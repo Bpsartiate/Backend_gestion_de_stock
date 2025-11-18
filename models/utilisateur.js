@@ -1,14 +1,13 @@
 const mongoose = require('mongoose');
 
 const utilisateurSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  nom: { type: String },
-  role: { type: String, required: true },
-  telephone: { type: String, required: true },
-  otp: { type: String },
-  otp_expiration: { type: Date }
+  nom: { type: String, required: true },
+  email: { type: String, unique: true, sparse: true },
+  telephone: { type: String, unique: true, sparse: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['admin', 'superviseur', 'vendeur'], required: true }
 }, {
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: true
 });
 
 module.exports = mongoose.model('Utilisateur', utilisateurSchema);
