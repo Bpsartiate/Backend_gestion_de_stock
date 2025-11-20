@@ -5,33 +5,50 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 router.post('/register', async (req, res) => {
-  const { nom, email, telephone, password, passwordConfirm, role } = req.body;
-  if (!nom || (!email && !telephone) || !password || !passwordConfirm || !role) {
-    return res.status(400).json({ message: 'Tous les champs requis doivent être remplis' });
-  }
-  if (password !== passwordConfirm) {
-    return res.status(400).json({ message: 'Les mots de passe ne correspondent pas' });
-  }
   try {
-    const existingUser = await Utilisateur.findOne({
-      $or: [{ email }, { telephone }]
-    });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email ou téléphone déjà utilisé' });
+    const { nom, email, telephone, password, passwordConfirm, role } = req.body;
+
+    if (!password || !passwordConfirm) {
+      return res.status(400).json({ message: 'Les mots de passe sont requis.' });
     }
+
+    if (password !== passwordConfirm) {
+      return res.status(400).json({ message: "Les mots de passe ne correspondent pas." });
+    }
+
+    // Vérifier si un admin existe déjà
+    if (role === 'admin') {
+      const adminExists = await Utilisateur.exists({ role: 'admin' });
+      if (adminExists) {
+        return res.status(403).json({ message: "Un administrateur existe déjà." });
+      }
+    }
+
+    // Vérifier que l'email n'existe pas déjà
+    if (email) {
+      const emailExists = await Utilisateur.exists({ email });
+      if (emailExists) {
+        return res.status(409).json({ message: "Cet email est déjà utilisé." });
+      }
+    }
+
+    // Vérifier que le téléphone n'existe pas déjà (si fourni)
+    if (telephone) {
+      const phoneExists = await Utilisateur.exists({ telephone });
+      if (phoneExists) {
+        return res.status(409).json({ message: "Ce numéro de téléphone est déjà utilisé." });
+      }
+    }
+
+    // Hacher le mot de passe et créer l'utilisateur
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new Utilisateur({
-      nom,
-      email,
-      telephone,
-      password: hashedPassword,
-      role
-    });
+    const newUser = new Utilisateur({ nom, email, telephone, password: hashedPassword, role });
     await newUser.save();
-    res.status(201).json({ message: 'Inscription réussie' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur serveur' });
+
+    res.status(201).json({ message: "Utilisateur créé avec succès !" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur." });
   }
 });
 
