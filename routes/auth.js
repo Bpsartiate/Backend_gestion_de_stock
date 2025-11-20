@@ -79,5 +79,15 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });
-
+// Vérifie s'il existe au moins un utilisateur avec role: 'admin'
+router.get('/admin-exists', async (req, res) => {
+  try {
+    const adminExists = await Utilisateur.exists({ role: 'admin' });
+    // renvoyer un booléen simple
+    return res.json({ exists: !!adminExists });
+  } catch (err) {
+    console.error('admin-exists error:', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
 module.exports = router;
