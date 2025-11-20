@@ -73,8 +73,18 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
-    res.status(200).json({ message: 'Authentification réussie', token });
-  } catch (error) {
+// après avoir créé 'token' :
+res.status(200).json({
+  message: 'Authentification réussie',
+  token,
+  user: {
+    id: utilisateur._id,
+    nom: utilisateur.nom,
+    email: utilisateur.email,
+    role: utilisateur.role
+  }
+}); 
+} catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
