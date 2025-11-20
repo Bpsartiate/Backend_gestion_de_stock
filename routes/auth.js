@@ -69,11 +69,21 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Mot de passe invalide' });
     }
     const token = jwt.sign(
-      { id: utilisateur._id, role: utilisateur.role },
+      { id: utilisateur._id, nom: utilisateur.nom, role: utilisateur.role },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
-    res.status(200).json({ message: 'Authentification réussie', token });
+    res.status(200).json({
+      message: 'Authentification réussie',
+      token,
+      user: {
+        id: utilisateur._id,
+        nom: utilisateur.nom,
+        email: utilisateur.email,
+        telephone: utilisateur.telephone,
+        role: utilisateur.role
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur serveur' });
