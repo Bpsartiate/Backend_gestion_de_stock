@@ -18,7 +18,7 @@ const phoneValidator = {
 };
 
 const businessSchema = new mongoose.Schema({
-  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Utilisateur', required: true, unique: true },
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Utilisateur', required: true },
   nomEntreprise: { type: String, trim: true, required: true },
   logoUrl: { type: String, trim: true },
   description: { type: String, trim: true },    // infos complémentaires
