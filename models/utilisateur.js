@@ -6,8 +6,10 @@ const utilisateurSchema = new mongoose.Schema({
   telephone: { type: String, unique: true, sparse: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['admin', 'superviseur', 'vendeur'], required: true },
-  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Utilisateur' }, // gestionnaire pour vendeur
-  canEditPasswords: { type: Boolean, default: false }, // config par admin (gestionnaires)
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Utilisateur' },
+  canEditPasswords: { type: Boolean, default: false },
+  canEditPhoto: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
   entreprise: {
     nomEntreprise: { type: String },
     logoUrl: { type: String },
@@ -17,8 +19,6 @@ const utilisateurSchema = new mongoose.Schema({
     email: { type: String },
     typeBusiness: { type: String }
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Utilisateur', utilisateurSchema);

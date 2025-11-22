@@ -1,103 +1,119 @@
 const bcrypt = require('bcryptjs');
 const Utilisateur = require('../models/utilisateur');
+const Business = require('../models/business');
 
-// Modifier le profil utilisateur (PUT /profile/:id)
+// Modifier profil utilisateur avec contrôle d'accès
 exports.modifierProfil = async (req, res) => {
   try {
-    const editor = req.user; // utilisateur connecté (donné par middleware auth)
+    const editor = req.user;
     const targetUserId = req.params.id;
     const data = { ...req.body };
 
     const targetUser = await Utilisateur.findById(targetUserId);
     if (!targetUser) return res.status(404).json({ message: 'Utilisateur non trouvé' });
 
-    // Contrôle d'accès
+    // Contrôle accès modif
     if (editor.role === 'vendeur' && editor._id.toString() !== targetUserId) {
       return res.status(403).json({ message: 'Accès interdit' });
     }
-
-    if (editor.role === 'gestionnaire') {
+    if (editor.role === 'superviseur') {
       if (targetUser.assignedTo?.toString() !== editor._id.toString()) {
         return res.status(403).json({ message: 'Accès interdit' });
       }
-      // Gestionnaire ne peut modifier le mot de passe que si autorisé
-      if (data.password) {
-        if (!editor.canEditPasswords) {
-          return res.status(403).json({ message: 'Modification du mot de passe non autorisée' });
-        }
-        data.password = await bcrypt.hash(data.password, 10);
+      if (data.password && !editor.canEditPasswords) {
+        return res.status(403).json({ message: 'Modification mot de passe non autorisée' });
       }
-      // Gestionnaire ne peut modifier ni rôle ni assignedTo
       delete data.role;
       delete data.assignedTo;
     }
-
     if (editor.role === 'admin' && data.password) {
       data.password = await bcrypt.hash(data.password, 10);
     }
-
     if (editor.role === 'vendeur') {
-      // Limiter champs modifiables par vendeur (ex: photo, téléphone)
       delete data.password;
       delete data.role;
       delete data.assignedTo;
-      // filtre supplémentaire côté frontend conseillé
     }
 
-    // Mise à jour
     Object.assign(targetUser, data);
     await targetUser.save();
-
-    res.json({ message: 'Profil mis à jour avec succès', user: targetUser });
+    res.json({ message: 'Profil mis à jour', user: targetUser });
   } catch (err) {
-    console.error('modifierProfil error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// Assignation d'un vendeur à un gestionnaire (admin seulement)
+// Lister membres selon rôle et entreprise
+exports.listerMembres = async (req, res) => {
+  try {
+    const requester = req.user;
+    let filter = { isActive: true };
+
+    if (requester.role === 'superviseur') {
+      filter.assignedTo = requester._id;
+    } else if (requester.role === 'vendeur') {
+      filter._id = requester._id;
+    }
+    // Filtrer sur entreprise: si liée, ajouter à filter
+
+    const membres = await Utilisateur.find(filter).select('-password');
+    res.json(membres);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// Récupérer le profil d'un utilisateur (sans mot de passe)
+exports.getProfil = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await Utilisateur.findById(id).select('-password');
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    res.json(user);
+  } catch (err) {
+    console.error('getProfil error:', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// Assignation vendeur -> gestionnaire (admin)
 exports.assignerVendeur = async (req, res) => {
   try {
     const { vendeurId, gestionnaireId } = req.body;
-    if (!vendeurId || !gestionnaireId) return res.status(400).json({ message: 'vendeurId et gestionnaireId requis' });
-
     const vendeur = await Utilisateur.findById(vendeurId);
-    if (!vendeur) return res.status(404).json({ message: 'Vendeur non trouvé' });
-
     const gestionnaire = await Utilisateur.findById(gestionnaireId);
-    if (!gestionnaire || !['superviseur', 'admin'].includes(gestionnaire.role)) {
-      return res.status(400).json({ message: 'Gestionnaire invalide' });
+
+    if (!vendeur || !gestionnaire || !['superviseur', 'admin'].includes(gestionnaire.role)) {
+      return res.status(400).json({ message: 'Invalid IDs' });
     }
 
     vendeur.assignedTo = gestionnaireId;
     await vendeur.save();
 
-    res.json({ message: 'Vendeur assigné au gestionnaire', vendeur });
+    res.json({ message: 'Vendeur assigné', vendeur });
   } catch (err) {
-    console.error('assignerVendeur error:', err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-// Modifier rôle et permissions d'un gestionnaire (admin seulement)
+// Modifier rôles et permissions (admin)
 exports.modifierRoleEtPermissionsGestionnaire = async (req, res) => {
   try {
-    const { gestionnaireId, role, canEditPasswords } = req.body;
+    const { gestionnaireId, role, canEditPasswords, canEditPhoto } = req.body;
 
     if (!['admin', 'superviseur', 'vendeur'].includes(role)) {
       return res.status(400).json({ message: 'Rôle invalide' });
     }
-
     const gestionnaire = await Utilisateur.findById(gestionnaireId);
     if (!gestionnaire) return res.status(404).json({ message: 'Utilisateur non trouvé' });
 
     gestionnaire.role = role;
     gestionnaire.canEditPasswords = canEditPasswords;
+    gestionnaire.canEditPhoto = canEditPhoto;
     await gestionnaire.save();
 
-    res.json({ message: 'Rôle et permissions modifiés', user: gestionnaire });
-  } catch (err) {
-    console.error('modifierRoleEtPermissionsGestionnaire error:', err);
+    res.json({ message: 'Rôles et permissions modifiés', user: gestionnaire });
+  } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
