@@ -99,7 +99,18 @@ exports.assignerVendeur = async (req, res) => {
 // Modifier rôles et permissions (admin)
 exports.modifierRoleEtPermissionsGestionnaire = async (req, res) => {
   try {
-    const { gestionnaireId, role, canEditPasswords, canEditPhoto } = req.body;
+    const requester = req.user;
+    if (!requester) return res.status(401).json({ message: 'Authentification requise' });
+
+    const { gestionnaireId, role, canEditPasswords, canEditPhoto, canAssignVendors, canAssignManagers, canDeleteMembers, canEditProfileFields } = req.body;
+
+    // Only admins can promote to admin or grant destructive permissions
+    if (role === 'admin' && requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Seul un admin peut attribuer le rôle admin' });
+    }
+    if (canDeleteMembers === true && requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Seule un admin peut accorder la permission de supprimer des membres' });
+    }
 
     if (!['admin', 'superviseur', 'vendeur'].includes(role)) {
       return res.status(400).json({ message: 'Rôle invalide' });
@@ -108,12 +119,17 @@ exports.modifierRoleEtPermissionsGestionnaire = async (req, res) => {
     if (!gestionnaire) return res.status(404).json({ message: 'Utilisateur non trouvé' });
 
     gestionnaire.role = role;
-    gestionnaire.canEditPasswords = canEditPasswords;
-    gestionnaire.canEditPhoto = canEditPhoto;
+    if (typeof canEditPasswords === 'boolean') gestionnaire.canEditPasswords = canEditPasswords;
+    if (typeof canEditPhoto === 'boolean') gestionnaire.canEditPhoto = canEditPhoto;
+    if (typeof canAssignVendors === 'boolean') gestionnaire.canAssignVendors = canAssignVendors;
+    if (typeof canAssignManagers === 'boolean') gestionnaire.canAssignManagers = canAssignManagers;
+    if (typeof canDeleteMembers === 'boolean') gestionnaire.canDeleteMembers = canDeleteMembers;
+    if (typeof canEditProfileFields === 'boolean') gestionnaire.canEditProfileFields = canEditProfileFields;
     await gestionnaire.save();
 
     res.json({ message: 'Rôles et permissions modifiés', user: gestionnaire });
   } catch (error) {
+    console.error('modifierRoleEtPermissionsGestionnaire error:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };

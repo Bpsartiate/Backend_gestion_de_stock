@@ -9,6 +9,10 @@ const utilisateurSchema = new mongoose.Schema({
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Utilisateur' },
   canEditPasswords: { type: Boolean, default: false },
   canEditPhoto: { type: Boolean, default: false },
+  canAssignVendors: { type: Boolean, default: false },
+  canAssignManagers: { type: Boolean, default: false },
+  canDeleteMembers: { type: Boolean, default: false },
+  canEditProfileFields: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   entreprise: {
     nomEntreprise: { type: String },
