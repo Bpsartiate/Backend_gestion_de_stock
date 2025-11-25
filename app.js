@@ -15,7 +15,20 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve uploaded files (MUST be before routes)
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+const uploadsPath = path.join(__dirname, 'public', 'uploads');
+console.log('[app] serving static files from:', uploadsPath);
+app.use('/uploads', express.static(uploadsPath));
+
+// diagnostic route to check if files exist
+app.get('/api/test-uploads', (req, res) => {
+  const fs = require('fs');
+  try {
+    const files = fs.readdirSync(uploadsPath);
+    res.json({ uploadsPath, files, exists: true });
+  } catch (e) {
+    res.json({ uploadsPath, error: e.message, exists: false });
+  }
+});
 
 app.use('/api/auth', utilisateurRoutes);
 app.use('/api/protected', protectedRoutes);

@@ -1,18 +1,40 @@
 const bcrypt = require('bcryptjs');
 const Utilisateur = require('../models/utilisateur');
 const Business = require('../models/business');
+const cloudinary = require('../services/cloudinary');
+const fs = require('fs');
+const path = require('path');
 
 // Modifier profil utilisateur avec contrôle d'accès
 exports.modifierProfil = async (req, res) => {
   try {
-    console.log('[modifierProfil] req.file:', req.file ? { fieldname: req.file.fieldname, filename: req.file.filename, size: req.file.size } : 'NONE');
+    console.log('[modifierProfil] req.file:', req.file ? { fieldname: req.file.fieldname, originalname: req.file.originalname, size: req.file.size } : 'NONE');
     const editor = req.user;
     const targetUserId = req.params.id;
     const data = { ...req.body };
-    // if a file was uploaded by multer, set photoUrl
-    if (req.file && req.file.filename) {
-      data.photoUrl = '/uploads/profiles/' + req.file.filename;
-      console.log('[modifierProfil] photoUrl set to:', data.photoUrl);
+    
+    // if a file was uploaded by multer (in memory), upload to Cloudinary via stream
+    if (req.file && req.file.buffer) {
+      try{
+        console.log('[modifierProfil] uploading to cloudinary via stream...');
+        // upload buffer to cloudinary using upload_stream
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'profiles' },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+        data.photoUrl = result.secure_url;
+        console.log('[modifierProfil] uploaded to cloudinary:', data.photoUrl);
+      }catch(upErr){
+        console.error('Cloudinary upload error', upErr);
+        // no fallback: fail gracefully
+        return res.status(400).json({ message: 'Erreur lors de l\'upload de la photo.' });
+      }
     }
 
     const targetUser = await Utilisateur.findById(targetUserId);

@@ -51,6 +51,7 @@
     "bootstrap": "^5.2.2",
     "chart.js": "^3.3.2",
     "choices.js": "^9.0.1",
+    "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
     "countup.js": "^2.0.6",
     "d3": "^7.6.1",

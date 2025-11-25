@@ -46,9 +46,29 @@ router.post('/register', upload.single('photo'), async (req, res) => {
     // Hacher le mot de passe et créer l'utilisateur
     const hashedPassword = await bcrypt.hash(password, 10);
     const userData = { nom, prenom, email, telephone, password: hashedPassword, role };
-    if (req.file && req.file.filename) {
-      // public/uploads is served at /uploads
-      userData.photoUrl = path.join('/uploads/profiles', req.file.filename).replace(/\\/g, '/');
+    
+    if (req.file && req.file.buffer) {
+      // upload buffer to cloudinary using upload_stream
+      try{
+        console.log('[auth.register] uploading to cloudinary via stream...');
+        const cloudinary = require('../services/cloudinary');
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'profiles' },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+        if(result && result.secure_url) userData.photoUrl = result.secure_url;
+        console.log('[auth.register] uploaded to cloudinary:', userData.photoUrl);
+      }catch(e){
+        console.error('cloudinary upload failed', e);
+        // fail gracefully: don't create user if photo upload fails
+        return res.status(400).json({ message: 'Erreur lors de l\'upload de la photo.' });
+      }
     }
     const newUser = new Utilisateur(userData);
     await newUser.save();
