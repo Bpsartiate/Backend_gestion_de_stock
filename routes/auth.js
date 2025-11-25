@@ -3,10 +3,12 @@ const router = express.Router();
 const Utilisateur = require('../models/utilisateur');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const upload = require('../middlewares/upload');
+const path = require('path');
 
-router.post('/register', async (req, res) => {
+router.post('/register', upload.single('photo'), async (req, res) => {
   try {
-    const { nom, email, telephone, password, passwordConfirm, role } = req.body;
+    const { nom, prenom, email, telephone, password, passwordConfirm, role } = req.body;
 
     if (!password || !passwordConfirm) {
       return res.status(400).json({ message: 'Les mots de passe sont requis.' });
@@ -42,7 +44,12 @@ router.post('/register', async (req, res) => {
 
     // Hacher le mot de passe et créer l'utilisateur
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new Utilisateur({ nom, email, telephone, password: hashedPassword, role });
+    const userData = { nom, prenom, email, telephone, password: hashedPassword, role };
+    if (req.file && req.file.filename) {
+      // public/uploads is served at /uploads
+      userData.photoUrl = path.join('/uploads/profiles', req.file.filename).replace(/\\/g, '/');
+    }
+    const newUser = new Utilisateur(userData);
     await newUser.save();
 
     res.status(201).json({ message: "Utilisateur créé avec succès !" });
@@ -69,7 +76,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Mot de passe invalide' });
     }
     const token = jwt.sign(
-      { id: utilisateur._id, nom: utilisateur.nom, role: utilisateur.role },
+      { id: utilisateur._id, nom: utilisateur.nom, prenom: utilisateur.prenom, role: utilisateur.role },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -79,6 +86,7 @@ router.post('/login', async (req, res) => {
       user: {
         id: utilisateur._id,
         nom: utilisateur.nom,
+        prenom: utilisateur.prenom,
         email: utilisateur.email,
         telephone: utilisateur.telephone,
         role: utilisateur.role

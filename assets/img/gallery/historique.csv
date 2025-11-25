@@ -1,0 +1,9 @@
+Date/Heure,Utilisateur,Rôle,Action,Objet,Détail,Commentaire/Justification
+24/04/2025 09:15,Marie Laurent,Gestionnaire, Ajout,Contrat fournisseur,Voir le document,Ajout du contrat cadre 2025
+23/04/2025 17:40,Ali Ben Said,Responsable achats, Validation,Commande CMD-20250415-001,Statut passé à Livrée,Livraison validée sans réserve
+22/04/2025 16:20,Sarah N’Diaye,Admin, Modification,Fournisseur : Société Alpha,Adresse :
+Avant : 12 rue A
+Après : 45 avenue B,Changement suite à déménagement
+21/04/2025 15:00,Jean Dupont,Logistique, Incident,Livraison,Marchandise endommagée,Palette abîmée lors du transport
+20/04/2025 12:00,Marie Laurent,Gestionnaire, Suppression,Facture FAC-20250417-003,Suppression d'une facture erronée,Erreur de saisie détectée
+19/04/2025 10:00,Ali Ben Said,Responsable achats, Téléchargement,Rapport d'audit,Export PDF,Pour transmission au bailleur

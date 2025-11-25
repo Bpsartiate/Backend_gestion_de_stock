@@ -8,6 +8,10 @@ exports.modifierProfil = async (req, res) => {
     const editor = req.user;
     const targetUserId = req.params.id;
     const data = { ...req.body };
+    // if a file was uploaded by multer, set photoUrl
+    if (req.file && req.file.filename) {
+      data.photoUrl = '/uploads/profiles/' + req.file.filename;
+    }
 
     const targetUser = await Utilisateur.findById(targetUserId);
     if (!targetUser) return res.status(404).json({ message: 'Utilisateur non trouvé' });

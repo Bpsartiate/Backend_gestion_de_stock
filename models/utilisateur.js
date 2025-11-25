@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const utilisateurSchema = new mongoose.Schema({
   nom: { type: String, required: true },
+  prenom: { type: String },
   email: { type: String, unique: true, sparse: true },
   telephone: { type: String, unique: true, sparse: true },
   password: { type: String, required: true },
@@ -13,6 +14,7 @@ const utilisateurSchema = new mongoose.Schema({
   canAssignManagers: { type: Boolean, default: false },
   canDeleteMembers: { type: Boolean, default: false },
   canEditProfileFields: { type: Boolean, default: false },
+  photoUrl: { type: String },
   isActive: { type: Boolean, default: true },
   entreprise: {
     nomEntreprise: { type: String },
