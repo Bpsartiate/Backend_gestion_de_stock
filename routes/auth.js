@@ -8,6 +8,7 @@ const path = require('path');
 
 router.post('/register', upload.single('photo'), async (req, res) => {
   try {
+    console.log('[auth.register] req.file:', req.file ? { fieldname: req.file.fieldname, filename: req.file.filename, size: req.file.size } : 'NONE');
     const { nom, prenom, email, telephone, password, passwordConfirm, role } = req.body;
 
     if (!password || !passwordConfirm) {

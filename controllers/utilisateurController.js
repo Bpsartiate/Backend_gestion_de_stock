@@ -5,12 +5,14 @@ const Business = require('../models/business');
 // Modifier profil utilisateur avec contrôle d'accès
 exports.modifierProfil = async (req, res) => {
   try {
+    console.log('[modifierProfil] req.file:', req.file ? { fieldname: req.file.fieldname, filename: req.file.filename, size: req.file.size } : 'NONE');
     const editor = req.user;
     const targetUserId = req.params.id;
     const data = { ...req.body };
     // if a file was uploaded by multer, set photoUrl
     if (req.file && req.file.filename) {
       data.photoUrl = '/uploads/profiles/' + req.file.filename;
+      console.log('[modifierProfil] photoUrl set to:', data.photoUrl);
     }
 
     const targetUser = await Utilisateur.findById(targetUserId);

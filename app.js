@@ -14,7 +14,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve uploaded files
+// Serve uploaded files (MUST be before routes)
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 app.use('/api/auth', utilisateurRoutes);
