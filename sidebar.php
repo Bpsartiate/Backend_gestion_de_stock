@@ -11,7 +11,7 @@
 
               <button class="btn navbar-toggler-humburger-icon navbar-vertical-toggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
 
-            </div><a class="navbar-brand" href="<?= $BASE_URL ?>/pages/e-commerce.php">
+            </div><a class="navbar-brand" href="pages/e-commerce.php">
               <div class="d-flex align-items-center py-3"><img class="me-2" src="assets/img/gallery/gestion-de-la-chaine-logistique.png" alt="" width="40" /><span class="font-sans-serif">Aurora</span>
               </div>
             </a>
@@ -51,25 +51,25 @@
                     </div>
                   </a>
                   <ul class="nav collapse" id="events">
-                    <!-- <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/TransportEtLivraison.php">
+                    <!-- <li class="nav-item"><a class="nav-link" href="pages/TransportEtLivraison.php">
                         <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Transport et livraison</span>
                         </div>
                       </a>
                       more inner pages
                     </li> -->
-                    <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/Réception_et_inspection.php">
+                    <li class="nav-item"><a class="nav-link" href="pages/Réception_et_inspection.php">
                         <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Réception et inspection</span>
                         </div>
                       </a>
                       <!-- more inner pages-->
                     </li>
-                    <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/stocks_et_entreposage.php">
+                    <li class="nav-item"><a class="nav-link" href="pages/stocks_et_entreposage.php">
                         <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Stocks et entreposage</span>
                         </div>
                       </a>
                       <!-- more inner pages-->
                     </li>
-                    <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/app/events/event-list.php">
+                    <li class="nav-item"><a class="nav-link" href="app/events/event-list.php">
                         <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Gestion des biens</span>
                         </div>
                       </a>
@@ -135,43 +135,43 @@
                       </a>
                       <!-- more inner pages-->
                       <ul class="nav collapse" id="simple">
-                        <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/authentication/simple/login.php">
+                        <li class="nav-item"><a class="nav-link" href="pages/authentication/simple/login.php">
                             <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Rôles et permissions</span>
                             </div>
                           </a>
                           <!-- more inner pages-->
                         </li>
-                        <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/authentication/simple/logout.php">
+                        <li class="nav-item"><a class="nav-link" href="pages/authentication/simple/logout.php">
                             <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Paramètres généraux</span>
                             </div>
                           </a>
                           <!-- more inner pages-->
                         </li>
-                        <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/authentication/simple/register.php">
+                        <li class="nav-item"><a class="nav-link" href="pages/authentication/simple/register.php">
                             <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Register</span>
                             </div>
                           </a>
                           <!-- more inner pages-->
                         </li>
-                        <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/authentication/simple/forgot-password.php">
+                        <li class="nav-item"><a class="nav-link" href="pages/authentication/simple/forgot-password.php">
                             <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Forgot password</span>
                             </div>
                           </a>
                           <!-- more inner pages-->
                         </li>
-                        <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/authentication/simple/confirm-mail.php">
+                        <li class="nav-item"><a class="nav-link" href="pages/authentication/simple/confirm-mail.php">
                             <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Confirm mail</span>
                             </div>
                           </a>
                           <!-- more inner pages-->
                         </li>
-                        <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/authentication/simple/reset-password.php">
+                        <li class="nav-item"><a class="nav-link" href="pages/authentication/simple/reset-password.php">
                             <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Reset password</span>
                             </div>
                           </a>
                           <!-- more inner pages-->
                         </li>
-                        <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/authentication/simple/lock-screen.php">
+                        <li class="nav-item"><a class="nav-link" href="pages/authentication/simple/lock-screen.php">
                             <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Lock screen</span>
                             </div>
                           </a>
@@ -186,7 +186,7 @@
                     </div>
                   </a>
                   <ul class="nav collapse" id="user">
-                    <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>/pages/user/profile.php">
+                    <li class="nav-item"><a class="nav-link" href="pages/user/profile.php">
                         <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Profile</span>
                         </div>
                       </a>
