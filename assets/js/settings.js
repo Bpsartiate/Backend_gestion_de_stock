@@ -43,20 +43,23 @@
 
   // Fetch full user profile from API (preferred) and populate UI
   async function fetchCurrentUserFromAPI(){
-    // Try localStorage 'user' first
-    try{
-      const stored = localStorage.getItem('user');
-      if(stored){
-        const u = JSON.parse(stored);
-        CURRENT_USER = u;
-        populateUserUI(u);
-        return u;
-      }
-    }catch(e){ /* ignore */ }
-
-    // Fallback: decode token to get id
+    // Always fetch from API if token exists (to get fresh photoUrl from Cloudinary)
     const token = getToken();
-    if(!token) return null;
+    if(!token){
+      // No token — try localStorage as fallback
+      try{
+        const stored = localStorage.getItem('user');
+        if(stored){
+          const u = JSON.parse(stored);
+          CURRENT_USER = u;
+          populateUserUI(u);
+          return u;
+        }
+      }catch(e){ /* ignore */ }
+      return null;
+    }
+
+    // Have token — decode to get id and fetch fresh profile from API
     const payload = decodeJwt(token);
     const id = payload?.id || payload?._id || payload?.userId || payload?.sub;
     if(!id) return null;
@@ -67,6 +70,7 @@
       const data = await res.json();
       CURRENT_USER = data;
       try{ localStorage.setItem('user', JSON.stringify(data)); }catch(e){}
+      console.log('[fetchCurrentUserFromAPI] fetched user from API, photoUrl:', data.photoUrl);
       populateUserUI(data);
       return data;
     }catch(err){
@@ -81,16 +85,38 @@
       $('#currentUserName').text(user.nom || user.name || user.email || 'Utilisateur');
       $('#currentUserRole').text(user.role ? (user.role.charAt(0).toUpperCase()+user.role.slice(1)) : '');
 
-      // fill profile form fields
-      if(user.nom){
-        // split name into prenom / nom if possible
-        $('#prenom').val((user.prenom) ? user.prenom : (user.nom.split(' ')[0] || ''));
-        $('#nom').val((user.nom.split(' ').slice(1).join(' ')) || '');
+      // fill profile form fields (support both separate prenom/nom or legacy full-name in user.nom)
+      if(user.prenom && user.nom){
+        $('#prenom').val(user.prenom);
+        $('#nom').val(user.nom);
+      } else if(user.prenom){
+        $('#prenom').val(user.prenom);
+        $('#nom').val(user.nom || '');
+      } else if(user.nom){
+        const parts = user.nom.split(' ').filter(p=>p.trim());
+        if(parts.length > 1){
+          $('#prenom').val(parts[0]);
+          $('#nom').val(parts.slice(1).join(' '));
+        } else {
+          // single token in user.nom — prefer showing it as last name to satisfy UI expectations
+          $('#prenom').val('');
+          $('#nom').val(user.nom);
+        }
       }
-      if(user.email) $('#email').val(user.email);
-      if(user.telephone) $('#telephone').val(user.telephone);
+       if(user.email) $('#email').val(user.email);
+       if(user.telephone) $('#telephone').val(user.telephone);
 
-      // permissions UI handled by loadAccountSettings
+       // set header avatar to user's photo if available (fallback to user_prof.svg)
+       try{
+         const topImg = user.photoUrl || 'assets/img/team/user_prof.svg';
+         console.log('[populateUserUI] user object:', user);
+         console.log('[populateUserUI] user.photoUrl:', user.photoUrl);
+         console.log('[populateUserUI] setting #topProfileImage.src to:', topImg);
+         $('#topProfileImage').attr('src', topImg);
+         console.log('[populateUserUI] #topProfileImage.src after update:', $('#topProfileImage').attr('src'));
+       }catch(e){ console.error('[populateUserUI] error setting image:', e); }
+
+       // permissions UI handled by loadAccountSettings
     }catch(e){ console.warn('populateUserUI', e); }
   }
 
@@ -222,7 +248,21 @@
 
   // Add member
   async function submitAddMember(form){
-    const nom = $('#memberName').val();
+    // support both new split fields and legacy single full-name field
+    const prenomField = $('#memberPrenom');
+    const nomField = $('#memberNom');
+    let prenom = '';
+    let nom = '';
+    if(prenomField.length && nomField.length){
+      prenom = prenomField.val();
+      nom = nomField.val();
+    } else {
+      // fallback to legacy single field
+      const full = $('#memberName').val() || '';
+      const parts = full.split(' ').filter(p=>p.trim());
+      if(parts.length > 1){ prenom = parts[0]; nom = parts.slice(1).join(' '); }
+      else { prenom = ''; nom = full; }
+    }
     const email = $('#memberEmail').val();
     const role = $('#memberRole').val();
     const telephone = $('#memberTelephone').val();
@@ -238,6 +278,7 @@
       // If a photo file was selected, send multipart/form-data
       if(photoInput && photoInput.files && photoInput.files.length){
         const fd = new FormData();
+        if(prenom) fd.append('prenom', prenom);
         fd.append('nom', nom);
         fd.append('email', email);
         fd.append('role', role);
@@ -255,7 +296,7 @@
         try{ json = await res.json(); }catch(e){ json = {}; }
       } else {
         // fallback to JSON
-        const payload = { nom, email, role, telephone, password, passwordConfirm };
+        const payload = { prenom, nom, email, role, telephone, password, passwordConfirm };
         res = await fetch(API_BASE + '/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type':'application/json', ...authHeaders() },
@@ -316,8 +357,12 @@
       const infoHtml = `
         <div class="row mb-3">
           <div class="col-md-6 mb-2">
+            <label class="form-label">Prénom</label>
+            <input class="form-control" id="editMemberPrenom" value="${user.prenom || ''}" />
+          </div>
+          <div class="col-md-6 mb-2">
             <label class="form-label">Nom</label>
-            <input class="form-control" id="editMemberName" value="${user.nom || ''}" />
+            <input class="form-control" id="editMemberNom" value="${user.nom || ''}" />
           </div>
           <div class="col-md-6 mb-2">
             <label class="form-label">Email</label>
@@ -550,7 +595,8 @@
     if(e && e.preventDefault) e.preventDefault();
     const id = $('#editMemberId').val();
     if(!id) return showToast('Identifiant manquant','danger');
-    const nom = $('#editMemberName').val();
+    const prenom = $('#editMemberPrenom').val();
+    const nom = $('#editMemberNom').val();
     const email = $('#editMemberEmail').val();
     const telephone = $('#editMemberTel').val();
     const role = $('#editMemberRole').val();
@@ -558,7 +604,7 @@
     const confirmPass = $('#confirm-member-password').val();
     if((newPass || confirmPass) && newPass !== confirmPass) return showToast('Les mots de passe ne correspondent pas','warning');
     const cur = loadCurrentUserFromToken() || CURRENT_USER; const isAdmin = cur && cur.role === 'admin';
-    const payload = { nom, email, telephone, role };
+    const payload = { prenom, nom, email, telephone, role };
     if(newPass) payload.password = newPass;
     if(isAdmin){
       // read modal-scoped permission checkboxes (to avoid collisions with page-level controls)
@@ -574,7 +620,13 @@
       // prefer modal-scoped file input when editing from modal
       const photoInput = document.getElementById('profile-image-modal') || document.getElementById('profile-image'); let res, json;
       if(photoInput && photoInput.files && photoInput.files.length){
-        const fd = new FormData(); fd.append('nom', payload.nom || ''); fd.append('email', payload.email || ''); if(payload.telephone) fd.append('telephone', payload.telephone); if(payload.role) fd.append('role', payload.role); if(payload.password) fd.append('password', payload.password);
+        const fd = new FormData();
+        if(payload.prenom) fd.append('prenom', payload.prenom);
+        fd.append('nom', payload.nom || '');
+        fd.append('email', payload.email || '');
+        if(payload.telephone) fd.append('telephone', payload.telephone);
+        if(payload.role) fd.append('role', payload.role);
+        if(payload.password) fd.append('password', payload.password);
         if(isAdmin){ fd.append('canEditPasswords', payload.canEditPasswords ? '1' : '0'); fd.append('canAssignVendors', payload.canAssignVendors ? '1' : '0'); fd.append('canAssignManagers', payload.canAssignManagers ? '1' : '0'); fd.append('canDeleteMembers', payload.canDeleteMembers ? '1' : '0'); fd.append('canEditProfileFields', payload.canEditProfileFields ? '1' : '0'); }
         fd.append('photo', photoInput.files[0]);
         // ensure we don't set a fixed Content-Type header when sending FormData

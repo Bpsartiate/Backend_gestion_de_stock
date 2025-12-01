@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Utilisateur = require('../models/utilisateur');
+const Affectation = require('../models/affectation');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const upload = require('../middlewares/upload');
@@ -96,6 +97,33 @@ router.post('/login', async (req, res) => {
     if (!validPassword) {
       return res.status(400).json({ message: 'Mot de passe invalide' });
     }
+
+    // ===== VÉRIFICATIONS D'AFFECTATION PAR RÔLE =====
+    
+    // Vendeur : DOIT avoir une affectation à un guichet pour se connecter (MOBILE)
+    if (utilisateur.role === 'vendeur') {
+      const affectation = await Affectation.findOne({ 
+        vendeurId: utilisateur._id, 
+        status: 1 // Affectation active
+      });
+      if (!affectation) {
+        return res.status(403).json({ 
+          message: 'Accès refusé : Vous n\'avez pas d\'affectation active. Contactez votre superviseur.' 
+        });
+      }
+    }
+
+    // Superviseur : DOIT avoir une affectation à une entreprise/magasin pour se connecter (WEB)
+    if (utilisateur.role === 'superviseur') {
+      if (!utilisateur.businessId) {
+        return res.status(403).json({ 
+          message: 'Accès refusé : Vous n\'avez pas d\'affectation à une entreprise. Contactez l\'administrateur.' 
+        });
+      }
+    }
+
+    // Admin : Pas de restriction (accès WEB complet)
+
     const token = jwt.sign(
       { id: utilisateur._id, nom: utilisateur.nom, prenom: utilisateur.prenom, role: utilisateur.role },
       process.env.JWT_SECRET,
@@ -110,7 +138,9 @@ router.post('/login', async (req, res) => {
         prenom: utilisateur.prenom,
         email: utilisateur.email,
         telephone: utilisateur.telephone,
-        role: utilisateur.role
+        role: utilisateur.role,
+        businessId: utilisateur.businessId,
+        guichetId: utilisateur.guichetId
       }
     });
   } catch (error) {

@@ -16,6 +16,8 @@ const utilisateurSchema = new mongoose.Schema({
   canEditProfileFields: { type: Boolean, default: false },
   photoUrl: { type: String },
   isActive: { type: Boolean, default: true },
+  businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'Business' }, // Business assignée (admin/superviseur)
+  guichetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Guichet' }, // Guichet assigné (vendeur)
   entreprise: {
     nomEntreprise: { type: String },
     logoUrl: { type: String },

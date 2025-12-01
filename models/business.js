@@ -8,7 +8,11 @@ const businessSchema = new mongoose.Schema({
   adresse: { type: String, trim: true },
   telephone: { type: String, trim: true },
   email: { type: String, trim: true, lowercase: true },
-  typeBusiness: { type: String, trim: true }
+  typeBusiness: { type: String, trim: true },
+  budget: { type: Number, default: 0 }, // Budget de l'entreprise
+  devise: { type: String, default: 'USD' }, // Devise (currency) pour le suivi financier
+  chiffre_affaires: { type: Number, default: 0 }, // Chiffre d'affaires total
+  status: { type: Number, default: 1 } // 1 = actif, 0 = désactivé
 }, { timestamps: true });
 
 businessSchema.index({ ownerId: 1 }, { unique: true });
