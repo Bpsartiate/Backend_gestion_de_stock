@@ -42,8 +42,8 @@ router.post('/', authenticateToken, async (req, res) => {
     await newBusiness.save();
     return res.status(201).json({ message: 'Entreprise créée', business: newBusiness });
   } catch(err) {
-    console.error('business.create.error', err);
-    return res.status(500).json({ message: 'Erreur serveur' });
+    console.error('business.create.error', err.message, err);
+    return res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 });
 
