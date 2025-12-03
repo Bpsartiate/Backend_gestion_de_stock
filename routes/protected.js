@@ -20,9 +20,22 @@ router.put('/modifier-role', authMiddleware, utilisateurController.modifierRoleE
 
 // PUT /api/protected/assign-guichet - Superviseur assigne un vendeur à un guichet
 router.put('/assign-guichet', authMiddleware, async (req, res) => {
-  const supervisorId = req.user?.id;
-  if (!supervisorId) return res.status(401).json({ message: 'Utilisateur non authentifié' });
-  if (req.user.role !== 'superviseur') return res.status(403).json({ message: 'Accès superviseur requis' });
+  const requesterId = req.user?.id;
+  if (!requesterId) return res.status(401).json({ message: 'Utilisateur non authentifié' });
+
+  // Load requester from DB to get up-to-date permissions
+  const requester = await Utilisateur.findById(requesterId).select('role canCreateGuichet nom prenom');
+  if (!requester) return res.status(401).json({ message: 'Utilisateur non trouvé' });
+
+  // Only admins or superviseurs may perform this action
+  if (!['admin', 'superviseur'].includes(requester.role)) {
+    return res.status(403).json({ message: 'Accès superviseur requis' });
+  }
+
+  // If the requester is a superviseur, ensure they have the canCreateGuichet permission
+  if (requester.role === 'superviseur' && !requester.canCreateGuichet) {
+    return res.status(403).json({ message: 'Permission refusée: le superviseur ne peut pas assigner de guichets' });
+  }
 
   try {
     const { vendeurId, guichetId } = req.body;
@@ -62,7 +75,7 @@ router.put('/assign-guichet', authMiddleware, async (req, res) => {
       entrepriseId: magasin.businessId,
       dateAffectation: new Date(),
       status: 1,
-      notes: `Affecté par ${req.user.prenom} ${req.user.nom}`
+      notes: `Affecté par ${requester.prenom} ${requester.nom}`
     });
     await newAffectation.save();
 

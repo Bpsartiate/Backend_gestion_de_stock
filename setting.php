@@ -175,6 +175,10 @@
                         <label class="form-check-label" for="permCanAssignManagers">Peut assigner des gestionnaires</label>
                       </div>
                       <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="permCanCreateGuichet" />
+                        <label class="form-check-label" for="permCanCreateGuichet">Peut créer des guichets</label>
+                      </div>
+                      <div class="form-check form-switch mb-2">
                         <input class="form-check-input" type="checkbox" id="permCanDeleteMembers" />
                         <label class="form-check-label" for="permCanDeleteMembers">Peut supprimer des membres</label>
                       </div>

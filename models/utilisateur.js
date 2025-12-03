@@ -13,6 +13,7 @@ const utilisateurSchema = new mongoose.Schema({
   canAssignVendors: { type: Boolean, default: false },
   canAssignManagers: { type: Boolean, default: false },
   canDeleteMembers: { type: Boolean, default: false },
+  canCreateGuichet: { type: Boolean, default: false },
   canEditProfileFields: { type: Boolean, default: false },
   photoUrl: { type: String },
   isActive: { type: Boolean, default: true },

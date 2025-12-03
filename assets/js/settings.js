@@ -137,6 +137,7 @@
       $('#permPhoto').prop('checked', !!data.canEditPhoto);
       $('#permCanAssignVendors').prop('checked', !!data.canAssignVendors);
       $('#permCanAssignManagers').prop('checked', !!data.canAssignManagers);
+      $('#permCanCreateGuichet').prop('checked', !!data.canCreateGuichet);
       $('#permCanDeleteMembers').prop('checked', !!data.canDeleteMembers);
       $('#permCanEditProfileFields').prop('checked', !!data.canEditProfileFields);
 
@@ -446,6 +447,7 @@
             <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="modal_perm_edit_passwords" ${user.canEditPasswords ? 'checked' : ''} /><label class="form-check-label" for="modal_perm_edit_passwords">Peut modifier mot de passe</label></div>
             <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="modal_perm_assign_vendors" ${user.canAssignVendors ? 'checked' : ''} /><label class="form-check-label" for="modal_perm_assign_vendors">Peut assigner vendeurs</label></div>
             <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="modal_perm_assign_managers" ${user.canAssignManagers ? 'checked' : ''} /><label class="form-check-label" for="modal_perm_assign_managers">Peut assigner gestionnaires</label></div>
+            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="modal_perm_can_create_guichet" ${user.canCreateGuichet ? 'checked' : ''} /><label class="form-check-label" for="modal_perm_can_create_guichet">Peut créer des guichets</label></div>
             <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="modal_perm_delete_members" ${user.canDeleteMembers ? 'checked' : ''} /><label class="form-check-label" for="modal_perm_delete_members">Peut supprimer des membres</label></div>
             <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="modal_perm_edit_profile_fields" ${user.canEditProfileFields ? 'checked' : ''} /><label class="form-check-label" for="modal_perm_edit_profile_fields">Peut modifier tous les champs du profil</label></div>
           </div>
@@ -611,6 +613,7 @@
       payload.canEditPasswords = $('#modal_perm_edit_passwords').is(':checked');
       payload.canAssignVendors = $('#modal_perm_assign_vendors').is(':checked');
       payload.canAssignManagers = $('#modal_perm_assign_managers').is(':checked');
+    payload.canCreateGuichet = $('#modal_perm_can_create_guichet').is(':checked');
       payload.canDeleteMembers = $('#modal_perm_delete_members').is(':checked');
       payload.canEditProfileFields = $('#modal_perm_edit_profile_fields').is(':checked');
     }
@@ -628,6 +631,7 @@
         if(payload.role) fd.append('role', payload.role);
         if(payload.password) fd.append('password', payload.password);
         if(isAdmin){ fd.append('canEditPasswords', payload.canEditPasswords ? '1' : '0'); fd.append('canAssignVendors', payload.canAssignVendors ? '1' : '0'); fd.append('canAssignManagers', payload.canAssignManagers ? '1' : '0'); fd.append('canDeleteMembers', payload.canDeleteMembers ? '1' : '0'); fd.append('canEditProfileFields', payload.canEditProfileFields ? '1' : '0'); }
+        if(isAdmin){ fd.append('canCreateGuichet', payload.canCreateGuichet ? '1' : '0'); }
         fd.append('photo', photoInput.files[0]);
         // ensure we don't set a fixed Content-Type header when sending FormData
         const headersObj = Object.assign({}, authHeaders()); if(headersObj['Content-Type']) delete headersObj['Content-Type'];
@@ -917,6 +921,7 @@
         canEditPhoto: $('#permPhoto').is(':checked'),
         canAssignVendors: $('#permCanAssignVendors').is(':checked'),
         canAssignManagers: $('#permCanAssignManagers').is(':checked'),
+        canCreateGuichet: $('#permCanCreateGuichet').is(':checked'),
         canDeleteMembers: $('#permCanDeleteMembers').is(':checked'),
         canEditProfileFields: $('#permCanEditProfileFields').is(':checked')
       };
