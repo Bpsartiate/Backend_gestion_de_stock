@@ -4,19 +4,31 @@
   // - Selects company and renders details
   // - Creates company and magasin via AJAX
 
-  const apiBase = '/api';
+  const apiBase = 'https://backend-gestion-de-stock.onrender.com';
 
   function getToken(){
-    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('accessToken') || localStorage.getItem('userToken') || null;
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('accessToken') || localStorage.getItem('userToken') || null;
+    console.log('[getToken] Looking for token in localStorage:', {
+      token: !!localStorage.getItem('token'),
+      authToken: !!localStorage.getItem('authToken'),
+      jwt: !!localStorage.getItem('jwt'),
+      accessToken: !!localStorage.getItem('accessToken'),
+      userToken: !!localStorage.getItem('userToken'),
+      found: !!token
+    });
+    return token;
   }
 
   function authHeaders(){
     const token = getToken();
-    return token ? { 'Authorization': 'Bearer ' + token } : {};
+    const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    console.log('[authHeaders] Token present:', !!token, 'Headers:', headers);
+    return headers;
   }
 
   async function fetchJson(url, opts={}){
-    opts.headers = Object.assign({}, opts.headers || {}, { 'Accept': 'application/json' }, authHeaders());
+    opts.headers = Object.assign({}, opts.headers || {}, { 'Accept': 'application/json', 'Content-Type': 'application/json' }, authHeaders());
+    opts.mode = 'cors';
     const res = await fetch(url, opts);
     if(!res.ok){
       const text = await res.text();
@@ -36,7 +48,8 @@
     const countEl = document.getElementById('companiesCount');
     if(list) list.innerHTML = '<div class="p-3 text-center text-500">Chargement...</div>';
     try{
-      const businesses = await fetchJson(apiBase + '/business');
+      console.log('[loadCompanies] apiBase:', apiBase, 'full URL:', apiBase + '/api/business');
+      const businesses = await fetchJson(apiBase + '/api/business');
       if(!Array.isArray(businesses) || businesses.length === 0){
         if(list) list.innerHTML = '<div class="p-3 text-center text-500">Aucune entreprise</div>';
         if(countEl) countEl.textContent = '0';
@@ -109,7 +122,7 @@
     const container = document.getElementById('magasinsList');
     if(container) container.innerHTML = '<div class="p-3 text-center text-500">Chargement des magasins...</div>';
     try{
-      const magasins = await fetchJson(apiBase + '/business/magasin/' + businessId);
+      const magasins = await fetchJson(apiBase + '/api/business/magasin/' + businessId);
       if(!Array.isArray(magasins) || magasins.length === 0){ if(container) container.innerHTML = '<div class="p-3 text-center text-500">Aucun magasin</div>'; return []; }
       if(container) container.innerHTML = '';
       for(const m of magasins){
@@ -126,7 +139,7 @@
 
   async function loadGuichets(magasinId){
     try{
-      const guichets = await fetchJson(apiBase + '/business/guichet/' + magasinId);
+      const guichets = await fetchJson(apiBase + '/api/business/guichet/' + magasinId);
       const holder = document.getElementById('guichets-' + magasinId);
       if(!holder) return guichets || [];
       if(!Array.isArray(guichets) || guichets.length === 0){ holder.innerHTML = '<div class="small text-500">Aucun guichet</div>'; return []; }
@@ -138,39 +151,132 @@
   // Create business handler
   async function submitCreateBusiness(){
     const form = document.getElementById('formCreateBusiness');
-    const fd = new FormData(form);
     try{
       const btn = document.getElementById('submitCreateBusiness');
       if(btn) btn.disabled = true;
-      const res = await fetch(apiBase + '/business', { method: 'POST', body: fd, headers: authHeaders() });
-      if(!res.ok){ const txt = await res.text(); throw new Error(txt); }
+      // Ensure we have a token to send
+      const token = getToken();
+      console.log('[submitCreateBusiness] token:', token);
+      if(!token){
+        alert('Action non autorisée — veuillez vous connecter.');
+        return;
+      }
+      
+      // Extract form fields and build JSON payload (logo file upload not supported yet)
+      const formData = new FormData(form);
+      const payload = {
+        nomEntreprise: formData.get('nomEntreprise') || '',
+        adresse: formData.get('adresse') || '',
+        budget: formData.get('budget') ? Number(formData.get('budget')) : 0,
+        devise: formData.get('devise') || 'USD',
+        email: formData.get('email') || '',
+        description: formData.get('description') || '',
+        telephone: formData.get('telephone') || ''
+      };
+      
+      const headers = {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      };
+      
+      console.log('[submitCreateBusiness] sending JSON payload:', payload);
+      console.log('[submitCreateBusiness] sending to:', apiBase + '/api/business');
+      
+      const res = await fetch(apiBase + '/api/business', { 
+        method: 'POST', 
+        body: JSON.stringify(payload), 
+        headers: headers
+      });
+      
+      console.log('[submitCreateBusiness] response status:', res.status);
+      
+      if(!res.ok){ 
+        const txt = await res.text(); 
+        console.error('[submitCreateBusiness] error response:', txt);
+        throw new Error(txt); 
+      }
+      
       const data = await res.json();
       const modal = (typeof bootstrap !== 'undefined') ? bootstrap.Modal.getInstance(document.getElementById('modalCreateBusiness')) : null;
       if(modal) modal.hide();
+      alert('Entreprise créée avec succès!');
+      form.reset();
       await loadCompanies();
       if(data.business && data.business._id) selectCompany(data.business._id);
-    }catch(err){ console.error('submitCreateBusiness', err); alert('Erreur création entreprise: ' + (err.message||err)); }finally{ const btn = document.getElementById('submitCreateBusiness'); if(btn) btn.disabled = false; }
+    }catch(err){ 
+      console.error('submitCreateBusiness', err); 
+      alert('Erreur création entreprise: ' + (err.message||err)); 
+    }finally{ 
+      const btn = document.getElementById('submitCreateBusiness'); 
+      if(btn) btn.disabled = false; 
+    }
   }
 
   async function submitCreateMagasin(){
     const form = document.getElementById('formCreateMagasin');
-    const fd = new FormData(form);
     try{
       const btn = document.getElementById('submitCreateMagasin');
       if(btn) btn.disabled = true;
-      const res = await fetch(apiBase + '/business/magasin', { method: 'POST', body: fd, headers: authHeaders() });
-      if(!res.ok){ const txt = await res.text(); throw new Error(txt); }
+      // Ensure we have a token to send
+      const token = getToken();
+      console.log('[submitCreateMagasin] token:', token);
+      if(!token){
+        alert('Action non autorisée — veuillez vous connecter.');
+        return;
+      }
+      
+      // Extract form fields and build JSON payload
+      const formData = new FormData(form);
+      const businessId = formData.get('businessId') || '';
+      const payload = {
+        businessId: businessId,
+        nom_magasin: formData.get('nom_magasin') || '',
+        adresse: formData.get('adresse') || '',
+        telephone: formData.get('telephone') || '',
+        email: formData.get('email') || ''
+      };
+      
+      const headers = {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      };
+      
+      console.log('[submitCreateMagasin] sending JSON payload:', payload);
+      console.log('[submitCreateMagasin] sending to:', apiBase + '/api/business/magasin');
+      
+      const res = await fetch(apiBase + '/api/business/magasin', { 
+        method: 'POST', 
+        body: JSON.stringify(payload), 
+        headers: headers
+      });
+      
+      console.log('[submitCreateMagasin] response status:', res.status);
+      
+      if(!res.ok){ 
+        const txt = await res.text(); 
+        console.error('[submitCreateMagasin] error response:', txt);
+        throw new Error(txt); 
+      }
+      
       const data = await res.json();
       const modal = (typeof bootstrap !== 'undefined') ? bootstrap.Modal.getInstance(document.getElementById('modalCreateMagasin')) : null;
       if(modal) modal.hide();
-      if(fd.get('businessId')) loadMagasins(fd.get('businessId'));
-    }catch(err){ console.error('submitCreateMagasin', err); alert('Erreur création magasin: ' + (err.message||err)); }finally{ const btn = document.getElementById('submitCreateMagasin'); if(btn) btn.disabled = false; }
+      alert('Magasin créé avec succès!');
+      form.reset();
+      if(businessId) loadMagasins(businessId);
+    }catch(err){ 
+      console.error('submitCreateMagasin', err); 
+      alert('Erreur création magasin: ' + (err.message||err)); 
+    }finally{ 
+      const btn = document.getElementById('submitCreateMagasin'); 
+      if(btn) btn.disabled = false; 
+    }
   }
 
   async function selectCompany(id){
     if(!id) return;
     try{
-      const business = await fetchJson(apiBase + '/business/' + id);
+      const business = await fetchJson(apiBase + '/api/business/' + id);
       renderCompany(business);
       const btnMag = document.getElementById('btnAddMagasin'); if(btnMag) btnMag.disabled = false;
       const mb = document.getElementById('magasinBusinessId'); if(mb) mb.value = id;
@@ -190,14 +296,14 @@
 
       // sellers count via affectations (best-effort)
       try{
-        const affs = await fetchJson(apiBase + '/protected/affectations?entrepriseId=' + id);
+        const affs = await fetchJson(apiBase + '/api/protected/affectations?entrepriseId=' + id);
         const sellers = new Set((affs||[]).map(a=>a.vendeurId || a.vendeur || a.userId).filter(Boolean));
         const vendEl = document.getElementById('vendeursLight'); if(vendEl) vendEl.textContent = 'Vendeurs: ' + sellers.size;
       }catch(e){ /* ignore */ }
 
       // try richer rapport
       try{
-        const rpt = await fetchJson(apiBase + '/protected/affectations/rapport?entrepriseId=' + id);
+        const rpt = await fetchJson(apiBase + '/api/protected/affectations/rapport?entrepriseId=' + id);
         if(rpt && rpt.spendings){
           const sp = rpt.spendings;
           const spendEl = document.getElementById('companySpendings');

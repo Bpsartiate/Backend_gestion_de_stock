@@ -19,7 +19,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
   try {
     const allowed = ['nomEntreprise', 'logoUrl', 'description', 'adresse', 'telephone', 'email', 'typeBusiness', 'budget', 'devise'];
-    const payload = { createdBy: ownerId };
+    const payload = { ownerId: ownerId };
     allowed.forEach(k => {
       if (req.body[k] !== undefined && req.body[k] !== null) {
         if (k === 'budget') payload[k] = Number(req.body[k]);

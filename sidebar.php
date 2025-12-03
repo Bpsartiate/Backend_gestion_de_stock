@@ -192,7 +192,7 @@
                       </a>
                       <!-- more inner pages-->
                     </li>
-                    <li class="nav-item"><a class="nav-link" href="<?= $BASE_URL ?>settings.php">
+                    <li class="nav-item"><a class="nav-link" href="setting.php">
                         <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Settings</span>
                         </div>
                       </a>

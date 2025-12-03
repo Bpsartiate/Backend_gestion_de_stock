@@ -1,3 +1,4 @@
+<?php include_once 'includes/auth-init.php'; ?>
 <!DOCTYPE html>
 <html lang="en-US" dir="ltr">
 
@@ -74,13 +75,14 @@
              <?php include_once 'sidebar.php'; ?>
         <div class="content">
           <!-- User info bar (name, role, logout) -->
-          <div id="userInfoBar" class="d-flex justify-content-end align-items-center mb-2">
+          <!-- <div id="userInfoBar" class="d-flex justify-content-end align-items-center mb-2">
             <div class="me-3 text-end">
               <div id="currentUserName" class="fw-bold"></div>
               <div id="currentUserRole" class="text-muted small"></div>
             </div>
             <button id="logoutBtn" class="btn btn-outline-secondary btn-sm">Logout</button>
-          </div>
+          </div> -->
+          <?php include_once 'topbar.php'; ?>
               <!-- nav -->
             <!-- <?php include_once "includes/content_nav.php" ?> -->
             <div class="row">
@@ -401,6 +403,7 @@
       </div>
     </div>
 
+    <script src="assets/js/auth-protection.js"></script>
     <script src="assets/js/settings.js"></script>
 
   </body>

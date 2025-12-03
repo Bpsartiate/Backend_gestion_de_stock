@@ -1,7 +1,7 @@
  <nav class="navbar navbar-light navbar-glass navbar-top navbar-expand">
 
             <button class="btn navbar-toggler-humburger-icon navbar-toggler me-1 me-sm-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarVerticalCollapse" aria-controls="navbarVerticalCollapse" aria-expanded="false" aria-label="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
-            <a class="navbar-brand me-1 me-sm-3" href="<?= $BASE_URL ?>/index.html">
+            <a class="navbar-brand me-1 me-sm-3" href="<?= $BASE_URL ?>/index.php">
               <div class="d-flex align-items-center"><img class="me-2" src="<?= $BASE_URL ?>/assets/img/icons/spot-illustrations/falcon.png" alt="" width="40" /><span class="font-sans-serif">falcon</span>
               </div>
             </a>
@@ -18,14 +18,14 @@
                   </div>
                   <div class="dropdown-menu border font-base start-0 mt-2 py-0 overflow-hidden w-100">
                     <div class="scrollbar list py-3" style="max-height: 24rem;">
-                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Recently Browsed</h6><a class="dropdown-item fs--1 px-x1 py-1 hover-primary" href="<?= $BASE_URL ?>/app/events/event-detail.html">
+                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Recently Browsed</h6><a class="dropdown-item fs--1 px-x1 py-1 hover-primary" href="<?= $BASE_URL ?>/app/events/event-detail.php">
                         <div class="d-flex align-items-center">
                           <span class="fas fa-circle me-2 text-300 fs--2"></span>
 
                           <div class="fw-normal title">Pages <span class="fas fa-chevron-right mx-1 text-500 fs--2" data-fa-transform="shrink-2"></span> Events</div>
                         </div>
                       </a>
-                      <a class="dropdown-item fs--1 px-x1 py-1 hover-primary" href="<?= $BASE_URL ?>/app/e-commerce/customers.html">
+                      <a class="dropdown-item fs--1 px-x1 py-1 hover-primary" href="<?= $BASE_URL ?>/app/e-commerce/customers.php">
                         <div class="d-flex align-items-center">
                           <span class="fas fa-circle me-2 text-300 fs--2"></span>
 
@@ -34,17 +34,17 @@
                       </a>
 
                       <hr class="text-200 dark__text-900" />
-                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Suggested Filter</h6><a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/e-commerce/customers.html">
+                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Suggested Filter</h6><a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/e-commerce/customers.php">
                         <div class="d-flex align-items-center"><span class="badge fw-medium text-decoration-none me-2 badge-soft-warning">customers:</span>
                           <div class="flex-1 fs--1 title">All customers list</div>
                         </div>
                       </a>
-                      <a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/events/event-detail.html">
+                      <a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/events/event-detail.php">
                         <div class="d-flex align-items-center"><span class="badge fw-medium text-decoration-none me-2 badge-soft-success">events:</span>
                           <div class="flex-1 fs--1 title">Latest events in current month</div>
                         </div>
                       </a>
-                      <a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/e-commerce/product/product-grid.html">
+                      <a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/e-commerce/product/product-grid.php">
                         <div class="d-flex align-items-center"><span class="badge fw-medium text-decoration-none me-2 badge-soft-info">products:</span>
                           <div class="flex-1 fs--1 title">Most popular products</div>
                         </div>
@@ -71,7 +71,7 @@
                       </a>
 
                       <hr class="text-200 dark__text-900" />
-                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Members</h6><a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.html">
+                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Members</h6><a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.php">
                         <div class="d-flex align-items-center">
                           <div class="avatar avatar-l status-online me-2">
                             <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/1.jpg" alt="" />
@@ -83,7 +83,7 @@
                           </div>
                         </div>
                       </a>
-                      <a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.html">
+                      <a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.php">
                         <div class="d-flex align-items-center">
                           <div class="avatar avatar-l me-2">
                             <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/2.jpg" alt="" />
@@ -95,7 +95,7 @@
                           </div>
                         </div>
                       </a>
-                      <a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.html">
+                      <a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.php">
                         <div class="d-flex align-items-center">
                           <div class="avatar avatar-l me-2">
                             <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/3.jpg" alt="" />
@@ -124,10 +124,8 @@
                   <label class="mb-0 theme-control-toggle-label theme-control-toggle-dark" for="themeControlToggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Switch to dark theme"><span class="fas fa-moon fs-0"></span></label>
                 </div>
               </li>
-              <li class="nav-item d-none d-sm-block">
-                <a class="nav-link px-0 notification-indicator notification-indicator-warning notification-indicator-fill fa-icon-wait" href="<?= $BASE_URL ?>/app/e-commerce/shopping-cart.html"><span class="fas fa-shopping-cart" data-fa-transform="shrink-7" style="font-size: 33px;"></span><span class="notification-indicator-number">1</span></a>
-
-              </li>
+             
+              <!-- notifation -->
               <li class="nav-item dropdown">
                 <a class="nav-link notification-indicator notification-indicator-primary px-0 fa-icon-wait" id="navbarDropdownNotification" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-hide-on-body-scroll="data-hide-on-body-scroll"><span class="fas fa-bell" data-fa-transform="shrink-6" style="font-size: 33px;"></span></a>
                 <div class="dropdown-menu dropdown-caret dropdown-caret dropdown-menu-end dropdown-menu-card dropdown-menu-notification dropdown-caret-bg" aria-labelledby="navbarDropdownNotification">
@@ -225,119 +223,31 @@
                         </div>
                       </div>
                     </div>
-                    <div class="card-footer text-center border-top"><a class="card-link d-block" href="<?= $BASE_URL ?>/app/social/notifications.html">View all</a></div>
+                    <div class="card-footer text-center border-top"><a class="card-link d-block" href="<?= $BASE_URL ?>/app/social/notifications.php">View all</a></div>
                   </div>
                 </div>
 
               </li>
-              <li class="nav-item dropdown px-1">
-                <a class="nav-link fa-icon-wait nine-dots p-1" id="navbarDropdownMenu" role="button" data-hide-on-body-scroll="data-hide-on-body-scroll" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="43" viewBox="0 0 16 16" fill="none">
-                    <circle cx="2" cy="2" r="2" fill="#6C6E71"></circle>
-                    <circle cx="2" cy="8" r="2" fill="#6C6E71"></circle>
-                    <circle cx="2" cy="14" r="2" fill="#6C6E71"></circle>
-                    <circle cx="8" cy="8" r="2" fill="#6C6E71"></circle>
-                    <circle cx="8" cy="14" r="2" fill="#6C6E71"></circle>
-                    <circle cx="14" cy="8" r="2" fill="#6C6E71"></circle>
-                    <circle cx="14" cy="14" r="2" fill="#6C6E71"></circle>
-                    <circle cx="8" cy="2" r="2" fill="#6C6E71"></circle>
-                    <circle cx="14" cy="2" r="2" fill="#6C6E71"></circle>
-                  </svg></a>
-                <div class="dropdown-menu dropdown-caret dropdown-caret dropdown-menu-end dropdown-menu-card dropdown-caret-bg" aria-labelledby="navbarDropdownMenu">
-                  <div class="card shadow-none">
-                    <div class="scrollbar-overlay nine-dots-dropdown">
-                      <div class="card-body px-3">
-                        <div class="row text-center gx-0 gy-0">
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="<?= $BASE_URL ?>/pages/user/profile.html" target="_blank">
-                              <div class="avatar avatar-2xl"> <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/3.jpg" alt="" /></div>
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2">Account</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="https://themewagon.com/" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/themewagon.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Themewagon</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="https://mailbluster.com/" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/mailbluster.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Mailbluster</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/google.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Google</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/spotify.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Spotify</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/steam.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Steam</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/github-light.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Github</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/discord.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Discord</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/xbox.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">xbox</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/trello.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Kanban</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/hp.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Hp</p>
-                            </a></div>
-                          <div class="col-12">
-                            <hr class="my-3 mx-n3 bg-200" />
-                          </div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/linkedin.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Linkedin</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/twitter.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Twitter</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/facebook.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Facebook</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/instagram.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Instagram</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/pinterest.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Pinterest</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/slack.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Slack</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="#!" target="_blank"><img class="rounded" src="<?= $BASE_URL ?>/assets/img/nav-icons/deviantart.png" alt="" width="40" height="40" />
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2 pt-1">Deviantart</p>
-                            </a></div>
-                          <div class="col-4"><a class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none" href="<?= $BASE_URL ?>/app/events/event-detail.html" target="_blank">
-                              <div class="avatar avatar-2xl">
-                                <div class="avatar-name rounded-circle bg-soft-primary text-primary"><span class="fs-2">E</span></div>
-                              </div>
-                              <p class="mb-0 fw-medium text-800 text-truncate fs--2">Events</p>
-                            </a></div>
-                          <div class="col-12"><a class="btn btn-outline-primary btn-sm mt-4" href="#!">Show more</a></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </li>
+            
               <li class="nav-item dropdown"><a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                   <div class="avatar avatar-xl">
-                    <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/3-thumb.png" alt="" />
+                    <img class="rounded-circle" id="userAvatarImg" src="<?= $BASE_URL ?>/assets/img/team/3-thumb.png" alt="User Avatar" />
 
                   </div>
                 </a>
                 <div class="dropdown-menu dropdown-caret dropdown-caret dropdown-menu-end py-0" aria-labelledby="navbarDropdownUser">
                   <div class="bg-white dark__bg-1000 rounded-2 py-2">
-                    <a class="dropdown-item fw-bold text-warning" href="#!"><span class="fas fa-crown me-1"></span><span>Go Pro</span></a>
+                    <div class="dropdown-item fw-bold d-flex align-items-center justify-content-between px-3 py-2">
+                      <div>
+                        <div class="fw-bold" id="userNameDisplay">User</div>
+                        <div class="small text-500" id="userRoleDisplay">Role</div>
+                      </div>
+                      <span class="badge rounded-pill" id="userRoleBadge" style="background-color: #28a745;">Admin</span>
+                    </div>
 
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="#!">Set status</a>
-                    <a class="dropdown-item" href="<?= $BASE_URL ?>/pages/user/profile.html">Profile &amp; account</a>
-                    <a class="dropdown-item" href="#!">Feedback</a>
-
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="<?= $BASE_URL ?>/pages/user/settings.html">Settings</a>
-                    <a class="dropdown-item" href="#" id="nav-logout">Logout</a>
+                    <a class="dropdown-item" href="setting.php">Settings</a>
+                    <button class="dropdown-item" id="nav-logout" style="border: none; background: none; cursor: pointer; text-align: left; width: 100%;">Logout</button>
                   </div>
                 </div>
               </li>
@@ -345,18 +255,192 @@
           </nav>
           <script>
             (function(){
+              const apiBase = 'https://backend-gestion-de-stock.onrender.com';
+
+              function getToken(){
+                return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('accessToken') || localStorage.getItem('userToken') || null;
+              }
+
+              function authHeaders(){
+                const token = getToken();
+                return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : {};
+              }
+
+              // Decode JWT payload (no validation) to read role/id/nom
+              function decodeJwt(token){
+                try{
+                  const payload = token.split('.')[1];
+                  const decoded = atob(payload.replace(/-/g,'+').replace(/_/g,'/'));
+                  return JSON.parse(decodeURIComponent(escape(decoded)));
+                }catch(e){
+                  console.warn('[topbar] decodeJwt error:', e);
+                  return null;
+                }
+              }
+
+              function displayUserInfo(user){
+                console.log('[topbar] displayUserInfo called with user:', user);
+                
+                // Display name and role
+                const nameEl = document.getElementById('userNameDisplay');
+                if(nameEl) {
+                  nameEl.textContent = ((user.prenom || '') + ' ' + (user.nom || '')).trim() || 'User';
+                  console.log('[topbar] Name set to:', nameEl.textContent);
+                }
+
+                const roleEl = document.getElementById('userRoleDisplay');
+                if(roleEl) {
+                  roleEl.textContent = user.role || 'User';
+                  console.log('[topbar] Role set to:', roleEl.textContent);
+                }
+
+                // Display role badge with color based on role
+                const badgeEl = document.getElementById('userRoleBadge');
+                if(badgeEl){
+                  badgeEl.textContent = (user.role || 'User').charAt(0).toUpperCase() + (user.role || 'User').slice(1);
+                  // Set badge color based on role
+                  const role = (user.role || '').toLowerCase();
+                  if(role === 'admin') badgeEl.style.backgroundColor = '#28a745'; // green
+                  else if(role === 'superviseur') badgeEl.style.backgroundColor = '#007bff'; // blue
+                  else if(role === 'vendeur') badgeEl.style.backgroundColor = '#ffc107'; // yellow
+                  else badgeEl.style.backgroundColor = '#6c757d'; // gray
+                  console.log('[topbar] Badge role set to:', badgeEl.textContent, 'color:', badgeEl.style.backgroundColor);
+                }
+
+                // Display user photo if available
+                const imgEl = document.getElementById('userAvatarImg');
+                if(imgEl) {
+                  console.log('[topbar] Image element found, current src:', imgEl.src);
+                  console.log('[topbar] user.photoUrl value:', user.photoUrl);
+                  
+                  if(user.photoUrl){
+                    imgEl.src = user.photoUrl;
+                    console.log('[topbar] Image src updated to:', imgEl.src);
+                    
+                    // Verify the image loaded
+                    imgEl.onload = function(){
+                      console.log('[topbar] Image loaded successfully from:', user.photoUrl);
+                    };
+                    imgEl.onerror = function(){
+                      console.error('[topbar] Image failed to load from:', user.photoUrl);
+                      imgEl.src = '<?= $BASE_URL ?>/assets/img/team/3-thumb.png';
+                    };
+                  } else {
+                    console.warn('[topbar] No photoUrl available');
+                  }
+                } else {
+                  console.warn('[topbar] Image element not found');
+                }
+              }
+
+              // Fetch full user profile from API (same method as settings.js)
+              async function fetchCurrentUserFromAPI(){
+                const token = getToken();
+                console.log('[topbar] fetchCurrentUserFromAPI - token exists:', !!token);
+                
+                if(!token){
+                  console.warn('[topbar] No token found, using fallback');
+                  loadUserInfoFromStorage();
+                  return null;
+                }
+
+                // Decode token to get user ID
+                const payload = decodeJwt(token);
+                console.log('[topbar] Decoded token payload:', payload);
+                
+                const id = payload?.id || payload?._id || payload?.userId || payload?.sub;
+                console.log('[topbar] Extracted user ID:', id);
+                
+                if(!id){
+                  console.warn('[topbar] No user ID in token, using fallback');
+                  loadUserInfoFromStorage();
+                  return null;
+                }
+
+                try{
+                  const url = apiBase + '/api/protected/profile/' + id;
+                  console.log('[topbar] Fetching user profile from:', url);
+                  
+                  const res = await fetch(url, { 
+                    method: 'GET',
+                    headers: authHeaders()
+                  });
+
+                  console.log('[topbar] API response status:', res.status);
+
+                  if(!res.ok){
+                    console.warn('[topbar] API fetch failed (status ' + res.status + '), using fallback');
+                    loadUserInfoFromStorage();
+                    return null;
+                  }
+
+                  const user = await res.json();
+                  console.log('[topbar] User profile fetched from API:', user);
+                  console.log('[topbar] User photoUrl:', user.photoUrl);
+                  
+                  displayUserInfo(user);
+                  return user;
+                }catch(err){
+                  console.error('[topbar] Error fetching user from API:', err);
+                  console.warn('[topbar] Error details:', err.message);
+                  loadUserInfoFromStorage();
+                  return null;
+                }
+              }
+
+              function loadUserInfoFromStorage(){
+                const nom = localStorage.getItem('nom') || localStorage.getItem('userNom') || 'User';
+                const prenom = localStorage.getItem('prenom') || localStorage.getItem('userPrenom') || '';
+                const role = localStorage.getItem('role') || localStorage.getItem('userRole') || 'Admin';
+                const photoUrl = localStorage.getItem('photoUrl') || localStorage.getItem('userPhotoUrl') || null;
+
+                console.log('[topbar] Loading user info from localStorage:');
+                console.log('  nom:', nom);
+                console.log('  prenom:', prenom);
+                console.log('  role:', role);
+                console.log('  photoUrl:', photoUrl);
+                
+                displayUserInfo({ nom, prenom, role, photoUrl });
+              }
+
               function doLogout(e){
                 if(e && e.preventDefault) e.preventDefault();
+                if(e && e.stopPropagation) e.stopPropagation();
+                console.log('[topbar] Starting logout process...');
+                // Clear all user-related localStorage
                 try{
-                  if(window.Auth && Auth.clear) Auth.clear();
-                  else { localStorage.removeItem('token'); localStorage.removeItem('nom'); localStorage.removeItem('role'); }
+                  localStorage.removeItem('token');
+                  localStorage.removeItem('authToken');
+                  localStorage.removeItem('jwt');
+                  localStorage.removeItem('accessToken');
+                  localStorage.removeItem('userToken');
+                  localStorage.removeItem('id');
+                  localStorage.removeItem('userId');
+                  localStorage.removeItem('nom');
+                  localStorage.removeItem('prenom');
+                  localStorage.removeItem('role');
+                  localStorage.removeItem('photoUrl');
+                  localStorage.removeItem('userNom');
+                  localStorage.removeItem('userPrenom');
+                  localStorage.removeItem('userRole');
+                  localStorage.removeItem('userPhotoUrl');
+                  localStorage.removeItem('email');
+                  localStorage.removeItem('businessId');
+                  localStorage.removeItem('guichetId');
+                  console.log('[topbar] localStorage cleared');
                 }catch(err){
-                  try{ localStorage.removeItem('token'); localStorage.removeItem('nom'); localStorage.removeItem('role'); }catch(e){}
+                  console.error('[topbar] Logout error:', err);
                 }
                 // redirect to login (use base URL)
-                window.location.href = '<?= $BASE_URL ?>/pages/authentication/login.php';
+                const loginUrl = '<?= $BASE_URL ?>/pages/authentication/login.php';
+                console.log('[topbar] redirecting to:', loginUrl);
+                setTimeout(() => { window.location.href = loginUrl; }, 100);
               }
+
               document.addEventListener('DOMContentLoaded', function(){
+                // Load user info from API (with fallback to localStorage)
+                fetchCurrentUserFromAPI();
+                // Attach logout handler
                 var btn = document.getElementById('nav-logout');
                 if(btn) btn.addEventListener('click', doLogout);
               });
