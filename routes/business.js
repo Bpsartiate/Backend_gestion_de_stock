@@ -52,7 +52,7 @@ router.get('/', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès admin requis' });
 
   try {
-    const businesses = await Business.find().populate('createdBy', 'nom prenom email');
+    const businesses = await Business.find().populate('ownerId', 'nom prenom email');
     return res.json(businesses);
   } catch(err) {
     console.error('business.list.error', err);
@@ -65,7 +65,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès admin requis' });
 
   try {
-    const business = await Business.findById(req.params.id).populate('createdBy', 'nom prenom email');
+    const business = await Business.findById(req.params.id).populate('ownerId', 'nom prenom email');
     if (!business) return res.status(404).json({ message: 'Entreprise non trouvée' });
     return res.json(business);
   } catch(err) {
