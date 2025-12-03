@@ -283,7 +283,7 @@
                       <div class="col md-4">
                         <!-- photo -->
                         <div class="col-md-12 text-center">
-                          <label class="form-label d-block">Photo (optionnelle)</label>
+                          <label class="form-label d-block">Photo (op)</label>
                           <div id="addMemberPhotoBlock">
                             <div style="position:relative;display:inline-block;">
                               <img id="memberPhotoPreview" src="assets/img/team/user_prof.svg" class="rounded-circle mb-2" style="width:120px;height:120px;object-fit:cover;border:1px solid rgba(0,0,0,0.08);" alt="Photo Membre" />
