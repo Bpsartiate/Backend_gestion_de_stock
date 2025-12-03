@@ -130,7 +130,7 @@ exports.modifierRoleEtPermissionsGestionnaire = async (req, res) => {
     const requester = req.user;
     if (!requester) return res.status(401).json({ message: 'Authentification requise' });
 
-    const { gestionnaireId, role, canEditPasswords, canEditPhoto, canAssignVendors, canAssignManagers, canDeleteMembers, canEditProfileFields } = req.body;
+    const { gestionnaireId, role, canEditPasswords, canEditPhoto, canAssignVendors, canAssignManagers, canDeleteMembers, canEditProfileFields, canCreateGuichet } = req.body;
 
     // Only admins can promote to admin or grant destructive permissions
     if (role === 'admin' && requester.role !== 'admin') {
@@ -153,6 +153,7 @@ exports.modifierRoleEtPermissionsGestionnaire = async (req, res) => {
     if (typeof canAssignManagers === 'boolean') gestionnaire.canAssignManagers = canAssignManagers;
     if (typeof canDeleteMembers === 'boolean') gestionnaire.canDeleteMembers = canDeleteMembers;
     if (typeof canEditProfileFields === 'boolean') gestionnaire.canEditProfileFields = canEditProfileFields;
+    if (typeof canCreateGuichet === 'boolean') gestionnaire.canCreateGuichet = canCreateGuichet;
     await gestionnaire.save();
 
     res.json({ message: 'Rôles et permissions modifiés', user: gestionnaire });
