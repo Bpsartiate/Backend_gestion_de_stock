@@ -255,7 +255,7 @@
           </nav>
           <script>
               (function(){
-              const apiBase = (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) ? 'http://localhost:3000' : 'https://backend-gestion-de-stock.onrender.com';
+              const apiBase = 'https://backend-gestion-de-stock.onrender.com';
 
               function getToken(){
                 return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('accessToken') || localStorage.getItem('userToken') || null;

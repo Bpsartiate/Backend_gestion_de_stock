@@ -4,7 +4,7 @@
   // - Selects company and renders details
   // - Creates company and magasin via AJAX
 
-  const apiBase = (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) ? 'http://localhost:3000' : 'https://backend-gestion-de-stock.onrender.com';
+  const apiBase = 'https://backend-gestion-de-stock.onrender.com';
 
   function getToken(){
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('accessToken') || localStorage.getItem('userToken') || null;
@@ -161,32 +161,54 @@
         alert('Action non autorisée — veuillez vous connecter.');
         return;
       }
-      
-      // Extract form fields and build JSON payload (logo file upload not supported yet)
+      // Extract form fields and build payload; if a logo file is present, send multipart FormData
       const formData = new FormData(form);
-      const payload = {
-        nomEntreprise: formData.get('nomEntreprise') || '',
-        adresse: formData.get('adresse') || '',
-        budget: formData.get('budget') ? Number(formData.get('budget')) : 0,
-        devise: formData.get('devise') || 'USD',
-        email: formData.get('email') || '',
-        description: formData.get('description') || '',
-        telephone: formData.get('telephone') || ''
-      };
-      
-      const headers = {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      };
-      
-      console.log('[submitCreateBusiness] sending JSON payload:', payload);
-      console.log('[submitCreateBusiness] sending to:', apiBase + '/api/business');
-      
-      const res = await fetch(apiBase + '/api/business', { 
-        method: 'POST', 
-        body: JSON.stringify(payload), 
-        headers: headers
-      });
+      const logoFile = form.querySelector('input[name="logo"]') ? form.querySelector('input[name="logo"]').files[0] : null;
+      let res;
+
+      if (logoFile) {
+        // Send as multipart/form-data so backend multer can process the image
+        const fd = new FormData();
+        fd.append('logo', logoFile);
+        fd.append('nomEntreprise', formData.get('nomEntreprise') || '');
+        fd.append('adresse', formData.get('adresse') || '');
+        if (formData.get('budget')) fd.append('budget', formData.get('budget'));
+        fd.append('devise', formData.get('devise') || 'USD');
+        fd.append('email', formData.get('email') || '');
+        fd.append('description', formData.get('description') || '');
+        fd.append('telephone', formData.get('telephone') || '');
+
+        console.log('[submitCreateBusiness] sending multipart payload with logo to:', apiBase + '/api/business');
+        res = await fetch(apiBase + '/api/business', { 
+          method: 'POST', 
+          body: fd,
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+      } else {
+        const payload = {
+          nomEntreprise: formData.get('nomEntreprise') || '',
+          adresse: formData.get('adresse') || '',
+          budget: formData.get('budget') ? Number(formData.get('budget')) : 0,
+          devise: formData.get('devise') || 'USD',
+          email: formData.get('email') || '',
+          description: formData.get('description') || '',
+          telephone: formData.get('telephone') || ''
+        };
+
+        const headers = {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        };
+
+        console.log('[submitCreateBusiness] sending JSON payload:', payload);
+        console.log('[submitCreateBusiness] sending to:', apiBase + '/api/business');
+
+        res = await fetch(apiBase + '/api/business', { 
+          method: 'POST', 
+          body: JSON.stringify(payload), 
+          headers: headers
+        });
+      }
       
       console.log('[submitCreateBusiness] response status:', res.status);
       
@@ -273,12 +295,59 @@
     }
   }
 
+  // Update existing business (supports optional logo upload via FormData)
+  async function submitUpdateBusiness(businessId){
+    const form = document.getElementById('formEditBusiness') || document.getElementById('formCreateBusiness');
+    if(!form) return;
+    try{
+      const btn = document.getElementById('submitUpdateBusiness');
+      if(btn) btn.disabled = true;
+      const token = getToken();
+      if(!token){ alert('Action non autorisée — veuillez vous connecter.'); return; }
+
+      const formData = new FormData(form);
+      const logoFile = form.querySelector('input[name="logo"]') ? form.querySelector('input[name="logo"]').files[0] : null;
+      let res;
+
+      if(logoFile){
+        const fd = new FormData();
+        fd.append('logo', logoFile);
+        // append fields that might be updated
+        ['nomEntreprise','adresse','budget','devise','email','description','telephone','status'].forEach(k => { if(formData.get(k)!==null) fd.append(k, formData.get(k)); });
+        res = await fetch(apiBase + '/api/business/' + businessId, { method: 'PUT', body: fd, headers: { 'Authorization': 'Bearer ' + token } });
+      } else {
+        const payload = {};
+        ['nomEntreprise','adresse','budget','devise','email','description','telephone','status'].forEach(k => { if(formData.get(k)!==null) payload[k] = (k==='budget' || k==='status') ? Number(formData.get(k)) : formData.get(k); });
+        res = await fetch(apiBase + '/api/business/' + businessId, { method: 'PUT', body: JSON.stringify(payload), headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } });
+      }
+
+      if(!res.ok){ const txt = await res.text(); throw new Error(txt); }
+      const data = await res.json();
+      alert('Entreprise mise à jour avec succès');
+      if(typeof loadCompanies === 'function') loadCompanies();
+      if(data.business && data.business._id) selectCompany(data.business._id);
+    }catch(err){ console.error('submitUpdateBusiness', err); alert('Erreur mise à jour: ' + (err.message||err)); }
+    finally{ const btn = document.getElementById('submitUpdateBusiness'); if(btn) btn.disabled = false; }
+  }
+
   async function selectCompany(id){
     if(!id) return;
     try{
       const business = await fetchJson(apiBase + '/api/business/' + id);
+      // store current business for edit population
+      window.CURRENT_BUSINESS = business;
       renderCompany(business);
+      // Hide the companies list pane for a cleaner single-item view
+      // This improves design by focusing on the selected company's details
+      try{
+        const leftPane = document.getElementById('leftPane');
+        if(leftPane) leftPane.style.display = 'none';
+      }catch(e){ /* noop */ }
       const btnMag = document.getElementById('btnAddMagasin'); if(btnMag) btnMag.disabled = false;
+      // show back-to-list button
+      const backBtn = document.getElementById('btnBackToList'); if(backBtn){ backBtn.classList.remove('d-none'); }
+      // set edit button dataset id
+      const editBtn = document.getElementById('btnEditCompany'); if(editBtn) editBtn.dataset.businessId = id;
       const mb = document.getElementById('magasinBusinessId'); if(mb) mb.value = id;
       const magasins = await loadMagasins(id);
 
@@ -336,6 +405,31 @@
     const refreshBtn = document.getElementById('refreshCompanies'); if(refreshBtn) refreshBtn.addEventListener('click', loadCompanies);
     const submitBiz = document.getElementById('submitCreateBusiness'); if(submitBiz) submitBiz.addEventListener('click', submitCreateBusiness);
     const submitMag = document.getElementById('submitCreateMagasin'); if(submitMag) submitMag.addEventListener('click', submitCreateMagasin);
+    const submitUpdate = document.getElementById('submitUpdateBusiness'); if(submitUpdate) submitUpdate.addEventListener('click', ()=>{ const id = submitUpdate.dataset.businessId || (document.getElementById('magasinBusinessId') && document.getElementById('magasinBusinessId').value); if(id) submitUpdateBusiness(id); else alert('Aucun ID d\'entreprise spécifié'); });
+    // Back to list button
+    const backBtn = document.getElementById('btnBackToList'); if(backBtn) backBtn.addEventListener('click', ()=>{ const left = document.getElementById('leftPane'); if(left) left.style.display = 'block'; backBtn.classList.add('d-none'); });
+    // Edit company button opens modal and populates form
+    const editBtn = document.getElementById('btnEditCompany'); if(editBtn) editBtn.addEventListener('click', ()=>{
+      const id = editBtn.dataset.businessId || (document.getElementById('magasinBusinessId') && document.getElementById('magasinBusinessId').value);
+      if(!id){ alert('Aucune entreprise sélectionnée'); return; }
+      const business = window.CURRENT_BUSINESS || null;
+      // populate edit form
+      try{
+        if(business){
+          document.getElementById('edit_nomEntreprise').value = business.nomEntreprise || business.nom || '';
+          document.getElementById('edit_adresse').value = business.adresse || '';
+          document.getElementById('edit_budget').value = business.budget || 0;
+          document.getElementById('edit_devise').value = business.devise || 'USD';
+          document.getElementById('edit_email').value = business.email || '';
+          const preview = document.getElementById('editLogoPreview'); if(preview) preview.src = business.logoUrl || business.photoUrl || 'assets/img/elearning/avatar/student.png';
+          const submitUpdateBtn = document.getElementById('submitUpdateBusiness'); if(submitUpdateBtn) submitUpdateBtn.dataset.businessId = id;
+        }
+      }catch(e){ console.warn('populate edit form', e); }
+      const modalEl = document.getElementById('modalEditBusiness'); if(modalEl){ const m = bootstrap.Modal.getOrCreateInstance(modalEl); m.show(); }
+    });
+    // Logo preview handlers
+    const createLogoInput = document.getElementById('createLogoInput'); if(createLogoInput) createLogoInput.addEventListener('change', (ev)=>{ const f = ev.target.files && ev.target.files[0]; const img = document.getElementById('createLogoPreview'); if(f && img){ img.src = URL.createObjectURL(f); img.style.display = 'block'; } else if(img){ img.style.display = 'none'; } });
+    const editLogoInput = document.getElementById('editLogoInput'); if(editLogoInput) editLogoInput.addEventListener('change', (ev)=>{ const f = ev.target.files && ev.target.files[0]; const img = document.getElementById('editLogoPreview'); if(f && img){ img.src = URL.createObjectURL(f); } });
     // initial load
     loadCompanies();
   });

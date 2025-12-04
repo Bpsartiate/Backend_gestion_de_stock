@@ -92,7 +92,7 @@
 
           <!-- Main 3-pane layout: left = companies list (toggle), center = company details, right = magasins/guichets -->
           <div class="row g-3 mb-3" id="businessManager">
-            <div class="col-lg-3" id="leftPane" style="display:none;">
+            <div class="col-lg-4" id="leftPane" style="display:none;">
               <div class="card h-100">
                 <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
                   <h6 class="mb-0">Entreprises</h6>
@@ -130,6 +130,9 @@
                           <div class="btn-group" role="group">
                             <button id="btnEditCompany" class="btn btn-outline-secondary btn-sm" type="button"><span class="fas fa-edit me-1"></span></button>
                             <button id="btnViewAffectations" class="btn btn-outline-primary btn-sm" disabled type="button"><span class="fas fa-eye me-1"></span>Affectations</button>
+                          </div>
+                          <div class="mt-2">
+                            <button id="btnBackToList" class="btn btn-outline-secondary btn-sm d-none" type="button"><span class="fas fa-list me-1"></span>Retour à la liste</button>
                           </div>
                           <div class="mt-2"><small class="text-500">Dernière mise à jour: <span id="companyUpdatedAt">—</span></small></div>
                         </div>
@@ -253,7 +256,10 @@
                     </div>
                     <div class="mb-2">
                       <label class="form-label">Logo</label>
-                      <input name="logo" type="file" accept="image/*" class="form-control" />
+                      <div class="d-flex align-items-center gap-3">
+                        <input name="logo" id="createLogoInput" type="file" accept="image/*" class="form-control" />
+                        <img id="createLogoPreview" src="assets/img/elearning/avatar/student.png" alt="preview" width="64" height="64" style="display:none;object-fit:cover;border-radius:8px;"/>
+                      </div>
                     </div>
                   </form>
                 </div>
@@ -272,6 +278,51 @@
                 <div class="modal-header"><h5 class="modal-title">Créer un magasin</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <div class="modal-body"><form id="formCreateMagasin"><div class="mb-2"><label class="form-label">Nom Magasin</label><input name="nom_magasin" class="form-control" required /></div><div class="mb-2"><label class="form-label">Adresse</label><input name="adresse" class="form-control" /></div><input type="hidden" name="businessId" id="magasinBusinessId" /></form></div>
                 <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button id="submitCreateMagasin" type="button" class="btn btn-primary">Créer</button></div>
+              </div>
+            </div>
+          </div>
+          <!-- Modal: Edit Business -->
+          <div class="modal fade" id="modalEditBusiness" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-md">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Modifier l'entreprise</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <form id="formEditBusiness">
+                    <div class="mb-2 text-center">
+                      <img id="editLogoPreview" src="assets/img/elearning/avatar/student.png" alt="logo" width="96" height="96" class="rounded-circle mb-2" />
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Nom</label>
+                      <input name="nomEntreprise" id="edit_nomEntreprise" class="form-control" required />
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Adresse</label>
+                      <input name="adresse" id="edit_adresse" class="form-control" />
+                    </div>
+                    <div class="mb-2 row">
+                      <div class="col-6"><label class="form-label">Budget</label><input name="budget" id="edit_budget" type="number" class="form-control" value="0" /></div>
+                      <div class="col-6"><label class="form-label">Devise</label><input name="devise" id="edit_devise" class="form-control" value="USD" /></div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Email</label>
+                      <input name="email" id="edit_email" type="email" class="form-control" />
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Logo</label>
+                      <div class="d-flex align-items-center gap-3">
+                        <input name="logo" id="editLogoInput" type="file" accept="image/*" class="form-control" />
+                        <small class="text-500">Choisir un fichier pour remplacer le logo</small>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                  <button id="submitUpdateBusiness" data-business-id="" type="button" class="btn btn-primary">Enregistrer</button>
+                </div>
               </div>
             </div>
           </div>

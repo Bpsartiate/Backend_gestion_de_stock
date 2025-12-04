@@ -210,7 +210,7 @@
           );
           $('#login-btn').prop('disabled', true);
 
-          const API_BASE = (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) ? 'http://localhost:3000' : 'https://backend-gestion-de-stock.onrender.com';
+          const API_BASE = 'https://backend-gestion-de-stock.onrender.com';
 
           $.ajax({
               url: API_BASE + '/api/auth/login',

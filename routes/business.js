@@ -4,6 +4,8 @@ const Business = require('../models/business');
 const Magasin = require('../models/magasin');
 const Guichet = require('../models/guichet');
 const authenticateToken = require('../middlewares/authenticateToken'); // Middleware JWT
+const upload = require('../middlewares/upload');
+const cloudinary = require('../services/cloudinary');
 
 // Helper validation
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -12,7 +14,7 @@ const isValidPhone = (phone) => /^[0-9+\s-]{7,20}$/.test(phone);
 // ===== BUSINESS ROUTES =====
 
 // POST /api/business - Créer une nouvelle business (admin)
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, upload.single('logo'), async (req, res) => {
   const ownerId = req.user?.id;
   if (!ownerId) return res.status(401).json({ message: 'Utilisateur non authentifié' });
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès admin requis' });
@@ -20,6 +22,21 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const allowed = ['nomEntreprise', 'logoUrl', 'description', 'adresse', 'telephone', 'email', 'typeBusiness', 'budget', 'devise'];
     const payload = { ownerId: ownerId };
+    // If a file was uploaded (multer memory storage), upload buffer to Cloudinary
+    if (req.file && req.file.buffer) {
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream({ folder: 'business_logos' }, (error, result) => {
+            if (error) reject(error); else resolve(result);
+          });
+          uploadStream.end(req.file.buffer);
+        });
+        payload.logoUrl = result.secure_url;
+      } catch (upErr) {
+        console.error('cloudinary upload error (business create)', upErr);
+        return res.status(400).json({ message: 'Erreur lors de l\'upload du logo' });
+      }
+    }
     allowed.forEach(k => {
       if (req.body[k] !== undefined && req.body[k] !== null) {
         if (k === 'budget') payload[k] = Number(req.body[k]);
@@ -75,12 +92,27 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/business/:id - Mettre à jour une business (admin)
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, upload.single('logo'), async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès admin requis' });
 
   try {
     const allowed = ['nomEntreprise', 'logoUrl', 'description', 'adresse', 'telephone', 'email', 'typeBusiness', 'budget', 'devise', 'status'];
     const payload = {};
+    // handle logo upload if provided (use upload middleware in route if needed)
+    if (req.file && req.file.buffer) {
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream({ folder: 'business_logos' }, (error, result) => {
+            if (error) reject(error); else resolve(result);
+          });
+          uploadStream.end(req.file.buffer);
+        });
+        payload.logoUrl = result.secure_url;
+      } catch (upErr) {
+        console.error('cloudinary upload error (business update)', upErr);
+        return res.status(400).json({ message: 'Erreur lors de l\'upload du logo' });
+      }
+    }
     allowed.forEach(k => {
       if (req.body[k] !== undefined && req.body[k] !== null) {
         if (k === 'budget' || k === 'status') payload[k] = Number(req.body[k]);
