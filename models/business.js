@@ -15,7 +15,6 @@ const businessSchema = new mongoose.Schema({
   status: { type: Number, default: 1 } // 1 = actif, 0 = désactivé
 }, { timestamps: true });
 
-// Allow multiple businesses per owner - removed unique constraint
-businessSchema.index({ ownerId: 1 });
+// No explicit index on ownerId to avoid accidental unique constraints at the DB level
 
 module.exports = mongoose.model('Business', businessSchema);
