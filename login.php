@@ -98,8 +98,8 @@
                       </div>
                   <form id="login-form">
                     <div class="mb-3">
-                      <label class="form-label" for="login-email">Email address</label>
-                      <input class="form-control" id="login-email" type="email" required />
+                      <label class="form-label" for="login-email">Email ou numéro de téléphone</label>
+                      <input class="form-control" id="login-email" type="text" placeholder="Adresse e-mail ou numéro de téléphone" required />
                     </div>
                     <div class="mb-3 position-relative">
                       <div class="d-flex justify-content-between">
@@ -157,7 +157,7 @@
     <script src="vendors/is/is.min.js"></script>
     <script src="vendors/fontawesome/all.min.js"></script>
     <script src="vendors/lodash/lodash.min.js"></script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=window.scroll"></script>
+    <!-- <script src="https://polyfill.io/v3/polyfill.min.js?features=window.scroll"></script> -->
     <script src="vendors/list.js/list.min.js"></script>
     <script src="assets/js/theme.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -210,8 +210,10 @@
           );
           $('#login-btn').prop('disabled', true);
 
+          const API_BASE = (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) ? 'http://localhost:3000' : 'https://backend-gestion-de-stock.onrender.com';
+
           $.ajax({
-            url: 'https://backend-gestion-de-stock.onrender.com/api/auth/login',
+              url: API_BASE + '/api/auth/login',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({

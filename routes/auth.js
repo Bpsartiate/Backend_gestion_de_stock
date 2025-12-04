@@ -82,6 +82,9 @@ router.post('/register', upload.single('photo'), async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
+  console.log('[auth.login] Received request:', { method: req.method, path: req.path });
+  console.log('[auth.login] Headers:', Object.keys(req.headers).reduce((o,k)=>{o[k]=req.headers[k];return o;},{}) );
+  console.log('[auth.login] Body preview:', JSON.stringify(Object.keys(req.body||{}).slice(0,10))); 
   const { identifier, password } = req.body; // Email ou téléphone
   if (!identifier || !password) {
     return res.status(400).json({ message: 'Identifier et mot de passe requis' });
@@ -147,6 +150,10 @@ router.post('/login', async (req, res) => {
     console.error(error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
+});
+// Helpful GET handler to indicate correct method
+router.get('/login', (req, res) => {
+  res.status(200).json({ message: 'This endpoint accepts POST requests for login. Use POST /api/auth/login with {identifier, password}.' });
 });
 // Vérifie s'il existe au moins un utilisateur avec role: 'admin'
 router.get('/admin-exists', async (req, res) => {

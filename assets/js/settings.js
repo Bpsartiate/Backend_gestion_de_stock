@@ -19,7 +19,7 @@
     }
   }catch(e){}
 
-  const API_BASE = 'https://backend-gestion-de-stock.onrender.com';
+  const API_BASE = (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) ? 'http://localhost:3000' : 'https://backend-gestion-de-stock.onrender.com';
 
   // show small badge indicating active API base
   function showApiBadge(){

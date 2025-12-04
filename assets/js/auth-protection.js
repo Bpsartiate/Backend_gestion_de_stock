@@ -2,7 +2,7 @@
   // Auth Protection & User Info Manager
   // Include this in all pages to protect them and manage user info
 
-  const apiBase = 'https://backend-gestion-de-stock.onrender.com';
+  const apiBase = (typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) ? 'http://localhost:3000' : 'https://backend-gestion-de-stock.onrender.com';
 
   // Check if user is logged in (has valid token)
   function checkAuth(){
@@ -21,7 +21,7 @@
 
   function redirectToLogin(){
     // Get BASE_URL from window if available, otherwise use relative path
-    const baseUrl = window.BASE_URL || '../login.php';
+    const baseUrl = window.BASE_URL || '.../login.php';
     window.location.href = baseUrl;
   }
 
