@@ -85,7 +85,7 @@
               </div>
               <div>
                 <button id="btnToggleCompanies" class="btn btn-falcon-default btn-md me-2" type="button"><span class="fas fa-users me-md-1"></span><span class="d-none d-md-inline">Entreprises</span></button>
-                <button id="btnAddCompany" class="btn btn-primary btn-md" type="button" data-bs-toggle="modal" data-bs-target="#modalCreateBusiness"><span class="fas fa-plus me-md-1"></span><span class="d-none d-md-inline">Ajouter Entreprise</span></button>
+                <button id="btnAddCompany" class="btn btn-primary btn-md" type="button" aria-label="Créer une nouvelle entreprise" data-bs-toggle="modal" data-bs-target="#modalCreateBusiness"><span class="fas fa-plus me-md-1"></span><span class="d-none d-md-inline">Ajouter Entreprise</span></button>
               </div>
             </div>
           </div>
@@ -93,13 +93,32 @@
           <!-- Main 3-pane layout: left = companies list (toggle), center = company details, right = magasins/guichets -->
           <div class="row g-3 mb-3" id="businessManager">
             <div class="col-lg-4" id="leftPane" style="display:none;">
-              <div class="card h-100">
-                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Entreprises</h6>
-                  <button class="btn btn-sm btn-link" id="refreshCompanies">Actualiser</button>
+               <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0"><i class="fas fa-list me-2"></i>Entreprises</h6>
+                  <button class="btn btn-sm btn-outline-primary" id="refreshCompanies"><i class="fas fa-sync"></i></button>
                 </div>
                 <div class="card-body p-0">
-                  <div class="list-group list-group-flush" id="companiesList" style="max-height:60vh; overflow:auto;"></div>
+                  <!-- Search & Filters -->
+                  <div class="p-3 border-bottom">
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text"><i class="fas fa-search"></i></span>
+                      <input type="text" id="searchCompanies" class="form-control" placeholder="Rechercher...">
+                    </div>
+                    <select id="filterStatus" class="form-select form-select-sm mt-2">
+                      <option value="">Tous statuts</option>
+                      <option value="actif">Actif</option>
+                      <option value="inactif">Inactif</option>
+                    </select>
+                  </div>
+                  <!-- Liste scrollable -->
+                  <div id="companiesList" class="list-group list-group-flush" style="max-height: 60vh; overflow: auto;">
+                    <div class="p-4 text-center">
+                      <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -121,14 +140,14 @@
                           <div id="companyStatus" class="d-flex flex-wrap gap-2 align-items-center mt-1">
                             <a href="#" id="statusLink" class="text-600 text-decoration-none me-2">Statut inconnu</a>
                             <span id="statusBadge" class="badge rounded-pill badge-soft-secondary d-none d-md-inline-block">—</span>
-                            <span id="budgetLight" class="badge rounded-pill bg-secondary">Budget: —</span>
+                            <!-- <span id="budgetLight" class="badge rounded-pill bg-secondary">Budget: —</span> -->
                             <span id="guichetsLight" class="badge rounded-pill bg-secondary">Guichets: 0</span>
                             <span id="vendeursLight" class="badge rounded-pill bg-secondary">Vendeurs: 0</span>
                           </div>
                         </div>
                         <div class="text-end">
                           <div class="btn-group" role="group">
-                            <button id="btnEditCompany" class="btn btn-outline-secondary btn-sm" type="button"><span class="fas fa-edit me-1"></span></button>
+                            <button id="btnEditCompany" class="btn btn-outline-secondary btn-sm" type="button" aria-label="Modifier l'entreprise"><span class="fas fa-edit me-1"></span></button>
                             <button id="btnViewAffectations" class="btn btn-outline-primary btn-sm" disabled type="button"><span class="fas fa-eye me-1"></span>Affectations</button>
                           </div>
                           <div class="mt-2">
@@ -145,7 +164,7 @@
                       <div class="card h-100">
                         <div class="card-body text-center">
                           <h6 class="mb-1">Budget</h6>
-                          <div class="fs-5 text-700" id="companyBudget">-</div>
+                          <div class="fs-2 text-700" id="companyBudget">-</div>
                           <div class="text-500 small mt-1" id="companyDevise">-</div>
                         </div>
                       </div>
@@ -172,7 +191,7 @@
                 </div>
 
                 <div class="card-body border-top">
-                  <div class="row g-3 align-items-center">
+                  <!-- <div class="row g-3 align-items-center">
                     <div class="col-md-8">
                       <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -200,16 +219,16 @@
                         <div class="card-body">
                           <table class="table table-borderless fs--1 fw-medium mb-0">
                             <tbody id="companyDetailsTable">
-                              <tr><td class="p-1" style="width:35%">Budget:</td><td class="p-1 text-600" id="companyBudget">-</td></tr>
-                              <tr><td class="p-1">Devise:</td><td class="p-1 text-600" id="companyDevise">-</td></tr>
-                              <tr><td class="p-1">Email:</td><td class="p-1 text-600" id="companyEmail">-</td></tr>
-                              <tr><td class="p-1">Téléphone:</td><td class="p-1 text-600" id="companyTelephone">-</td></tr>
+                              <tr><td class="p-1" style="width:35%"><i class="fas fa-wallet me-2 text-secondary"></i>Budget:</td><td class="p-1 text-600" id="companyBudget">-</td></tr>
+                              <tr><td class="p-1"><i class="fas fa-coins me-2 text-secondary"></i>Devise:</td><td class="p-1 text-600" id="companyDevise">-</td></tr>
+                              <tr><td class="p-1"><i class="fas fa-envelope me-2 text-secondary"></i>Email:</td><td class="p-1 text-600" id="companyEmail">-</td></tr>
+                              <tr><td class="p-1"><i class="fas fa-phone me-2 text-secondary"></i>Téléphone:</td><td class="p-1 text-600" id="companyTelephone">-</td></tr>
                             </tbody>
                           </table>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> -->
                 </div>
               </div>
             </div>
@@ -217,11 +236,16 @@
             <div class="col-lg-5" id="rightPane">
               <div class="card h-100">
                 <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Magasins & Guichets</h6><button id="btnAddMagasin" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalCreateMagasin" disabled><span class="fas fa-plus me-md-1"></span>Ajouter Magasin</button>
+                  <h6 class="mb-0">Magasins & Guichets</h6><span id="magasinsCountBadge" class="badge rounded-pill bg-success">0</span><button id="btnAddMagasin" class="btn btn-outline-primary btn-sm" aria-label="Ajouter un magasin" data-bs-toggle="modal" data-bs-target="#modalCreateMagasin" disabled><span class="fas fa-plus me-md-1"></span>Ajouter Magasin</button>
                 </div>
                 <div class="card-body p-0">
                   <div id="magasinsList" style="max-height:60vh; overflow:auto;">
-                    <div class="p-3 text-center text-500">Sélectionner une entreprise pour afficher ses magasins</div>
+                    <div class="p-3 text-center">
+                      <div class="spinner-border spinner-border-sm text-primary mb-2" role="status">
+                        <span class="visually-hidden">Chargement des magasins...</span>
+                      </div>
+                      <p class="text-muted small mt-2">Veuillez sélectionner une entreprise...</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -329,58 +353,60 @@
 <!-- score -->
         <div class="row g-3 mb-3">
             <div class="col-md-12">
-              <div class="card h-100 font-sans-serif">
-                <div class="card-header bg-light d-flex flex-between-center py-2">
-                  <h6 class="mb-0">Assignment Scores</h6><a class="btn btn-link btn-sm px-0 fw-medium" href="#!">Individual results<span class="fas fa-angle-right ms-1 fs--1"></span></a>
+              <div class="card py-3 mb-3">
+            <div class="card-body py-3">
+              <div class="row g-0">
+                <div class="col-6 col-md-4 border-200 border-bottom border-end pb-4">
+                  <h6 class="pb-1 text-700">Orders </h6>
+                  <p class="font-sans-serif lh-1 mb-1 fs-2">15,450 </p>
+                  <div class="d-flex align-items-center">
+                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-primary"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                  </div>
                 </div>
-                <div class="card-body">
-                  <div class="row g-0 h-100">
-                    <div class="col-sm-7 order-1 order-sm-0">
-                      <div class="row g-sm-0 gy-4 row-cols-2 h-100 align-content-between">
-                        <div class="col">
-                          <div class="d-flex gap-2 mb-3">
-                            <div class="vr rounded ps-1 bg-success"></div>
-                            <h6 class="lh-base text-700 mb-0">90-100%</h6>
-                          </div>
-                          <h5 class="fw-normal" id="assignTopCount">—</h5>
-                          <h6 class="mb-0"><span class="text-500 me-2">this week</span><span class="badge rounded-pill badge-soft-success"><span class="fas fa-caret-up me-1" data-fa-transform="shrink-4"></span><span id="assignTopDelta">—</span></span>
-                          </h6>
-                        </div>
-                        <div class="col">
-                          <div class="d-flex gap-2 mb-3">
-                            <div class="vr rounded ps-1 bg-primary"></div>
-                            <h6 class="lh-base text-700 mb-0">70-90%</h6>
-                          </div>
-                          <h5 class="fw-normal" id="assignMidCount">—</h5>
-                          <h6 class="mb-0"><span class="text-500 me-2">this week</span><span class="badge rounded-pill badge-soft-danger"><span class="fas fa-caret-down me-1" data-fa-transform="shrink-4"></span><span id="assignMidDelta">—</span></span>
-                          </h6>
-                        </div>
-                        <div class="col">
-                          <div class="d-flex gap-2 mb-3">
-                            <div class="vr rounded ps-1 bg-info"></div>
-                            <h6 class="lh-base text-700 mb-0">40-70%</h6>
-                          </div>
-                          <h5 class="fw-normal" id="assignLowCount">—</h5>
-                          <h6 class="mb-0"><span class="text-500 me-2">this week</span><span class="badge rounded-pill badge-soft-secondary"><span id="assignLowDelta">—</span><span class=" ms-1" data-fa-transform="shrink-4"></span></span>
-                          </h6>
-                        </div>
-                        <div class="col">
-                          <div class="d-flex gap-2 mb-3">
-                            <div class="vr rounded ps-1 bg-warning"></div>
-                            <h6 class="lh-base text-700 mb-0">0-40%</h6>
-                          </div>
-                          <h5 class="fw-normal" id="assignBottomCount">—</h5>
-                          <h6 class="mb-0"><span class="text-500 me-2">this week</span><span class="badge rounded-pill badge-soft-primary"><span class="fas fa-plus me-1" data-fa-transform="shrink-4"></span><span id="assignBottomDelta">—</span></span>
-                          </h6>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-sm-5 mb-5 mb-sm-0">
-                      <div class="echart-assignment-scores" data-echart-responsive="true"></div>
-                    </div>
+                <div class="col-6 col-md-4 border-200 border-md-200 border-bottom border-md-end pb-4 ps-3">
+                  <h6 class="pb-1 text-700">Items sold </h6>
+                  <p class="font-sans-serif lh-1 mb-1 fs-2">1,054 </p>
+                  <div class="d-flex align-items-center">
+                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-warning"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                  </div>
+                </div>
+                <div class="col-6 col-md-4 border-200 border-bottom border-end border-md-end-0 pb-4 pt-4 pt-md-0 ps-md-3">
+                  <h6 class="pb-1 text-700">Refunds </h6>
+                  <p class="font-sans-serif lh-1 mb-1 fs-2">$145.65 </p>
+                  <div class="d-flex align-items-center">
+                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                  </div>
+                </div>
+                <div class="col-6 col-md-4 border-200 border-md-200 border-bottom border-md-bottom-0 border-md-end pt-4 pb-md-0 ps-3 ps-md-0">
+                  <h6 class="pb-1 text-700">Gross sale </h6>
+                  <p class="font-sans-serif lh-1 mb-1 fs-2">$100.26 </p>
+                  <div class="d-flex align-items-center">
+                    <h6 class="fs--1 text-500 mb-0">$109.65 </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-danger"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                  </div>
+                </div>
+                <div class="col-6 col-md-4 border-200 border-md-bottom-0 border-end pt-4 pb-md-0 ps-md-3">
+                  <h6 class="pb-1 text-700">Shipping </h6>
+                  <p class="font-sans-serif lh-1 mb-1 fs-2">$365.53 </p>
+                  <div class="d-flex align-items-center">
+                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                  </div>
+                </div>
+                <div class="col-6 col-md-4 pb-0 pt-4 ps-3">
+                  <h6 class="pb-1 text-700">Processing </h6>
+                  <p class="font-sans-serif lh-1 mb-1 fs-2">861 </p>
+                  <div class="d-flex align-items-center">
+                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-info"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
             </div>
         </div>
 
@@ -388,64 +414,69 @@
           <div class="row g-3 mb-3">
             <div class="col-lg-5 col-xxl-3">
               <div class="card h-100">
-                <div class="card-header bg-light d-flex flex-between-center py-2">
-                  <h6 class="mb-0">Payment Methods</h6>
-                  <div class="dropdown font-sans-serif position-static d-inline-block btn-reveal-trigger">
-                    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-payment-methods" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
-                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-payment-methods"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a>
-                      <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
+                <div class="card-header">
+                  <div class="row justify-content-between gx-0">
+                    <div class="col-auto">
+                      <h1 class="fs-0 text-900">Revenue Global</h1>
+                      <div class="d-flex">
+                        <h4 class="text-primary mb-0">$165.50</h4>
+                        <div class="ms-3"><span class="badge rounded-pill badge-soft-primary"><span class="fas fa-caret-up"></span> 5%</span></div>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <select class="form-select form-select-sm pe-4" id="select-gross-revenue-month">
+                        <option value="0">Jan</option>
+                        <option value="1">Feb</option>
+                        <option value="2">Mar</option>
+                        <option value="3">Apr</option>
+                        <option value="4">May</option>
+                        <option value="5">Jun</option>
+                        <option value="6">Jul</option>
+                        <option value="7">Aug</option>
+                        <option value="8">Sep</option>
+                        <option value="9">Oct</option>
+                        <option value="10">Nov</option>
+                        <option value="11">Dec</option>
+                      </select>
                     </div>
                   </div>
                 </div>
-                <div class="card-body">
-                  <div class="row g-3 h-100">
-                    <div class="col-sm-6 col-lg-12">
-                      <div class="card position-relative rounded-4">
-                        <div class="bg-holder bg-card rounded-4" style="background-image:url(assets/img/icons/spot-illustrations/corner-2.png);">
-                        </div>
-                        <!--/.bg-holder-->
-
-                        <div class="card-body p-3 pt-5 pt-xxl-4"><img class="mb-3" src="assets/img/icons/chip.png" alt="" width="30" />
-                          <h6 class="text-primary font-base lh-1 mb-1">**** **** **** 9876</h6>
-                          <h6 class="fs--2 fw-semi-bold text-facebook mb-3">12/26</h6>
-                          <h6 class="mb-0 text-facebook">Michael Giacchino</h6><img class="position-absolute end-0 bottom-0 mb-2 me-2" src="assets/img/icons/master-card.png" alt="" width="70" />
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-sm-6 col-lg-12">
-                      <table class="table table-borderless fw-medium font-sans-serif fs--1 mb-2">
-                        <tbody>
-                          <tr>
-                            <td class="p-1" style="width: 35%;">Type:</td>
-                            <td class="p-1 text-600">Mastercard debit card</td>
-                          </tr>
-                          <tr>
-                            <td class="p-1" style="width: 35%;">Name:</td>
-                            <td class="p-1 text-600">Michael Giacchino</td>
-                          </tr>
-                          <tr>
-                            <td class="p-1" style="width: 35%;">Expires:</td>
-                            <td class="p-1 text-600">DEC 2026</td>
-                          </tr>
-                          <tr>
-                            <td class="p-1" style="width: 35%;">Issuer:</td>
-                            <td class="p-1 text-600">Falcon Finances</td>
-                          </tr>
-                          <tr>
-                            <td class="p-1" style="width: 35%;">ID:</td>
-                            <td class="p-1 text-600">card_3d1avx3zcafd62</td>
-                          </tr>
-                        </tbody>
-                      </table><span class="badge rounded-pill badge-soft-success me-2"><span>Verified</span><span class="fas fa-check ms-1" data-fa-transform="shrink-4"></span></span><span class="badge rounded-pill badge-soft-warning"><span>Non Billable</span><span class="fas fa-exclamation-triangle ms-1" data-fa-transform="shrink-4"></span></span>
-                    </div>
+                <div class="card-body pt-0 pb-3 h-100">
+                  <div class="mx-ncard">
+                    <table class="table table-borderless font-sans-serif fw-medium fs--1">
+                      <tr>
+                        <td class="pb-2 pt-0">Point of sale</td>
+                        <td class="pb-2 pt-0 text-end" style="width: 20%">$791.64</td>
+                        <td class="pb-2 pt-0 text-end text-700" style="max-width: 20%"><span class="me-1 fas fa-long-arrow-alt-down text-danger"></span>13%</td>
+                      </tr>
+                      <tr>
+                        <td class="pb-2 pt-0">Online Store</td>
+                        <td class="pb-2 pt-0 text-end" style="width: 20%">$113.86</td>
+                        <td class="pb-2 pt-0 text-end text-700" style="max-width: 20%"><span class="me-1 fas fa-long-arrow-alt-up text-success"></span>178%</td>
+                      </tr>
+                      <tr>
+                        <td class="pb-2 pt-0">Online Store</td>
+                        <td class="pb-2 pt-0 text-end" style="width: 20%">$0.00</td>
+                        <td class="pb-2 pt-0 text-end text-700" style="max-width: 20%"><span class="me-1 false text-success"></span>-</td>
+                      </tr>
+                    </table>
+                    <!-- Find the JS file for the following calendar at: src/js/charts/echarts/gross-revenue.js-->
+                    <!-- If you are not using gulp based workflow, you can find the transpiled code at: public/assets/js/theme.js-->
+                    <div class="echart-gross-revenue-chart px-3 h-100" data-echart-responsive="true" data-options='{"target":"gross-revenue-footer","monthSelect":"select-gross-revenue-month","optionOne":"currentMonth","optionTwo":"prevMonth"}'></div>
                   </div>
+                </div>
+                <div class="card-footer border-top py-2 d-flex flex-between-center">
+                  <div class="d-flex" id="gross-revenue-footer">
+                    <div class="btn btn-sm btn-text d-flex align-items-center p-0 shadow-none" id="currentMonth" data-month="current"><span class="fas fa-circle text-primary fs--2 me-1"></span><span class="text">Jan</span></div>
+                    <div class="btn btn-sm btn-text d-flex align-items-center p-0 shadow-none ms-2" id="prevMonth" data-month="prev"><span class="fas fa-circle text-300 fs--2 me-1"></span><span class="text">Dec</span></div>
+                  </div><a class="btn btn-link btn-sm px-0" href="#!">View report<span class="fas fa-chevron-right ms-1 fs--2"></span></a>
                 </div>
               </div>
             </div>
             <div class="col-xxl-8 col-xxl-9 order-xxl-1 order-lg-2 order-1">
               <div class="card h-100" id="paymentHistoryTable" data-list='{"valueNames":["course","invoice","date","amount","status"],"page":5}'>
                 <div class="card-header d-flex flex-between-center">
-                  <h5 class="mb-0 text-nowrap py-2 py-xl-0">Payment History</h5>
+                  <h5 class="mb-0 text-nowrap py-2 py-xl-0">Historique des transactions</h5>
                   <div>
                     <button class="btn btn-falcon-default btn-sm me-2" type="button"><span class="fas fa-filter fs--2"></span><span class="d-none d-sm-inline-block ms-1 align-middle">Filter</span></button>
                     <button class="btn btn-falcon-default btn-sm" type="button"><span class="fas fa-external-link-alt fs--2"></span><span class="d-none d-sm-inline-block ms-1 align-middle">Export</span></button>
@@ -523,57 +554,7 @@
                 </div>
               </div>
             </div>
-            <div class="col-md-6 col-lg-6 col-xxl-4 order-xxl-2 order-lg-3 order-2">
-              <div class="card h-100">
-                <div class="card-header bg-light d-flex flex-between-center py-2">
-                  <h6 class="mb-0">Billing Address</h6>
-                  <div class="dropdown font-sans-serif position-static d-inline-block btn-reveal-trigger">
-                    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-billing-address" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
-                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-billing-address"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a>
-                      <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
-                    </div>
-                  </div>
-                </div>
-                <div class="card-body p-0">
-                  <div class="row g-0">
-                    <div class="col-12">
-                      <div class="googlemap" style="min-height: 18.75rem" data-latlng="48.8583701,2.2922873,17" data-scrollwheel="false" data-icon="assets/img/icons/map-marker.png" data-zoom="17" data-theme="Default">
-                        <div class="marker-content">
-                          <h5>Excellent Street </h5>
-                          <div class="mb-0">987, Apartment 6, Excellent Street, Good Area, Clean City 5434, Canada</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-12 p-x1">
-                      <table class="table table-borderless fw-medium font-sans-serif fs--1 mb-0">
-                        <tbody>
-                          <tr class="hover-actions-trigger">
-                            <td class="p-1" style="width: 35%;">Name:</td>
-                            <td class="p-1 text-600">Michael Giacchino<a class="btn btn-link p-0 mt-n1 hover-actions" href="#!"><span class="fas fa-pencil-alt ms-1 fs--2"></span></a></td>
-                          </tr>
-                          <tr class="hover-actions-trigger">
-                            <td class="p-1" style="width: 35%;">Address:</td>
-                            <td class="p-1 text-600">987, Apartment 6, Excellent Street, Good Area, Clean City 5434, Canada.<a class="btn btn-link p-0 mt-n1 hover-actions" href="#!"><span class="fas fa-pencil-alt ms-1 fs--2"></span></a></td>
-                          </tr>
-                          <tr class="hover-actions-trigger">
-                            <td class="p-1" style="width: 35%;">Email:</td>
-                            <td class="p-1 text-600"> <a class="text-600 text-decoration-none" href="mailto:goodguy@nicemail.com">goodguy@nicemail.com </a><a class="btn btn-link p-0 mt-n1 hover-actions" href="#!"><span class="fas fa-pencil-alt ms-1 fs--2"></span></a></td>
-                          </tr>
-                          <tr class="hover-actions-trigger">
-                            <td class="p-1" style="width: 35%;">Mobile No:</td>
-                            <td class="p-1 text-primary"> <a class="text-600 text-decoration-none" href="tel:+12025550110">+1-202-555-0110</a><a class="btn btn-link p-0 mt-n1 hover-actions" href="#!"><span class="fas fa-pencil-alt ms-1 fs--2"></span></a></td>
-                          </tr>
-                          <tr class="hover-actions-trigger">
-                            <td class="p-1" style="width: 35%;">SMS Invoice:</td>
-                            <td class="p-1 text-600">On<a class="btn btn-link p-0 mt-n1 hover-actions" href="#!"><span class="fas fa-pencil-alt ms-1 fs--2"></span></a></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          
             <div class="col-md-6 col-lg-7 col-xxl-4 order-xxl-3 order-lg-1 order-3">
               <div class="card h-100 font-sans-serif">
                 <div class="card-header bg-light d-flex flex-between-center py-2">
@@ -687,63 +668,48 @@
                 </div>
               </div>
             </div>
-            <div class="col-lg-6 col-xxl-4 order-4">
-              <div class="card h-100 font-sans-serif">
-                <div class="card-header bg-light py-2 d-flex flex-between-center">
-                  <h6 class="mb-0">Course Status</h6><a class="btn btn-link btn-sm px-0 fw-medium" href="#!">Details<span class="fas fa-angle-right ms-1 fs--1"></span></a>
+          
+          </div>
+          <!-- total sales -->
+         <div class="card h-100 mb-3">
+                <div class="card-header ">
+                  <div class="row flex-between-center">
+                    <div class="col-auto">
+                      <h6 class="mb-0">Total Sales</h6>
+                    </div>
+                    <div class="col-auto d-flex">
+                      <select class="form-select form-select-sm select-month me-2">
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">Jun</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                      </select>
+                      <div class="dropdown font-sans-serif btn-reveal-trigger">
+                        <button class="btn btn-link text-600 btn-sm dropdown-toggle dropdown-caret-none btn-reveal" type="button" id="dropdown-total-sales" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-total-sales"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Export</a>
+                          <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Remove</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="card-body p-0 d-flex flex-column justify-content-between">
-                  <!-- Find the JS file for the following chart at: src/js/charts/echarts/course-status.js-->
-                  <!-- If you are not using gulp based workflow, you can find the transpiled code at: public/assets/js/theme.js-->
-                  <div class="echart-course-status" data-echart-responsive="true"></div>
-                  <ul class="list-unstyled mb-0">
-                    <li class="d-flex gap-2 flex-between-center flex-wrap fs--2 p-x1 bg-light">
-                      <h6 class="fs-xxl--1 fs-lg--2 mb-0 d-flex align-items-center gap-2"><span class="fas fa-circle text-primary" data-fa-transform="shrink-4"></span>Completed Courses<span class="badge rounded-pill badge-soft-success"><span class="fas fa-caret-up me-1" data-fa-transform="shrink-4"></span><span>2.1%</span></span>
-                      </h6>
-                      <p class="text-600 mb-0">13 Courses</p>
-                    </li>
-                    <li class="d-flex gap-2 flex-between-center flex-wrap fs--2 p-x1">
-                      <h6 class="fs-xxl--1 fs-lg--2 mb-0 d-flex align-items-center gap-2"><span class="fas fa-circle text-warning" data-fa-transform="shrink-4"></span>Dropped Courses<span class="badge rounded-pill badge-soft-primary"><span class="fas fa-caret-up me-1" data-fa-transform="shrink-4"></span><span>3.5%</span></span>
-                      </h6>
-                      <p class="text-600 mb-0">10 Courses</p>
-                    </li>
-                    <li class="d-flex gap-2 flex-between-center flex-wrap fs--2 p-x1 bg-light">
-                      <h6 class="fs-xxl--1 fs-lg--2 mb-0 d-flex align-items-center gap-2"><span class="fas fa-circle text-success" data-fa-transform="shrink-4"></span>Refund Claimed<span class="badge rounded-pill badge-soft-secondary"><span class=" me-1" data-fa-transform="shrink-4"></span><span>0.00%</span></span>
-                      </h6>
-                      <p class="text-600 mb-0">7 Courses</p>
-                    </li>
-                    <li class="d-flex gap-2 flex-between-center flex-wrap fs--2 p-x1">
-                      <h6 class="fs-xxl--1 fs-lg--2 mb-0 d-flex align-items-center gap-2"><span class="fas fa-circle text-info" data-fa-transform="shrink-4"></span>On-going Courses<span class="badge rounded-pill badge-soft-danger"><span class="fas fa-caret-down me-1" data-fa-transform="shrink-4"></span><span>5.1%</span></span>
-                      </h6>
-                      <p class="text-600 mb-0">20 Courses</p>
-                    </li>
-                  </ul>
+                <div class="card-body h-100 pe-0">
+                  <!-- Find the JS file for the following chart at: src\js\charts\echarts\total-sales.js-->
+                  <!-- If you are not using gulp based workflow, you can find the transpiled code at: public\assets\js\theme.js-->
+                  <div class="echart-line-total-sales h-100" data-echart-responsive="true"></div>
                 </div>
               </div>
-            </div>
-          </div>
-          <div class="card h-100 mb-3">
-            <div class="card-header bg-light py-3">
-              <h6 class="mb-0">Browsing New Courses</h6>
-            </div>
-            <div class="card-body">
-              <!-- Find the JS file for the following chart at: src/js/charts/echarts/browsed-courses.js-->
-              <!-- If you are not using gulp based workflow, you can find the transpiled code at: public/assets/js/theme.js-->
-              <div class="echart-browsed-courses h-100" data-echart-responsive="true" data-options='{"optionOne":"newCourseBrowsed","optionTwo":"paidCourseBrowsed"}'></div>
-            </div>
-            <div class="card-footer bg-light py-2">
-              <div class="row flex-between-center g-0">
-                <div class="col-auto">
-                  <button class="btn btn-sm btn-link fs--2 text-600 text-decoration-none px-0 me-2" id="newCourseBrowsed"><span class="fas fa-circle text-primary text-opacity-25 me-1" data-fa-transform="shrink-4"></span>New Courses Browsed</button>
-                  <button class="btn btn-sm btn-link fs--2 text-600 text-decoration-none px-0" id="paidCourseBrowsed"><span class="fas fa-circle text-primary me-1" data-fa-transform="shrink-4"></span>Paid Courses Browsed</button>
-                </div>
-                <div class="col-auto"><a class="btn btn-link btn-sm px-0 fw-medium" href="#!">View report<span class="fas fa-chevron-right ms-1 fs--2"></span></a></div>
-              </div>
-            </div>
-          </div>
           <div class="card" id="enrolledCoursesTable" data-list='{"valueNames":["title","trainer","date","time","progress","price"]}'>
             <div class="card-header d-flex flex-between-center">
-              <h6 class="mb-0">Enrolled Courses</h6>
+              <h6 class="mb-0">Produits vendues</h6>
               <div>
                 <button class="btn btn-falcon-default btn-sm me-2" type="button"><span class="fas fa-filter fs--2"></span><span class="d-none d-sm-inline-block ms-1 align-middle">Filter</span></button>
                 <button class="btn btn-falcon-default btn-sm" type="button"><span class="fas fa-expand-arrows-alt fs--2"></span><span class="d-none d-sm-inline-block ms-1 align-middle">Expand</span></button>
@@ -913,56 +879,7 @@
             </div>
           </footer>
         </div>
-        <div class="modal fade" id="authentication-modal" tabindex="-1" role="dialog" aria-labelledby="authentication-modal-label" aria-hidden="true">
-          <div class="modal-dialog mt-6" role="document">
-            <div class="modal-content border-0">
-              <div class="modal-header px-5 position-relative modal-shape-header bg-shape">
-                <div class="position-relative z-index-1 light">
-                  <h4 class="mb-0 text-white" id="authentication-modal-label">Register</h4>
-                  <p class="fs--1 mb-0 text-white">Please create your free Falcon account</p>
-                </div>
-                <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body py-4 px-5">
-                <form>
-                  <div class="mb-3">
-                    <label class="form-label" for="modal-auth-name">Name</label>
-                    <input class="form-control" type="text" autocomplete="on" id="modal-auth-name" />
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label" for="modal-auth-email">Email address</label>
-                    <input class="form-control" type="email" autocomplete="on" id="modal-auth-email" />
-                  </div>
-                  <div class="row gx-2">
-                    <div class="mb-3 col-sm-6">
-                      <label class="form-label" for="modal-auth-password">Password</label>
-                      <input class="form-control" type="password" autocomplete="on" id="modal-auth-password" />
-                    </div>
-                    <div class="mb-3 col-sm-6">
-                      <label class="form-label" for="modal-auth-confirm-password">Confirm Password</label>
-                      <input class="form-control" type="password" autocomplete="on" id="modal-auth-confirm-password" />
-                    </div>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="modal-auth-register-checkbox" />
-                    <label class="form-label" for="modal-auth-register-checkbox">I accept the <a href="#!">terms </a>and <a href="#!">privacy policy</a></label>
-                  </div>
-                  <div class="mb-3">
-                    <button class="btn btn-primary d-block w-100 mt-3" type="submit" name="submit">Register</button>
-                  </div>
-                </form>
-                <div class="position-relative mt-5">
-                  <hr />
-                  <div class="divider-content-center">or register with</div>
-                </div>
-                <div class="row g-2 mt-2">
-                  <div class="col-sm-6"><a class="btn btn-outline-google-plus btn-sm d-block w-100" href="#"><span class="fab fa-google-plus-g me-2" data-fa-transform="grow-8"></span> google</a></div>
-                  <div class="col-sm-6"><a class="btn btn-outline-facebook btn-sm d-block w-100" href="#"><span class="fab fa-facebook-square me-2" data-fa-transform="grow-8"></span> facebook</a></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+       
       </div>
     </main>
     <!-- ===============================================-->
@@ -1064,7 +981,8 @@
           <p class="fs--1">Get Falcon now and create beautiful dashboards with hundreds of widgets.</p><a class="mb-3 btn btn-primary" href="https://themes.getbootstrap.com/product/falcon-admin-dashboard-webapp-template/" target="_blank">Purchase</a>
         </div>
       </div>
-    </div><a class="card setting-toggle" href="#settings-offcanvas" data-bs-toggle="offcanvas">
+    </div>
+    <a class="card setting-toggle" href="#settings-offcanvas" data-bs-toggle="offcanvas">
       <div class="card-body d-flex align-items-center py-md-2 px-2 py-1">
         <div class="bg-soft-primary position-relative rounded-start" style="height:34px;width:28px">
           <div class="settings-popover"><span class="ripple"><span class="fa-spin position-absolute all-0 d-flex flex-center"><span class="icon-spin position-absolute all-0 d-flex flex-center">
@@ -1097,4 +1015,4 @@
 
   </body>
 
-</html>
+</html> 

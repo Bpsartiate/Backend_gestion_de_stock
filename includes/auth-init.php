@@ -22,8 +22,8 @@ $BASE_URL = preg_replace('/\/(pages|app|admin).*/', '', $currentUrl);
   <?php 
     // Relative path to root (without domain for SPA compatibility)
     $baseDir = preg_replace('/\/(pages|app|admin).*/', '', dirname($_SERVER['PHP_SELF']));
-    if (empty($baseDir) || $baseDir === '/') $baseDir = '';
+    if (empty($baseDir) || $baseDir === '/') $baseDir = '/backend_Stock';
   ?>
-  window.BASE_URL = '<?php echo $baseDir; ?>';
-  window.PAGE_BASE_URL = '<?php echo $baseDir; ?>';
+  window.BASE_URL = '<?php echo $baseDir; ?>' || '/backend_Stock';
+  window.PAGE_BASE_URL = '<?php echo $baseDir; ?>' || '/backend_Stock';
 </script>

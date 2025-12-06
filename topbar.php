@@ -1,8 +1,8 @@
  <nav class="navbar navbar-light navbar-glass navbar-top navbar-expand">
 
             <button class="btn navbar-toggler-humburger-icon navbar-toggler me-1 me-sm-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarVerticalCollapse" aria-controls="navbarVerticalCollapse" aria-expanded="false" aria-label="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
-            <a class="navbar-brand me-1 me-sm-3" href="<?= $BASE_URL ?>/index.php">
-              <div class="d-flex align-items-center"><img class="me-2" src="<?= $BASE_URL ?>/assets/img/icons/spot-illustrations/falcon.png" alt="" width="40" /><span class="font-sans-serif">falcon</span>
+            <a class="navbar-brand me-1 me-sm-3" href="/backend_Stock/index.php">
+              <div class="d-flex align-items-center"><img class="me-2" src="/backend_Stock/assets/img/icons/spot-illustrations/falcon.png" alt="" width="40" /><span class="font-sans-serif">falcon</span>
               </div>
             </a>
             <ul class="navbar-nav align-items-center d-none d-lg-block">
@@ -18,14 +18,14 @@
                   </div>
                   <div class="dropdown-menu border font-base start-0 mt-2 py-0 overflow-hidden w-100">
                     <div class="scrollbar list py-3" style="max-height: 24rem;">
-                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Recently Browsed</h6><a class="dropdown-item fs--1 px-x1 py-1 hover-primary" href="<?= $BASE_URL ?>/app/events/event-detail.php">
+                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Recently Browsed</h6><a class="dropdown-item fs--1 px-x1 py-1 hover-primary" href="/backend_Stock/app/events/event-detail.php">
                         <div class="d-flex align-items-center">
                           <span class="fas fa-circle me-2 text-300 fs--2"></span>
 
                           <div class="fw-normal title">Pages <span class="fas fa-chevron-right mx-1 text-500 fs--2" data-fa-transform="shrink-2"></span> Events</div>
                         </div>
                       </a>
-                      <a class="dropdown-item fs--1 px-x1 py-1 hover-primary" href="<?= $BASE_URL ?>/app/e-commerce/customers.php">
+                      <a class="dropdown-item fs--1 px-x1 py-1 hover-primary" href="/backend_Stock/app/e-commerce/customers.php">
                         <div class="d-flex align-items-center">
                           <span class="fas fa-circle me-2 text-300 fs--2"></span>
 
@@ -34,17 +34,17 @@
                       </a>
 
                       <hr class="text-200 dark__text-900" />
-                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Suggested Filter</h6><a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/e-commerce/customers.php">
+                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Suggested Filter</h6><a class="dropdown-item px-x1 py-1 fs-0" href="/backend_Stock/app/e-commerce/customers.php">
                         <div class="d-flex align-items-center"><span class="badge fw-medium text-decoration-none me-2 badge-soft-warning">customers:</span>
                           <div class="flex-1 fs--1 title">All customers list</div>
                         </div>
                       </a>
-                      <a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/events/event-detail.php">
+                      <a class="dropdown-item px-x1 py-1 fs-0" href="/backend_Stock/app/events/event-detail.php">
                         <div class="d-flex align-items-center"><span class="badge fw-medium text-decoration-none me-2 badge-soft-success">events:</span>
                           <div class="flex-1 fs--1 title">Latest events in current month</div>
                         </div>
                       </a>
-                      <a class="dropdown-item px-x1 py-1 fs-0" href="<?= $BASE_URL ?>/app/e-commerce/product/product-grid.php">
+                      <a class="dropdown-item px-x1 py-1 fs-0" href="/backend_Stock/app/e-commerce/product/product-grid.php">
                         <div class="d-flex align-items-center"><span class="badge fw-medium text-decoration-none me-2 badge-soft-info">products:</span>
                           <div class="flex-1 fs--1 title">Most popular products</div>
                         </div>
@@ -53,7 +53,7 @@
                       <hr class="text-200 dark__text-900" />
                       <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Files</h6><a class="dropdown-item px-x1 py-2" href="#!">
                         <div class="d-flex align-items-center">
-                          <div class="file-thumbnail me-2"><img class="border h-100 w-100 fit-cover rounded-3" src="<?= $BASE_URL ?>/assets/img/products/3-thumb.png" alt="" /></div>
+                          <div class="file-thumbnail me-2"><img class="border h-100 w-100 fit-cover rounded-3" src="/backend_Stock/assets/img/products/3-thumb.png" alt="" /></div>
                           <div class="flex-1">
                             <h6 class="mb-0 title">iPhone</h6>
                             <p class="fs--2 mb-0 d-flex"><span class="fw-semi-bold">Antony</span><span class="fw-medium text-600 ms-2">27 Sep at 10:30 AM</span></p>
@@ -62,7 +62,7 @@
                       </a>
                       <a class="dropdown-item px-x1 py-2" href="#!">
                         <div class="d-flex align-items-center">
-                          <div class="file-thumbnail me-2"><img class="img-fluid" src="<?= $BASE_URL ?>/assets/img/icons/zip.png" alt="" /></div>
+                          <div class="file-thumbnail me-2"><img class="img-fluid" src="/backend_Stock/assets/img/icons/zip.png" alt="" /></div>
                           <div class="flex-1">
                             <h6 class="mb-0 title">Falcon v1.8.2</h6>
                             <p class="fs--2 mb-0 d-flex"><span class="fw-semi-bold">John</span><span class="fw-medium text-600 ms-2">30 Sep at 12:30 PM</span></p>
@@ -71,10 +71,10 @@
                       </a>
 
                       <hr class="text-200 dark__text-900" />
-                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Members</h6><a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.php">
+                      <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs--2 pt-0 pb-2">Members</h6><a class="dropdown-item px-x1 py-2" href="/backend_Stock/pages/user/profile.php">
                         <div class="d-flex align-items-center">
                           <div class="avatar avatar-l status-online me-2">
-                            <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/1.jpg" alt="" />
+                            <img class="rounded-circle" src="/backend_Stock/assets/img/team/1.jpg" alt="" />
 
                           </div>
                           <div class="flex-1">
@@ -83,10 +83,10 @@
                           </div>
                         </div>
                       </a>
-                      <a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.php">
+                      <a class="dropdown-item px-x1 py-2" href="/backend_Stock/pages/user/profile.php">
                         <div class="d-flex align-items-center">
                           <div class="avatar avatar-l me-2">
-                            <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/2.jpg" alt="" />
+                            <img class="rounded-circle" src="/backend_Stock/assets/img/team/2.jpg" alt="" />
 
                           </div>
                           <div class="flex-1">
@@ -95,10 +95,10 @@
                           </div>
                         </div>
                       </a>
-                      <a class="dropdown-item px-x1 py-2" href="<?= $BASE_URL ?>/pages/user/profile.php">
+                      <a class="dropdown-item px-x1 py-2" href="/backend_Stock/pages/user/profile.php">
                         <div class="d-flex align-items-center">
                           <div class="avatar avatar-l me-2">
-                            <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/3.jpg" alt="" />
+                            <img class="rounded-circle" src="/backend_Stock/assets/img/team/3.jpg" alt="" />
 
                           </div>
                           <div class="flex-1">
@@ -145,7 +145,7 @@
                           <a class="notification notification-flush notification-unread" href="#!">
                             <div class="notification-avatar">
                               <div class="avatar avatar-2xl me-3">
-                                <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/1-thumb.png" alt="" />
+                                <img class="rounded-circle" src="/backend_Stock/assets/img/team/1-thumb.png" alt="" />
 
                               </div>
                             </div>
@@ -177,7 +177,7 @@
                           <a class="notification notification-flush" href="#!">
                             <div class="notification-avatar">
                               <div class="avatar avatar-2xl me-3">
-                                <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/icons/weather-sm.jpg" alt="" />
+                                <img class="rounded-circle" src="/backend_Stock/assets/img/icons/weather-sm.jpg" alt="" />
 
                               </div>
                             </div>
@@ -193,7 +193,7 @@
                           <a class="border-bottom-0 notification-unread  notification notification-flush" href="#!">
                             <div class="notification-avatar">
                               <div class="avatar avatar-xl me-3">
-                                <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/logos/oxford.png" alt="" />
+                                <img class="rounded-circle" src="/backend_Stock/assets/img/logos/oxford.png" alt="" />
 
                               </div>
                             </div>
@@ -209,7 +209,7 @@
                           <a class="border-bottom-0 notification notification-flush" href="#!">
                             <div class="notification-avatar">
                               <div class="avatar avatar-xl me-3">
-                                <img class="rounded-circle" src="<?= $BASE_URL ?>/assets/img/team/10.jpg" alt="" />
+                                <img class="rounded-circle" src="/backend_Stock/assets/img/team/10.jpg" alt="" />
 
                               </div>
                             </div>
@@ -223,7 +223,7 @@
                         </div>
                       </div>
                     </div>
-                    <div class="card-footer text-center border-top"><a class="card-link d-block" href="<?= $BASE_URL ?>/app/social/notifications.php">View all</a></div>
+                    <div class="card-footer text-center border-top"><a class="card-link d-block" href="/backend_Stock/app/social/notifications.php">View all</a></div>
                   </div>
                 </div>
 
@@ -231,7 +231,7 @@
             
               <li class="nav-item dropdown"><a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                   <div class="avatar avatar-xl">
-                    <img class="rounded-circle" id="userAvatarImg" src="<?= $BASE_URL ?>/assets/img/team/3-thumb.png" alt="User Avatar" />
+                    <img class="rounded-circle" id="userAvatarImg" src="/backend_Stock/assets/img/team/3-thumb.png" alt="User Avatar" />
 
                   </div>
                 </a>
@@ -323,7 +323,7 @@
                     };
                     imgEl.onerror = function(){
                       console.error('[topbar] Image failed to load from:', user.photoUrl);
-                      imgEl.src = '<?= $BASE_URL ?>/assets/img/team/3-thumb.png';
+                      imgEl.src = '/backend_Stock/assets/img/team/3-thumb.png';
                     };
                   } else {
                     console.warn('[topbar] No photoUrl available');
@@ -431,8 +431,11 @@
                 }catch(err){
                   console.error('[topbar] Logout error:', err);
                 }
-                // redirect to login (use base URL)
-                const loginUrl = '<?= $BASE_URL ?>/pages/authentication/login.php';
+                // redirect to login with robust fallback
+                let loginUrl = '/backend_Stock/login.php';
+                if(window.BASE_URL && window.BASE_URL.trim() && window.BASE_URL !== '/'){
+                  loginUrl = window.BASE_URL + '/login.php';
+                }
                 console.log('[topbar] redirecting to:', loginUrl);
                 setTimeout(() => { window.location.href = loginUrl; }, 100);
               }
@@ -446,3 +449,4 @@
               });
             })();
           </script>
+

@@ -45,6 +45,16 @@
                       </a>
                       <!-- more inner pages-->
                     </li>
+                    <li class="nav-item"><a class="nav-link" href="magasin.php">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Magasins</span>
+                        </div>
+                      </a>
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="guichet.php">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Guichets</span>
+                        </div>
+                      </a>
+                    </li>
                   </ul>
                   <!-- parent pages--><a class="nav-link dropdown-indicator" href="#events" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="events">
                     <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-warehouse"></span></span><span class="nav-link-text ps-1">Logistique</span>

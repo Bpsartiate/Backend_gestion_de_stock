@@ -43,13 +43,162 @@
 
   function budgetSmallCheck(b){ return false; }
 
+  // Initialize company overview card with spinner and message when no company is selected
+  function initializeCompanyOverview() {
+    const companyOverview = document.getElementById('companyOverview');
+    if(companyOverview) {
+      const cardBody = companyOverview.querySelector('.card-body');
+      if(cardBody) {
+        cardBody.innerHTML = `
+          <div class="d-flex align-items-center justify-content-center" style="height: 300px;">
+            <div class="text-center">
+              <div class="spinner-border spinner-border-lg text-primary mb-3" role="status">
+                <span class="visually-hidden">Chargement...</span>
+              </div>
+              <p class="text-muted">Veuillez sélectionner une entreprise dans la liste</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+  }
+  
+  // Restore the company overview card to its default skeleton (no spinner)
+  function resetCompanyOverviewToDefault() {
+    const companyOverview = document.getElementById('companyOverview');
+    if(!companyOverview) return;
+    const cardBody = companyOverview.querySelector('.card-body');
+    if(!cardBody) return;
+    cardBody.innerHTML = `
+      <div class="d-flex align-items-center">
+        <div class="me-3">
+          <div class="avatar avatar-xxl rounded-circle bg-soft-secondary">
+            <img id="companyLogo" class="rounded-circle" src="assets/img/elearning/avatar/student.png" alt="logo" width="96" height="96" />
+          </div>
+        </div>
+        <div class="flex-fill">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <h5 id="companyName" class="mb-1">Aucune entreprise sélectionnée</h5>
+              <p id="companyInfo" class="text-600 mb-1">Sélectionnez une entreprise dans la liste pour voir son état.</p>
+              <div id="companyStatus" class="d-flex flex-wrap gap-2 align-items-center mt-1">
+                <a href="#" id="statusLink" class="text-600 text-decoration-none me-2">Statut inconnu</a>
+                <span id="statusBadge" class="badge rounded-pill badge-soft-secondary d-none d-md-inline-block">—</span>
+                <span id="guichetsLight" class="badge rounded-pill bg-secondary">Guichets: 0</span>
+                <span id="vendeursLight" class="badge rounded-pill bg-secondary">Vendeurs: 0</span>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="btn-group" role="group">
+                <button id="btnEditCompany" class="btn btn-outline-secondary btn-sm" type="button"><span class="fas fa-edit me-1"></span></button>
+                <button id="btnViewAffectations" class="btn btn-outline-primary btn-sm" disabled type="button"><span class="fas fa-eye me-1"></span>Affectations</button>
+              </div>
+              <div class="mt-2">
+                <button id="btnBackToList" class="btn btn-outline-secondary btn-sm d-none" type="button"><span class="fas fa-list me-1"></span>Retour à la liste</button>
+              </div>
+              <div class="mt-2"><small class="text-500">Dernière mise à jour: <span id="companyUpdatedAt">—</span></small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mt-3 g-3">
+        <div class="col-sm-4">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <h6 class="mb-1">Budget</h6>
+              <div class="fs-2 text-700" id="companyBudget">-</div>
+              <div class="text-500 small mt-1" id="companyDevise">-</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <h6 class="mb-1">Chiffre d'affaires</h6>
+              <div class="fs-5 text-700" id="companyCA">-</div>
+              <div class="text-500 small mt-1">Période: <span id="caPeriod">mois</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="card h-100">
+            <div class="card-body text-center">
+              <h6 class="mb-1">Magasins</h6>
+              <div class="fs-5 text-700" id="companyStoresCount">0</div>
+              <div class="text-500 small mt-1">Guichets: <span id="companyCountersGuichets">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body border-top">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-1">Spendings</h6>
+                <div class="fs-3 fw-bold" id="companySpendings">$0.00</div>
+                <div class="mt-1"><span id="companySpendingsDelta" class="badge rounded-pill badge-soft-danger">—</span></div>
+              </div>
+              <div class="text-muted small text-end">
+                <div>Budget utilisé</div>
+                <div class="progress mt-1" style="height:8px;width:140px;">
+                  <div id="budgetUsageBar" class="progress-bar bg-primary" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header pb-0"><h6 class="mb-0">Informations</h6></div>
+              <div class="card-body">
+                <table class="table table-borderless fs--1 fw-medium mb-0">
+                  <tbody id="companyDetailsTable">
+                    <tr><td class="p-1" style="width:35%">Budget:</td><td class="p-1 text-600" id="companyBudget">-</td></tr>
+                    <tr><td class="p-1">Devise:</td><td class="p-1 text-600" id="companyDevise">-</td></tr>
+                    <tr><td class="p-1">Email:</td><td class="p-1 text-600" id="companyEmail">-</td></tr>
+                    <tr><td class="p-1">Téléphone:</td><td class="p-1 text-600" id="companyTelephone">-</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  function showAlert(message, type = 'info', duration = 3000) {
+    const alertId = 'alert-' + Date.now();
+    const alertHTML = `
+      <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 1050; max-width: 400px;" role="alert">
+        <span>${escapeHtml(message)}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', alertHTML);
+    if (duration > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(alertId);
+        if (el) el.remove();
+      }, duration);
+    }
+  }
+
   async function loadCompanies(){
     const list = document.getElementById('companiesList');
     const countEl = document.getElementById('companiesCount');
-    if(list) list.innerHTML = '<div class="p-3 text-center text-500">Chargement...</div>';
+    if(list) list.innerHTML = '<div class="p-3 text-center"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
     try{
       console.log('[loadCompanies] apiBase:', apiBase, 'full URL:', apiBase + '/api/business');
       const businesses = await fetchJson(apiBase + '/api/business');
+      // After loading companies, ensure the company overview is reset to default if no company selected
+      if(!window.CURRENT_BUSINESS){
+        try{ resetCompanyOverviewToDefault(); }catch(e){ console.warn('reset overview', e); }
+      }
       if(!Array.isArray(businesses) || businesses.length === 0){
         if(list) list.innerHTML = '<div class="p-3 text-center text-500">Aucune entreprise</div>';
         if(countEl) countEl.textContent = '0';
@@ -61,16 +210,18 @@
         a.href = '#';
         a.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
         a.dataset.id = b._id;
-        a.innerHTML = `<div><strong>${escapeHtml(b.nomEntreprise || b.nom || 'Sans nom')}</strong><div class="text-500 small">${escapeHtml(b.adresse || '')}</div></div><span class="badge bg-primary">${formatCurrency(b.budget||0,b.devise||'USD')}</span>`;
+                a.innerHTML = `<div class="d-flex align-items-center"><div class="me-2" style="width:44px;height:44px;flex-shrink:0;"><img src="${escapeHtml(b.logoUrl || b.photoUrl || 'assets/img/elearning/avatar/student.png')}" alt="logo" class="rounded-circle" style="width:100%;height:100%;object-fit:cover;" /></div><div><strong>${escapeHtml(b.nomEntreprise || b.nom || 'Sans nom')}</strong><div class="text-500 small">${escapeHtml(b.adresse || '')}</div></div></div><span class="badge bg-primary">${formatCurrency(b.budget||0,b.devise||'USD')}</span>`;
         a.addEventListener('click', (ev)=>{ ev.preventDefault(); selectCompany(b._id); });
         list.appendChild(a);
       }
       if(countEl) countEl.textContent = String(businesses.length);
+      showAlert('Entreprises chargées avec succès', 'success', 2000);
       return businesses;
     }catch(err){
       console.error('loadCompanies', err);
-      if(list) list.innerHTML = '<div class="p-3 text-center text-danger">Erreur de chargement</div>';
+      if(list) list.innerHTML = '<div class="p-3 text-center text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Erreur de chargement</div>';
       if(countEl) countEl.textContent = '—';
+      showAlert('Erreur lors du chargement des entreprises', 'danger', 4000);
       return [];
     }
   }
@@ -120,21 +271,42 @@
 
   async function loadMagasins(businessId){
     const container = document.getElementById('magasinsList');
-    if(container) container.innerHTML = '<div class="p-3 text-center text-500">Chargement des magasins...</div>';
+    // If no businessId provided, show spinner + message asking to select a company
+    if(!businessId){
+      if(container) container.innerHTML = '<div class="p-3 text-center"><div class="spinner-border spinner-border-sm text-primary mb-2" role="status"><span class="visually-hidden">Chargement des magasins...</span></div><p class="text-muted small mt-2">Veuillez sélectionner une entreprise...</p></div>';
+      return [];
+    }
+    if(container) container.innerHTML = '<div class="p-3 text-center"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Chargement des magasins...</span></div></div>';
     try{
       const magasins = await fetchJson(apiBase + '/api/business/magasin/' + businessId);
-      if(!Array.isArray(magasins) || magasins.length === 0){ if(container) container.innerHTML = '<div class="p-3 text-center text-500">Aucun magasin</div>'; return []; }
+      // Update magasins count badge
+      const badge = document.getElementById('magasinsCountBadge');
+      if(badge) badge.textContent = Array.isArray(magasins) ? magasins.length : 0;
+      
+      if(!Array.isArray(magasins) || magasins.length === 0){ if(container) container.innerHTML = '<div class="p-3 text-center text-500">Aucun magasin ni guichet enregistré</div>'; return []; }
       if(container) container.innerHTML = '';
       for(const m of magasins){
         const div = document.createElement('div');
-        div.className = 'p-3 border-bottom';
-        div.innerHTML = `<div class="d-flex justify-content-between align-items-start"><div><strong>${escapeHtml(m.nom_magasin)}</strong><div class="small text-500">${escapeHtml(m.adresse||'')}</div></div><div><button class="btn btn-sm btn-link" data-magasin-id="${m._id}">Voir guichets</button></div></div><div class="mt-2" id="guichets-${m._id}"></div>`;
+        div.className = 'p-3 border-bottom d-flex flex-column';
+        div.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex align-items-start">
+              <span class="drag-handle me-2" style="cursor:grab"><i class="fas fa-grip-vertical"></i></span>
+              <div>
+                <strong>${escapeHtml(m.nom_magasin)}</strong>
+                <div class="small text-500">${escapeHtml(m.adresse||'')}</div>
+              </div>
+            </div>
+            <div><button class="btn btn-sm btn-link" data-magasin-id="${m._id}">Voir guichets</button></div>
+          </div>
+          <div class="mt-2" id="guichets-${m._id}"></div>
+        `;
         container.appendChild(div);
         // load guichets for display (does not block)
         loadGuichets(m._id).catch(()=>{});
       }
       return magasins;
-    }catch(err){ console.error('loadMagasins', err); if(container) container.innerHTML = '<div class="p-3 text-center text-danger">Erreur</div>'; return []; }
+    }catch(err){ console.error('loadMagasins', err); if(container) container.innerHTML = '<div class="p-3 text-center text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Erreur</div>'; showAlert('Erreur lors du chargement des magasins', 'danger', 4000); return []; }
   }
 
   async function loadGuichets(magasinId){
@@ -221,13 +393,16 @@
       const data = await res.json();
       const modal = (typeof bootstrap !== 'undefined') ? bootstrap.Modal.getInstance(document.getElementById('modalCreateBusiness')) : null;
       if(modal) modal.hide();
-      alert('Entreprise créée avec succès!');
+      showAlert('Entreprise créée avec succès!', 'success', 3000);
       form.reset();
+      // Clear logo preview
+      const preview = document.getElementById('createLogoPreview');
+      if(preview) preview.style.display = 'none';
       await loadCompanies();
       if(data.business && data.business._id) selectCompany(data.business._id);
     }catch(err){ 
       console.error('submitCreateBusiness', err); 
-      alert('Erreur création entreprise: ' + (err.message||err)); 
+      showAlert('Erreur création entreprise: ' + (err.message||err), 'danger', 4000);
     }finally{ 
       const btn = document.getElementById('submitCreateBusiness'); 
       if(btn) btn.disabled = false; 
@@ -283,12 +458,14 @@
       const data = await res.json();
       const modal = (typeof bootstrap !== 'undefined') ? bootstrap.Modal.getInstance(document.getElementById('modalCreateMagasin')) : null;
       if(modal) modal.hide();
-      alert('Magasin créé avec succès!');
+      showAlert('Magasin créé avec succès!', 'success', 3000);
       form.reset();
-      if(businessId) loadMagasins(businessId);
+      if(businessId) {
+        await loadMagasins(businessId);
+      }
     }catch(err){ 
       console.error('submitCreateMagasin', err); 
-      alert('Erreur création magasin: ' + (err.message||err)); 
+      showAlert('Erreur création magasin: ' + (err.message||err), 'danger', 4000);
     }finally{ 
       const btn = document.getElementById('submitCreateMagasin'); 
       if(btn) btn.disabled = false; 
@@ -323,10 +500,10 @@
 
       if(!res.ok){ const txt = await res.text(); throw new Error(txt); }
       const data = await res.json();
-      alert('Entreprise mise à jour avec succès');
+      showAlert('Entreprise mise à jour avec succès', 'success', 3000);
       if(typeof loadCompanies === 'function') loadCompanies();
       if(data.business && data.business._id) selectCompany(data.business._id);
-    }catch(err){ console.error('submitUpdateBusiness', err); alert('Erreur mise à jour: ' + (err.message||err)); }
+    }catch(err){ console.error('submitUpdateBusiness', err); showAlert('Erreur mise à jour: ' + (err.message||err), 'danger', 4000); }
     finally{ const btn = document.getElementById('submitUpdateBusiness'); if(btn) btn.disabled = false; }
   }
 
@@ -394,6 +571,28 @@
         }
       }catch(e){ console.warn('rapport fetch failed', e); }
 
+      // Update Chart.js sales chart if available using report data
+      try{
+        if(window.companySalesChartInstance){
+          const chart = window.companySalesChartInstance;
+          if(rpt && Array.isArray(rpt.sales) && rpt.sales.length){
+            const labels = (rpt.salesLabels && Array.isArray(rpt.salesLabels)) ? rpt.salesLabels : rpt.sales.map((_,i)=>'J-'+(rpt.sales.length-1-i));
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = rpt.sales.slice(-labels.length);
+            chart.update();
+          } else if(rpt && rpt.spendings && Array.isArray(rpt.spendings.trend)){
+            const trend = rpt.spendings.trend.slice(-7);
+            chart.data.labels = trend.map((_,i)=>'J-'+(trend.length-1-i));
+            chart.data.datasets[0].data = trend;
+            chart.update();
+          } else {
+            // fallback demo
+            chart.data.datasets[0].data = [5,12,9,20,16,22,18];
+            chart.update();
+          }
+        }
+      }catch(e){ console.warn('chart update failed', e); }
+
     }catch(err){
       console.error('selectCompany', err);
       alert('Impossible de charger l\'entreprise');
@@ -401,35 +600,67 @@
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
+    // Initialize company overview with spinner/message on load
+    initializeCompanyOverview();
+    
     const toggleBtn = document.getElementById('btnToggleCompanies'); if(toggleBtn) toggleBtn.addEventListener('click', ()=>{ const left = document.getElementById('leftPane'); left.style.display = left.style.display === 'none' ? 'block' : 'none'; });
     const refreshBtn = document.getElementById('refreshCompanies'); if(refreshBtn) refreshBtn.addEventListener('click', loadCompanies);
     const submitBiz = document.getElementById('submitCreateBusiness'); if(submitBiz) submitBiz.addEventListener('click', submitCreateBusiness);
     const submitMag = document.getElementById('submitCreateMagasin'); if(submitMag) submitMag.addEventListener('click', submitCreateMagasin);
     const submitUpdate = document.getElementById('submitUpdateBusiness'); if(submitUpdate) submitUpdate.addEventListener('click', ()=>{ const id = submitUpdate.dataset.businessId || (document.getElementById('magasinBusinessId') && document.getElementById('magasinBusinessId').value); if(id) submitUpdateBusiness(id); else alert('Aucun ID d\'entreprise spécifié'); });
-    // Back to list button
-    const backBtn = document.getElementById('btnBackToList'); if(backBtn) backBtn.addEventListener('click', ()=>{ const left = document.getElementById('leftPane'); if(left) left.style.display = 'block'; backBtn.classList.add('d-none'); });
-    // Edit company button opens modal and populates form
-    const editBtn = document.getElementById('btnEditCompany'); if(editBtn) editBtn.addEventListener('click', ()=>{
-      const id = editBtn.dataset.businessId || (document.getElementById('magasinBusinessId') && document.getElementById('magasinBusinessId').value);
-      if(!id){ alert('Aucune entreprise sélectionnée'); return; }
-      const business = window.CURRENT_BUSINESS || null;
-      // populate edit form
-      try{
-        if(business){
-          document.getElementById('edit_nomEntreprise').value = business.nomEntreprise || business.nom || '';
-          document.getElementById('edit_adresse').value = business.adresse || '';
-          document.getElementById('edit_budget').value = business.budget || 0;
-          document.getElementById('edit_devise').value = business.devise || 'USD';
-          document.getElementById('edit_email').value = business.email || '';
-          const preview = document.getElementById('editLogoPreview'); if(preview) preview.src = business.logoUrl || business.photoUrl || 'assets/img/elearning/avatar/student.png';
-          const submitUpdateBtn = document.getElementById('submitUpdateBusiness'); if(submitUpdateBtn) submitUpdateBtn.dataset.businessId = id;
-        }
-      }catch(e){ console.warn('populate edit form', e); }
-      const modalEl = document.getElementById('modalEditBusiness'); if(modalEl){ const m = bootstrap.Modal.getOrCreateInstance(modalEl); m.show(); }
+    // Delegated handlers for Back to list and Edit buttons (survives innerHTML replacements)
+    document.addEventListener('click', (ev)=>{
+      const back = ev.target.closest && ev.target.closest('#btnBackToList');
+      if(back){
+        const left = document.getElementById('leftPane');
+        if(left) left.style.display = 'block';
+        back.classList.add('d-none');
+        return;
+      }
+
+      const edit = ev.target.closest && ev.target.closest('#btnEditCompany');
+      if(edit){
+        const id = edit.dataset.businessId || (document.getElementById('magasinBusinessId') && document.getElementById('magasinBusinessId').value);
+        if(!id){ showAlert ? showAlert('Aucune entreprise sélectionnée','warning',3000) : alert('Aucune entreprise sélectionnée'); return; }
+        const business = window.CURRENT_BUSINESS || null;
+        try{
+          if(business){
+            const n = document.getElementById('edit_nomEntreprise'); if(n) n.value = business.nomEntreprise || business.nom || '';
+            const a = document.getElementById('edit_adresse'); if(a) a.value = business.adresse || '';
+            const bd = document.getElementById('edit_budget'); if(bd) bd.value = business.budget || 0;
+            const dv = document.getElementById('edit_devise'); if(dv) dv.value = business.devise || 'USD';
+            const em = document.getElementById('edit_email'); if(em) em.value = business.email || '';
+            const preview = document.getElementById('editLogoPreview'); if(preview) preview.src = business.logoUrl || business.photoUrl || 'assets/img/elearning/avatar/student.png';
+            const submitUpdateBtn = document.getElementById('submitUpdateBusiness'); if(submitUpdateBtn) submitUpdateBtn.dataset.businessId = id;
+          }
+        }catch(e){ console.warn('populate edit form', e); }
+        const modalEl = document.getElementById('modalEditBusiness'); if(modalEl){ const m = bootstrap.Modal.getOrCreateInstance(modalEl); m.show(); }
+        return;
+      }
     });
     // Logo preview handlers
     const createLogoInput = document.getElementById('createLogoInput'); if(createLogoInput) createLogoInput.addEventListener('change', (ev)=>{ const f = ev.target.files && ev.target.files[0]; const img = document.getElementById('createLogoPreview'); if(f && img){ img.src = URL.createObjectURL(f); img.style.display = 'block'; } else if(img){ img.style.display = 'none'; } });
     const editLogoInput = document.getElementById('editLogoInput'); if(editLogoInput) editLogoInput.addEventListener('change', (ev)=>{ const f = ev.target.files && ev.target.files[0]; const img = document.getElementById('editLogoPreview'); if(f && img){ img.src = URL.createObjectURL(f); } });
+    // Initialize Sortable for magasinsList if available
+    try{
+      const magasinsEl = document.getElementById('magasinsList');
+      if(window.Sortable && magasinsEl){
+        new Sortable(magasinsEl, { animation: 150, handle: '.drag-handle' });
+      }
+    }catch(e){ console.warn('sortable init failed', e); }
+
+    // Initialize a lightweight Chart.js line for companySalesChart
+    try{
+      const ctx = document.getElementById('companySalesChart');
+      if(ctx && window.Chart){
+        window.companySalesChartInstance = new Chart(ctx.getContext('2d'), {
+          type: 'line',
+          data: { labels: ['J-6','J-5','J-4','J-3','J-2','J-1','Aujourd\'hui'], datasets: [{ label: 'Ventes', data: [0,0,0,0,0,0,0], borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.08)', tension: 0.4, fill: true }] },
+          options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: true }, y: { display: true } } }
+        });
+      }
+    }catch(e){ console.warn('chart init failed', e); }
+
     // initial load
     loadCompanies();
   });

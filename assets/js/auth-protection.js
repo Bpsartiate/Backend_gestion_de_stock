@@ -20,9 +20,15 @@
   }
 
   function redirectToLogin(){
-    // Get BASE_URL from window if available, otherwise use relative path
-    const baseUrl = window.BASE_URL || '.../login.php';
-    window.location.href = baseUrl;
+    // Determine the login URL with robust fallbacks
+    let loginUrl = '/backend_Stock/login.php';
+    
+    if(window.BASE_URL && window.BASE_URL.trim() && window.BASE_URL !== '/'){
+      loginUrl = window.BASE_URL + '/login.php';
+    }
+    
+    console.log('[auth-protection] Redirecting to:', loginUrl);
+    window.location.href = loginUrl;
   }
 
   // Fetch and display user info
