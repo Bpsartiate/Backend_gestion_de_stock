@@ -33,6 +33,8 @@ app.get('/api/test-uploads', (req, res) => {
 app.use('/api/auth', utilisateurRoutes);
 app.use('/api/protected', protectedRoutes);
 app.use('/api/business', businessRoutes);
+// Activity routes mounted under business path (mergeParams used in router)
+app.use('/api/business/:businessId/activities', require('./routes/activity'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'API backend opérationnelle' });

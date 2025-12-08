@@ -20,7 +20,7 @@ router.post('/', authenticateToken, upload.single('logo'), async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès admin requis' });
 
   try {
-    const allowed = ['nomEntreprise', 'logoUrl', 'description', 'adresse', 'telephone', 'email', 'typeBusiness', 'budget', 'devise'];
+    const allowed = ['nomEntreprise', 'logoUrl', 'description', 'adresse', 'telephone', 'email', 'typeBusiness', 'budget', 'devise', 'rccm', 'idNat', 'totalSpendings', 'productsSoldCount', 'activities'];
     const payload = { ownerId: ownerId };
     // If a file was uploaded (multer memory storage), upload buffer to Cloudinary
     if (req.file && req.file.buffer) {
@@ -39,8 +39,10 @@ router.post('/', authenticateToken, upload.single('logo'), async (req, res) => {
     }
     allowed.forEach(k => {
       if (req.body[k] !== undefined && req.body[k] !== null) {
-        if (k === 'budget') payload[k] = Number(req.body[k]);
-        else payload[k] = String(req.body[k]).trim();
+        if (k === 'budget' || k === 'totalSpendings' || k === 'productsSoldCount') payload[k] = Number(req.body[k]);
+        else if (k === 'activities') {
+          try { payload.activities = Array.isArray(req.body.activities) ? req.body.activities : JSON.parse(req.body.activities); } catch(e) { payload.activities = []; }
+        } else payload[k] = String(req.body[k]).trim();
       }
     });
     if (payload.email) payload.email = payload.email.toLowerCase();
@@ -96,7 +98,7 @@ router.put('/:id', authenticateToken, upload.single('logo'), async (req, res) =>
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès admin requis' });
 
   try {
-    const allowed = ['nomEntreprise', 'logoUrl', 'description', 'adresse', 'telephone', 'email', 'typeBusiness', 'budget', 'devise', 'status'];
+    const allowed = ['nomEntreprise', 'logoUrl', 'description', 'adresse', 'telephone', 'email', 'typeBusiness', 'budget', 'devise', 'status', 'rccm', 'idNat', 'totalSpendings', 'productsSoldCount', 'activities'];
     const payload = {};
     // handle logo upload if provided (use upload middleware in route if needed)
     if (req.file && req.file.buffer) {
@@ -115,8 +117,10 @@ router.put('/:id', authenticateToken, upload.single('logo'), async (req, res) =>
     }
     allowed.forEach(k => {
       if (req.body[k] !== undefined && req.body[k] !== null) {
-        if (k === 'budget' || k === 'status') payload[k] = Number(req.body[k]);
-        else payload[k] = String(req.body[k]).trim();
+        if (k === 'budget' || k === 'status' || k === 'totalSpendings' || k === 'productsSoldCount') payload[k] = Number(req.body[k]);
+        else if (k === 'activities') {
+          try { payload.activities = Array.isArray(req.body.activities) ? req.body.activities : JSON.parse(req.body.activities); } catch(e) { payload.activities = [] }
+        } else payload[k] = String(req.body[k]).trim();
       }
     });
     if (payload.email) payload.email = payload.email.toLowerCase();

@@ -190,46 +190,7 @@
                   </div>
                 </div>
 
-                <div class="card-body border-top">
-                  <!-- <div class="row g-3 align-items-center">
-                    <div class="col-md-8">
-                      <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                          <h6 class="mb-1">Spendings</h6>
-                          <div class="fs-3 fw-bold" id="companySpendings">$0.00</div>
-                          <div class="mt-1"><span id="companySpendingsDelta" class="badge rounded-pill badge-soft-danger">—</span></div>
-                        </div>
-                        <div class="text-muted small text-end">
-                          <div>Budget utilisé</div>
-                          <div class="progress mt-1" style="height:8px;width:140px;">
-                            <div id="budgetUsageBar" class="progress-bar bg-primary" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-md-4 d-flex justify-content-end">
-                      <div id="spendingsChart" class="echart-default" data-echart-responsive="true" data-echarts='{"xAxis":{"data":["J1","J2","J3","J4","J5","J6","J7"]},"series":[{"type":"line","data":[10,20,15,30,25,20,35],"smooth":true,"lineStyle":{"width":2}}],"grid":{"bottom":"2%","top":"2%","right":"0px","left":"0px"}}' style="width:140px;height:60px"></div>
-                    </div>
-                  </div>
-
-                  <div class="row mt-3">
-                    <div class="col-12">
-                      <div class="card">
-                        <div class="card-header pb-0"><h6 class="mb-0">Informations</h6></div>
-                        <div class="card-body">
-                          <table class="table table-borderless fs--1 fw-medium mb-0">
-                            <tbody id="companyDetailsTable">
-                              <tr><td class="p-1" style="width:35%"><i class="fas fa-wallet me-2 text-secondary"></i>Budget:</td><td class="p-1 text-600" id="companyBudget">-</td></tr>
-                              <tr><td class="p-1"><i class="fas fa-coins me-2 text-secondary"></i>Devise:</td><td class="p-1 text-600" id="companyDevise">-</td></tr>
-                              <tr><td class="p-1"><i class="fas fa-envelope me-2 text-secondary"></i>Email:</td><td class="p-1 text-600" id="companyEmail">-</td></tr>
-                              <tr><td class="p-1"><i class="fas fa-phone me-2 text-secondary"></i>Téléphone:</td><td class="p-1 text-600" id="companyTelephone">-</td></tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div> -->
-                </div>
+                
               </div>
             </div>
 
@@ -350,8 +311,8 @@
               </div>
             </div>
           </div>
-<!-- score -->
-        <div class="row g-3 mb-3">
+<!-- orders -->
+        <div id="orders" class="row g-3 mb-3">
             <div class="col-md-12">
               <div class="card py-3 mb-3">
             <div class="card-body py-3">
@@ -410,7 +371,7 @@
             </div>
         </div>
 
-          
+          <!-- revenues globales -->
           <div class="row g-3 mb-3">
             <div class="col-lg-5 col-xxl-3">
               <div class="card h-100">
@@ -419,7 +380,7 @@
                     <div class="col-auto">
                       <h1 class="fs-0 text-900">Revenue Global</h1>
                       <div class="d-flex">
-                        <h4 class="text-primary mb-0">$165.50</h4>
+                        <h4 id="grossRevenueValue" class="text-primary mb-0">$165.50</h4>
                         <div class="ms-3"><span class="badge rounded-pill badge-soft-primary"><span class="fas fa-caret-up"></span> 5%</span></div>
                       </div>
                     </div>
@@ -466,6 +427,9 @@
                   </div>
                 </div>
                 <div class="card-footer border-top py-2 d-flex flex-between-center">
+                  <div>
+                    <button id="saveGrossRevenueBtn" class="btn btn-sm btn-primary me-2">Enregistrer</button>
+                  </div>
                   <div class="d-flex" id="gross-revenue-footer">
                     <div class="btn btn-sm btn-text d-flex align-items-center p-0 shadow-none" id="currentMonth" data-month="current"><span class="fas fa-circle text-primary fs--2 me-1"></span><span class="text">Jan</span></div>
                     <div class="btn btn-sm btn-text d-flex align-items-center p-0 shadow-none ms-2" id="prevMonth" data-month="prev"><span class="fas fa-circle text-300 fs--2 me-1"></span><span class="text">Dec</span></div>
@@ -483,7 +447,16 @@
                   </div>
                 </div>
                 <div class="card-body p-0">
-                  <div class="table-responsive scrollbar">
+                  <div class="p-3 border-bottom">
+                    <div class="input-group input-group-sm">
+                      <input type="text" id="productNameInput" class="form-control" placeholder="Produit" />
+                      <input type="number" id="productQtyInput" class="form-control" placeholder="Quantité" min="1" style="max-width:120px" />
+                      <input type="number" id="productPriceInput" class="form-control" placeholder="Prix" step="0.01" style="max-width:140px" />
+                      <button id="addProductBtn" class="btn btn-primary">Ajouter</button>
+                      <button id="saveProductsBtn" class="btn btn-outline-success ms-2">Enregistrer</button>
+                    </div>
+                  </div>
+              <div class="table-responsive scrollbar">
                     <table class="table mb-0 fs--1 border-200 overflow-hidden">
                       <thead class="bg-light text-900 font-sans-serif">
                         <tr>
@@ -567,7 +540,7 @@
                   </div>
                 </div>
                 <div class="card-body py-0 scrollbar-overlay recent-activity-body-height">
-                  <div class="timeline-simple">
+                  <div id="recentActivitiesList" class="timeline-simple">
                     <div class="timeline-item position-relative">
                       <div class="row g-0 align-items-center">
                         <div class="col-auto d-flex align-items-center">
@@ -670,8 +643,8 @@
             </div>
           
           </div>
-          <!-- total sales -->
-         <div class="card h-100 mb-3">
+             <!-- total sales -->
+            <div class="card h-100 mb-3">
                 <div class="card-header ">
                   <div class="row flex-between-center">
                     <div class="col-auto">
@@ -705,6 +678,9 @@
                   <!-- Find the JS file for the following chart at: src\js\charts\echarts\total-sales.js-->
                   <!-- If you are not using gulp based workflow, you can find the transpiled code at: public\assets\js\theme.js-->
                   <div class="echart-line-total-sales h-100" data-echart-responsive="true"></div>
+                </div>
+                <div class="card-footer text-end">
+                  <button id="saveTotalSalesBtn" class="btn btn-sm btn-primary">Enregistrer</button>
                 </div>
               </div>
           <div class="card" id="enrolledCoursesTable" data-list='{"valueNames":["title","trainer","date","time","progress","price"]}'>
@@ -1012,6 +988,247 @@
     <script src="assets/js/auth-protection.js"></script>
     <script src="assets/js/entreprise.js"></script>
 
+    <script>
+      (function(){
+        function getBizKey(){
+          return 'company_' + (localStorage.getItem('businessId') || 'global');
+        }
+
+        function parseCurrency(text){
+          if(!text) return 0;
+          const n = text.toString().replace(/[^0-9.-]+/g,'');
+          return parseFloat(n) || 0;
+        }
+
+        // Activities
+        function loadActivities(){
+          const key = getBizKey() + '_activities';
+          try{ return JSON.parse(localStorage.getItem(key)) || []; }catch(e){ return []; }
+        }
+        function saveActivities(arr){
+          const key = getBizKey() + '_activities';
+          localStorage.setItem(key, JSON.stringify(arr));
+        }
+
+        function getToken(){
+          return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('accessToken') || localStorage.getItem('userToken') || null;
+        }
+
+        async function postActivityToServer(businessId, payload){
+          try{
+            const token = getToken();
+            if(!token) throw new Error('No token');
+            const res = await fetch('/api/business/' + businessId + '/activities', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify(payload)
+            });
+            if(!res.ok) throw new Error('Server responded ' + res.status);
+            const data = await res.json();
+            return data.activity || data;
+          }catch(err){
+            console.warn('postActivityToServer failed', err && err.message);
+            return null;
+          }
+        }
+
+        async function fetchActivitiesFromServer(businessId){
+          try{
+            const token = getToken();
+            if(!token) return null;
+            const res = await fetch('/api/business/' + businessId + '/activities?limit=100', { headers: { 'Authorization': 'Bearer ' + token } });
+            if(!res.ok) return null;
+            const json = await res.json();
+            return Array.isArray(json.activities) ? json.activities : null;
+          }catch(e){
+            console.warn('fetchActivitiesFromServer failed', e && e.message);
+            return null;
+          }
+        }
+
+        async function recordActivity(title, description, icon){
+          const businessId = localStorage.getItem('businessId') || null;
+          const item = { ts: Date.now(), title, description, icon: icon || 'fas fa-info-circle' };
+
+          // Try to post to server first
+          if(businessId){
+            const posted = await postActivityToServer(businessId, item);
+            if(posted){
+              // preprend to local copy for immediate UI
+              const activities = loadActivities();
+              activities.unshift({ ts: posted.ts || Date.now(), title: posted.title || title, description: posted.description || description, icon: posted.icon || icon });
+              saveActivities(activities);
+              renderActivities();
+              return;
+            }
+          }
+
+          // fallback: save locally
+          const activities = loadActivities();
+          activities.unshift(item);
+          saveActivities(activities);
+          renderActivities();
+        }
+        function renderActivities(){
+          const container = document.getElementById('recentActivitiesList');
+          if(!container) return;
+          const activities = loadActivities();
+          // Clear existing timeline items (keep header structure)
+          container.innerHTML = '';
+          activities.slice(0,50).forEach(a => {
+            const d = new Date(a.ts);
+            const timeAgo = Math.round((Date.now()-a.ts)/3600000) + 'h ago';
+            const html = `
+              <div class="timeline-item position-relative">
+                <div class="row g-0 align-items-center">
+                  <div class="col-auto d-flex align-items-center">
+                    <h6 class="timeline-item-date fs--2 text-500 text-truncate mb-0 me-1"> ${timeAgo}</h6>
+                    <div class="position-relative">
+                      <div class="icon-item icon-item-md rounded-7 shadow-none bg-200"><span class="text-primary ${a.icon}"></span></div>
+                    </div>
+                  </div>
+                  <div class="col ps-3 fs--1 text-500">
+                    <div class="py-x1">
+                      <h5 class="fs--1">${a.title}</h5>
+                      <p class="mb-0">${a.description}</p>
+                    </div>
+                    <hr class="text-200 my-0" />
+                  </div>
+                </div>
+              </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+          });
+        }
+
+        // Gross revenue
+        document.getElementById('saveGrossRevenueBtn')?.addEventListener('click', function(){
+          const value = document.getElementById('grossRevenueValue')?.textContent || '';
+          const monthSel = document.getElementById('select-gross-revenue-month');
+          const month = monthSel ? monthSel.value : '0';
+          const data = { amount: parseCurrency(value), month: month, savedAt: Date.now() };
+          localStorage.setItem(getBizKey() + '_grossRevenue', JSON.stringify(data));
+          recordActivity('Revenue sauvegardé', `Montant: ${value} (mois ${month})`, 'fas fa-dollar-sign');
+          alert('Revenue global enregistré');
+        });
+
+        // Total sales
+        document.getElementById('saveTotalSalesBtn')?.addEventListener('click', function(){
+          // sum amounts from paymentHistoryTable
+          let sum = 0;
+          document.querySelectorAll('#paymentHistoryTable .amount').forEach(td=>{ sum += parseCurrency(td.textContent); });
+          const sel = document.querySelector('.select-month');
+          const month = sel ? sel.value : '0';
+          const data = { total: sum, month: month, savedAt: Date.now() };
+          localStorage.setItem(getBizKey() + '_totalSales_' + month, JSON.stringify(data));
+          recordActivity('Total Sales sauvegardé', `Total: ${sum} (mois ${month})`, 'fas fa-chart-line');
+          alert('Total des ventes enregistré');
+        });
+
+        // Products sold
+        function loadProducts(){
+          try{ return JSON.parse(localStorage.getItem(getBizKey() + '_products')) || []; }catch(e){ return []; }
+        }
+        function saveProducts(arr){ localStorage.setItem(getBizKey() + '_products', JSON.stringify(arr)); }
+        function renderProducts(){
+          const tbody = document.querySelector('.table-enrolled-courses tbody.list');
+          if(!tbody) return;
+          const products = loadProducts();
+          // clear existing rows
+          tbody.innerHTML = '';
+          products.forEach((p,i)=>{
+            const html = `
+              <tr class="btn-reveal-trigger fw-semi-bold">
+                <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
+                  <div class="d-flex gap-3 align-items-center position-relative"><img class="rounded-1 border border-200" src="assets/img/elearning/courses/course3.png" width="60" alt="" /><a class="stretched-link text-truncate" href="#">${p.name}</a></div>
+                </td>
+                <td class="align-middle text-nowrap trainer">-</td>
+                <td class="align-middle date">${new Date(p.date).toLocaleDateString()}</td>
+                <td class="align-middle time">${p.qty}</td>
+                <td class="align-middle"><div class="progress rounded-3 worked" style="height: 5px; width:5rem"><div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 100%"></div></div></td>
+                <td class="align-middle text-end price">${p.price ? '$'+p.price.toFixed(2) : '-'}</td>
+                <td class="align-middle text-end"></td>
+              </tr>`;
+            tbody.insertAdjacentHTML('beforeend', html);
+          });
+        }
+
+        document.getElementById('addProductBtn')?.addEventListener('click', function(e){
+          e.preventDefault();
+          const name = document.getElementById('productNameInput')?.value?.trim();
+          const qty = parseInt(document.getElementById('productQtyInput')?.value) || 1;
+          const price = parseFloat(document.getElementById('productPriceInput')?.value) || 0;
+          if(!name){ alert('Veuillez saisir le nom du produit'); return; }
+          const products = loadProducts();
+          const item = { name, qty, price, date: Date.now() };
+          products.unshift(item);
+          saveProducts(products);
+          renderProducts();
+          recordActivity('Produit vendu ajouté', `${name} x${qty} à ${price}`, 'fas fa-box-open');
+          // clear inputs
+          document.getElementById('productNameInput').value='';
+          document.getElementById('productQtyInput').value=1;
+          document.getElementById('productPriceInput').value='';
+        });
+
+        document.getElementById('saveProductsBtn')?.addEventListener('click', function(){
+          const products = loadProducts();
+          saveProducts(products);
+          recordActivity('Produits sauvegardés', `Total produits: ${products.length}`, 'fas fa-save');
+          alert('Produits enregistrés');
+        });
+
+        // Populate initial data on load
+        document.addEventListener('DOMContentLoaded', async function(){
+          // Try to load from server if possible
+          const businessId = localStorage.getItem('businessId') || null;
+          const token = getToken();
+
+          if(businessId && token){
+            try{
+              // fetch business details
+              const res = await fetch('/api/business/' + businessId, { headers: { 'Authorization': 'Bearer ' + token } });
+              if(res.ok){
+                const biz = await res.json();
+                // Fill fields if present
+                if(biz.nomEntreprise) document.getElementById('companyName').textContent = biz.nomEntreprise;
+                if(biz.description) document.getElementById('companyInfo').textContent = biz.description;
+                if(biz.budget !== undefined) document.getElementById('companyBudget').textContent = biz.budget;
+                if(biz.devise) document.getElementById('companyDevise').textContent = biz.devise;
+                if(biz.email) document.getElementById('companyEmail').textContent = biz.email;
+                if(biz.telephone) document.getElementById('companyTelephone').textContent = biz.telephone;
+                if(biz.adresse) document.getElementById('companyAddress').textContent = biz.adresse;
+                if(biz.rccm) document.getElementById('companyRCCM').textContent = biz.rccm;
+                if(biz.idNat) document.getElementById('companyIDNat').textContent = biz.idNat;
+                if(biz.createdAt) document.getElementById('companyCreatedAt').textContent = new Date(biz.createdAt).toLocaleString();
+                if(biz.updatedAt && document.getElementById('companyUpdatedAt')) document.getElementById('companyUpdatedAt').textContent = new Date(biz.updatedAt).toLocaleString();
+                if(biz.updatedAt && document.getElementById('companyUpdatedAtDetail')) document.getElementById('companyUpdatedAtDetail').textContent = new Date(biz.updatedAt).toLocaleString();
+                // logo
+                if(biz.logoUrl && document.getElementById('companyLogo')) document.getElementById('companyLogo').src = biz.logoUrl;
+              }
+            }catch(e){ console.warn('Failed to fetch business details', e && e.message); }
+
+            // fetch activities from server and merge with local
+            try{
+              const serverActivities = await fetchActivitiesFromServer(businessId);
+              if(Array.isArray(serverActivities)){
+                // store as local copy for UI
+                saveActivities(serverActivities.map(a=>({ ts: a.ts||Date.now(), title: a.title, description: a.description, icon: a.icon })));
+              }
+            }catch(e){ /* ignore */ }
+          }
+
+          renderActivities();
+          renderProducts();
+
+          // populate gross revenue if saved
+          try{
+            const gr = JSON.parse(localStorage.getItem(getBizKey() + '_grossRevenue'));
+            if(gr && document.getElementById('grossRevenueValue')) document.getElementById('grossRevenueValue').textContent = '$' + (gr.amount||0).toFixed(2);
+          }catch(e){}
+        });
+
+      })();
+    </script>
 
   </body>
 
