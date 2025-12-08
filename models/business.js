@@ -10,6 +10,10 @@ const businessSchema = new mongoose.Schema({
   idNat: { type: String, trim: true },
   telephone: { type: String, trim: true },
   email: { type: String, trim: true, lowercase: true },
+  siteWeb: { type: String, trim: true },
+  formeJuridique: { type: String, trim: true },
+  capitalSocial: { type: Number, default: 0 },
+  siegeSocial: { type: String, trim: true },
   typeBusiness: { type: String, trim: true },
   budget: { type: Number, default: 0 }, // Budget de l'entreprise
   devise: { type: String, default: 'USD' }, // Devise (currency) pour le suivi financier

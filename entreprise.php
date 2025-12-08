@@ -232,6 +232,22 @@
                       <input name="adresse" class="form-control" />
                     </div>
                     <div class="mb-2 row">
+                      <div class="col-6"><label class="form-label">RCCM</label><input name="rccm" class="form-control" /></div>
+                      <div class="col-6"><label class="form-label">ID Nat</label><input name="idNat" class="form-control" /></div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Site Web</label>
+                      <input name="siteWeb" class="form-control" />
+                    </div>
+                    <div class="mb-2 row">
+                      <div class="col-6"><label class="form-label">Forme Juridique</label><input name="formeJuridique" class="form-control" /></div>
+                      <div class="col-6"><label class="form-label">Capital Social</label><input name="capitalSocial" type="number" class="form-control" value="0" /></div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Siège Social</label>
+                      <input name="siegeSocial" class="form-control" />
+                    </div>
+                    <div class="mb-2 row">
                       <div class="col-6"><label class="form-label">Budget</label><input name="budget" type="number" class="form-control" value="0" /></div>
                       <div class="col-6"><label class="form-label">Devise</label><input name="devise" class="form-control" value="USD" /></div>
                     </div>
@@ -301,6 +317,22 @@
                         <input name="logo" id="editLogoInput" type="file" accept="image/*" class="form-control" />
                         <small class="text-500">Choisir un fichier pour remplacer le logo</small>
                       </div>
+                    </div>
+                    <div class="mb-2 row">
+                      <div class="col-6"><label class="form-label">RCCM</label><input name="rccm" id="edit_rccm" class="form-control" /></div>
+                      <div class="col-6"><label class="form-label">ID Nat</label><input name="idNat" id="edit_idNat" class="form-control" /></div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Site Web</label>
+                      <input name="siteWeb" id="edit_siteWeb" class="form-control" />
+                    </div>
+                    <div class="mb-2 row">
+                      <div class="col-6"><label class="form-label">Forme Juridique</label><input name="formeJuridique" id="edit_formeJuridique" class="form-control" /></div>
+                      <div class="col-6"><label class="form-label">Capital Social</label><input name="capitalSocial" id="edit_capitalSocial" type="number" class="form-control" value="0" /></div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Siège Social</label>
+                      <input name="siegeSocial" id="edit_siegeSocial" class="form-control" />
                     </div>
                   </form>
                 </div>
@@ -696,12 +728,12 @@
                 <table class="table mb-0 fs--1 border-200 overflow-hidden table-enrolled-courses">
                   <thead class="bg-light font-sans-serif">
                     <tr class="text-800">
-                      <th class="fw-medium sort" data-sort="title">Course Title </th>
-                      <th class="fw-medium sort" data-sort="trainer">Trainer</th>
-                      <th class="fw-medium sort" data-sort="date">Enrollment</th>
-                      <th class="fw-medium sort" data-sort="time">Worked</th>
-                      <th class="fw-medium sort" data-sort="progress">Progress</th>
-                      <th class="fw-medium sort text-end" data-sort="price">Price</th>
+                      <th class="fw-medium sort" data-sort="title">Designation</th>
+                      <th class="fw-medium sort" data-sort="trainer">Vendeur</th>
+                      <th class="fw-medium sort" data-sort="date">Date</th>
+                      <th class="fw-medium sort" data-sort="time">Quantite</th>
+                      <th class="fw-medium sort" data-sort="progress">Etat du Stock</th>
+                      <th class="fw-medium sort text-end" data-sort="price">Prix</th>
                       <th class="fw-medium no-sort pe-1 align-middle data-table-row-action"></th>
                     </tr>
                   </thead>
@@ -1249,6 +1281,10 @@
                 if(biz.adresse) document.getElementById('companyAddress').textContent = biz.adresse;
                 if(biz.rccm) document.getElementById('companyRCCM').textContent = biz.rccm;
                 if(biz.idNat) document.getElementById('companyIDNat').textContent = biz.idNat;
+                if(biz.siteWeb) document.getElementById('companySiteWeb').textContent = biz.siteWeb;
+                if(biz.formeJuridique) document.getElementById('companyFormeJuridique').textContent = biz.formeJuridique;
+                if(biz.capitalSocial !== undefined) document.getElementById('companyCapitalSocial').textContent = biz.capitalSocial;
+                if(biz.siegeSocial) document.getElementById('companySiegeSocial').textContent = biz.siegeSocial;
                 if(biz.createdAt) document.getElementById('companyCreatedAt').textContent = new Date(biz.createdAt).toLocaleString();
                 if(biz.updatedAt && document.getElementById('companyUpdatedAt')) document.getElementById('companyUpdatedAt').textContent = new Date(biz.updatedAt).toLocaleString();
                 if(biz.updatedAt && document.getElementById('companyUpdatedAtDetail')) document.getElementById('companyUpdatedAtDetail').textContent = new Date(biz.updatedAt).toLocaleString();

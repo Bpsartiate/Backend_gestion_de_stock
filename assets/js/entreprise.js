@@ -153,7 +153,7 @@
 
         <div class="row mt-3">
           <div class="col-12">
-            <div class="card">
+              <div class="card">
               <div class="card-header pb-0"><h6 class="mb-0">Informations</h6></div>
               <div class="card-body">
                 <table class="table table-borderless fs--1 fw-medium mb-0">
@@ -162,6 +162,13 @@
                     <tr><td class="p-1">Devise:</td><td class="p-1 text-600" id="companyDevise">-</td></tr>
                     <tr><td class="p-1">Email:</td><td class="p-1 text-600" id="companyEmail">-</td></tr>
                     <tr><td class="p-1">Téléphone:</td><td class="p-1 text-600" id="companyTelephone">-</td></tr>
+                    <tr><td class="p-1">Adresse:</td><td class="p-1 text-600" id="companyAddress">-</td></tr>
+                    <tr><td class="p-1">RCCM:</td><td class="p-1 text-600" id="companyRCCM">-</td></tr>
+                    <tr><td class="p-1">ID Nat:</td><td class="p-1 text-600" id="companyIDNat">-</td></tr>
+                    <tr><td class="p-1">Site Web:</td><td class="p-1 text-600" id="companySiteWeb">-</td></tr>
+                    <tr><td class="p-1">Forme Juridique:</td><td class="p-1 text-600" id="companyFormeJuridique">-</td></tr>
+                    <tr><td class="p-1">Capital Social:</td><td class="p-1 text-600" id="companyCapitalSocial">-</td></tr>
+                    <tr><td class="p-1">Siège Social:</td><td class="p-1 text-600" id="companySiegeSocial">-</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -229,7 +236,14 @@
   function renderCompany(b){
     try{
       const nameEl = document.getElementById('companyName');
-      if(nameEl) nameEl.textContent = b.nomEntreprise || b.nom || 'Untitled';
+      if(nameEl){
+        // If the business provides an icon class (fontawesome), show it before the name
+        if(b.icon){
+          nameEl.innerHTML = `<span class="me-2"><i class="${escapeHtml(b.icon)}"></i></span>${escapeHtml(b.nomEntreprise || b.nom || 'Untitled')}`;
+        }else{
+          nameEl.textContent = b.nomEntreprise || b.nom || 'Untitled';
+        }
+      }
       const infoEl = document.getElementById('companyInfo'); if(infoEl) infoEl.textContent = b.description || '';
       const budgetEl = document.getElementById('companyBudget'); if(budgetEl) budgetEl.textContent = formatCurrency(b.budget||0, b.devise || 'USD');
       const devEl = document.getElementById('companyDevise'); if(devEl) devEl.textContent = b.devise || 'USD';
@@ -237,6 +251,13 @@
       const telEl = document.getElementById('companyTelephone'); if(telEl) telEl.textContent = b.telephone || '-';
       const spendEl = document.getElementById('companySpendings'); if(spendEl) spendEl.textContent = formatCurrency(b.chiffre_affaires||0, b.devise || 'USD');
       const logo = document.getElementById('companyLogo'); if(logo) logo.src = b.logoUrl || b.photoUrl || 'assets/img/elearning/avatar/student.png';
+      const siteEl = document.getElementById('companySiteWeb'); if(siteEl) siteEl.textContent = b.siteWeb || '-';
+      const formeEl = document.getElementById('companyFormeJuridique'); if(formeEl) formeEl.textContent = b.formeJuridique || '-';
+      const capitalEl = document.getElementById('companyCapitalSocial'); if(capitalEl) capitalEl.textContent = b.capitalSocial ? formatCurrency(b.capitalSocial, b.devise||'USD') : '-';
+      const siegeEl = document.getElementById('companySiegeSocial'); if(siegeEl) siegeEl.textContent = b.siegeSocial || '-';
+      const addrEl = document.getElementById('companyAddress'); if(addrEl) addrEl.textContent = b.adresse || '-';
+      const rccmEl = document.getElementById('companyRCCM'); if(rccmEl) rccmEl.textContent = b.rccm || '-';
+      const idNatEl = document.getElementById('companyIDNat'); if(idNatEl) idNatEl.textContent = b.idNat || '-';
       const assEl = document.getElementById('assignmentScore'); if(assEl) assEl.textContent = b.assignmentScore || '—';
 
       const statusLink = document.getElementById('statusLink');
@@ -349,6 +370,14 @@
         fd.append('email', formData.get('email') || '');
         fd.append('description', formData.get('description') || '');
         fd.append('telephone', formData.get('telephone') || '');
+        // extended fields
+        fd.append('rccm', formData.get('rccm') || '');
+        fd.append('idNat', formData.get('idNat') || '');
+        fd.append('siteWeb', formData.get('siteWeb') || '');
+        fd.append('icon', formData.get('icon') || '');
+        fd.append('formeJuridique', formData.get('formeJuridique') || '');
+        if (formData.get('capitalSocial')) fd.append('capitalSocial', formData.get('capitalSocial'));
+        fd.append('siegeSocial', formData.get('siegeSocial') || '');
 
         console.log('[submitCreateBusiness] sending multipart payload with logo to:', apiBase + '/api/business');
         res = await fetch(apiBase + '/api/business', { 
@@ -366,6 +395,14 @@
           description: formData.get('description') || '',
           telephone: formData.get('telephone') || ''
         };
+        // extended fields
+        if(formData.get('rccm')) payload.rccm = formData.get('rccm');
+        if(formData.get('idNat')) payload.idNat = formData.get('idNat');
+        if(formData.get('siteWeb')) payload.siteWeb = formData.get('siteWeb');
+        if(formData.get('icon')) payload.icon = formData.get('icon');
+        if(formData.get('formeJuridique')) payload.formeJuridique = formData.get('formeJuridique');
+        if(formData.get('capitalSocial')) payload.capitalSocial = Number(formData.get('capitalSocial'));
+        if(formData.get('siegeSocial')) payload.siegeSocial = formData.get('siegeSocial');
 
         const headers = {
           'Authorization': 'Bearer ' + token,
@@ -491,10 +528,21 @@
         fd.append('logo', logoFile);
         // append fields that might be updated
         ['nomEntreprise','adresse','budget','devise','email','description','telephone','status'].forEach(k => { if(formData.get(k)!==null) fd.append(k, formData.get(k)); });
+        // extended fields
+        ['rccm','idNat','siteWeb','icon','formeJuridique','siegeSocial'].forEach(k => { if(formData.get(k)!==null) fd.append(k, formData.get(k)); });
+        if(formData.get('capitalSocial')) fd.append('capitalSocial', formData.get('capitalSocial'));
         res = await fetch(apiBase + '/api/business/' + businessId, { method: 'PUT', body: fd, headers: { 'Authorization': 'Bearer ' + token } });
       } else {
         const payload = {};
         ['nomEntreprise','adresse','budget','devise','email','description','telephone','status'].forEach(k => { if(formData.get(k)!==null) payload[k] = (k==='budget' || k==='status') ? Number(formData.get(k)) : formData.get(k); });
+        // extended fields
+        if(formData.get('rccm')!==null) payload.rccm = formData.get('rccm');
+        if(formData.get('idNat')!==null) payload.idNat = formData.get('idNat');
+        if(formData.get('siteWeb')!==null) payload.siteWeb = formData.get('siteWeb');
+        if(formData.get('icon')!==null) payload.icon = formData.get('icon');
+        if(formData.get('formeJuridique')!==null) payload.formeJuridique = formData.get('formeJuridique');
+        if(formData.get('siegeSocial')!==null) payload.siegeSocial = formData.get('siegeSocial');
+        if(formData.get('capitalSocial')) payload.capitalSocial = Number(formData.get('capitalSocial'));
         res = await fetch(apiBase + '/api/business/' + businessId, { method: 'PUT', body: JSON.stringify(payload), headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } });
       }
 
@@ -631,6 +679,13 @@
             const dv = document.getElementById('edit_devise'); if(dv) dv.value = business.devise || 'USD';
             const em = document.getElementById('edit_email'); if(em) em.value = business.email || '';
             const preview = document.getElementById('editLogoPreview'); if(preview) preview.src = business.logoUrl || business.photoUrl || 'assets/img/elearning/avatar/student.png';
+            const rccm = document.getElementById('edit_rccm'); if(rccm) rccm.value = business.rccm || '';
+            const idnat = document.getElementById('edit_idNat'); if(idnat) idnat.value = business.idNat || '';
+            const site = document.getElementById('edit_siteWeb'); if(site) site.value = business.siteWeb || '';
+            const ic = document.getElementById('edit_icon'); if(ic) ic.value = business.icon || '';
+            const forme = document.getElementById('edit_formeJuridique'); if(forme) forme.value = business.formeJuridique || '';
+            const cap = document.getElementById('edit_capitalSocial'); if(cap) cap.value = business.capitalSocial || 0;
+            const siege = document.getElementById('edit_siegeSocial'); if(siege) siege.value = business.siegeSocial || '';
             const submitUpdateBtn = document.getElementById('submitUpdateBusiness'); if(submitUpdateBtn) submitUpdateBtn.dataset.businessId = id;
           }
         }catch(e){ console.warn('populate edit form', e); }
