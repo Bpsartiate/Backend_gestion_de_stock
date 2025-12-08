@@ -1108,6 +1108,18 @@
           const data = { amount: parseCurrency(value), month: month, savedAt: Date.now() };
           localStorage.setItem(getBizKey() + '_grossRevenue', JSON.stringify(data));
           recordActivity('Revenue sauvegardé', `Montant: ${value} (mois ${month})`, 'fas fa-dollar-sign');
+
+          // Try to persist to server
+          (async function(){
+            const businessId = localStorage.getItem('businessId');
+            const token = getToken();
+            if(businessId && token){
+              try{
+                await updateBusinessOnServer(businessId, { chiffre_affaires: data.amount });
+              }catch(e){ console.warn('Failed to persist gross revenue', e && e.message); }
+            }
+          })();
+
           alert('Revenue global enregistré');
         });
 
@@ -1121,6 +1133,17 @@
           const data = { total: sum, month: month, savedAt: Date.now() };
           localStorage.setItem(getBizKey() + '_totalSales_' + month, JSON.stringify(data));
           recordActivity('Total Sales sauvegardé', `Total: ${sum} (mois ${month})`, 'fas fa-chart-line');
+          // Try to persist to server
+          (async function(){
+            const businessId = localStorage.getItem('businessId');
+            const token = getToken();
+            if(businessId && token){
+              try{
+                await updateBusinessOnServer(businessId, { totalSales: sum });
+              }catch(e){ console.warn('Failed to persist total sales', e && e.message); }
+            }
+          })();
+
           alert('Total des ventes enregistré');
         });
 
@@ -1174,8 +1197,35 @@
           const products = loadProducts();
           saveProducts(products);
           recordActivity('Produits sauvegardés', `Total produits: ${products.length}`, 'fas fa-save');
+          // Try to persist products count to server
+          (async function(){
+            const businessId = localStorage.getItem('businessId');
+            const token = getToken();
+            if(businessId && token){
+              try{
+                await updateBusinessOnServer(businessId, { productsSoldCount: products.length });
+              }catch(e){ console.warn('Failed to persist products count', e && e.message); }
+            }
+          })();
+
           alert('Produits enregistrés');
         });
+
+        // Helper: update business fields on server via JSON PUT
+        async function updateBusinessOnServer(businessId, payload){
+          const token = getToken();
+          if(!token) throw new Error('No auth token');
+          const res = await fetch('/api/business/' + businessId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok){
+            const txt = await res.text();
+            throw new Error('Update failed: ' + res.status + ' ' + txt);
+          }
+          return await res.json();
+        }
 
         // Populate initial data on load
         document.addEventListener('DOMContentLoaded', async function(){

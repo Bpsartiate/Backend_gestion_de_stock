@@ -15,6 +15,7 @@ const businessSchema = new mongoose.Schema({
   devise: { type: String, default: 'USD' }, // Devise (currency) pour le suivi financier
   chiffre_affaires: { type: Number, default: 0 }, // Chiffre d'affaires total
   totalSpendings: { type: Number, default: 0 }, // Dépenses totales enregistrées
+  totalSales: { type: Number, default: 0 }, // Total des ventes (bénéfice brut ou somme des transactions)
   productsSoldCount: { type: Number, default: 0 }, // Nombre total de produits vendus
   activities: [{ title: String, description: String, icon: String, ts: Number }],
   status: { type: Number, default: 1 } // 1 = actif, 0 = désactivé
