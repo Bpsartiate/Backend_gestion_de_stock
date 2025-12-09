@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-affectationSchema.index({ guichetId: 1 });
 const affectationSchema = new mongoose.Schema({
   vendeurId: { type: mongoose.Schema.Types.ObjectId, ref: 'Utilisateur' },
   managerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Utilisateur' },
@@ -14,6 +13,7 @@ const affectationSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Index pour requêtes rapides
+// Indexes pour requêtes rapides
 affectationSchema.index({ vendeurId: 1 });
 affectationSchema.index({ guichetId: 1 });
 affectationSchema.index({ magasinId: 1 });
