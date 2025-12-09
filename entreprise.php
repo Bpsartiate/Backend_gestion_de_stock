@@ -179,11 +179,33 @@
                       </div>
                     </div>
                     <div class="col-sm-4">
-                      <div class="card h-100">
-                        <div class="card-body text-center">
-                          <h6 class="mb-1">Magasins</h6>
-                          <div class="fs-5 text-700" id="companyStoresCount">0</div>
-                          <div class="text-500 small mt-1">Guichets: <span id="companyCountersGuichets">0</span></div>
+                      <div class="card h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="position-absolute" style="top: -40px; right: -40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                        <div class="position-absolute" style="bottom: -20px; left: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
+                        <div class="card-body text-center position-relative" style="z-index: 1;">
+                          <div class="d-flex align-items-center justify-content-center mb-2">
+                            <span class="fas fa-store" style="font-size: 1.5rem; color: rgba(255,255,255,0.9);"></span>
+                          </div>
+                          <h6 class="mb-2 text-white fw-bold">Réseau</h6>
+                          <div class="row g-2 align-items-center">
+                            <div class="col-6">
+                              <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 12px; backdrop-filter: blur(10px);">
+                                <div class="fs-4 fw-bold text-white" id="companyStoresCount">0</div>
+                                <div class="small text-white" style="font-size: 0.5rem; letter-spacing: 0.5px; opacity: 0.9;">MAGASINS</div>
+                              </div>
+                            </div>
+                            <div class="col-6">
+                              <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 12px; backdrop-filter: blur(10px);">
+                                <div class="fs-4 fw-bold text-white" id="companyCountersGuichets">0</div>
+                                <div class="small text-white" style="font-size: 0.5rem; letter-spacing: 0.5px; opacity: 0.9;">GUICHETS</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mt-3 pt-2" style="border-top: 1px solid rgba(255,255,255,0.2);">
+                            <span class="badge badge-soft-light text-dark small" style="background: rgba(255,255,255,0.95); font-size: 0.7rem;">
+                              <span class="fas fa-arrow-up me-1" style="color: #667eea;"></span><span id="storesTrend">+0</span> ce mois
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -231,6 +253,10 @@
                       <label class="form-label">Adresse</label>
                       <input name="adresse" class="form-control" />
                     </div>
+                    <div class="md-2">
+                      <label class="form-label">Telephone</label>
+                      <input name="telephone" class="form-control" />
+                    </div>
                     <div class="mb-2 row">
                       <div class="col-6"><label class="form-label">RCCM</label><input name="rccm" class="form-control" /></div>
                       <div class="col-6"><label class="form-label">ID Nat</label><input name="idNat" class="form-control" /></div>
@@ -272,16 +298,7 @@
             </div>
           </div>
 
-          <!-- Modal: Create Magasin -->
-          <div class="modal fade" id="modalCreateMagasin" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-md">
-              <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Créer un magasin</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body"><form id="formCreateMagasin"><div class="mb-2"><label class="form-label">Nom Magasin</label><input name="nom_magasin" class="form-control" required /></div><div class="mb-2"><label class="form-label">Adresse</label><input name="adresse" class="form-control" /></div><input type="hidden" name="businessId" id="magasinBusinessId" /></form></div>
-                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button><button id="submitCreateMagasin" type="button" class="btn btn-primary">Créer</button></div>
-              </div>
-            </div>
-          </div>
+          
           <!-- Modal: Edit Business -->
           <div class="modal fade" id="modalEditBusiness" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-md">
@@ -317,6 +334,10 @@
                         <input name="logo" id="editLogoInput" type="file" accept="image/*" class="form-control" />
                         <small class="text-500">Choisir un fichier pour remplacer le logo</small>
                       </div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label">Téléphone</label>
+                      <input name="telephone" id="edit_telephone" class="form-control" />
                     </div>
                     <div class="mb-2 row">
                       <div class="col-6"><label class="form-label">RCCM</label><input name="rccm" id="edit_rccm" class="form-control" /></div>
@@ -887,6 +908,8 @@
             </div>
           </footer>
         </div>
+        <!-- modal -->
+         <?php include_once "/modals/magasins-guichets-modals.php" ?>
        
       </div>
     </main>
@@ -1101,6 +1124,8 @@
           saveActivities(activities);
           renderActivities();
         }
+        // expose helper to global scope so external scripts can call it
+        try{ window.recordActivity = recordActivity; }catch(e){ /* noop if not available */ }
         function renderActivities(){
           const container = document.getElementById('recentActivitiesList');
           if(!container) return;

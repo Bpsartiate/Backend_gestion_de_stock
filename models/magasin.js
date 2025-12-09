@@ -6,10 +6,12 @@ const magasinSchema = new mongoose.Schema({
   adresse: { type: String, trim: true },
   telephone: { type: String, trim: true },
   email: { type: String, trim: true, lowercase: true },
+  latitude: { type: Number },
+  longitude: { type: Number },
+  photoUrl: { type: String },
+  managerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Utilisateur' },
   status: { type: Number, default: 1 }, // 1 = actif, 0 = désactivé
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 
 magasinSchema.index({ businessId: 1 });
 

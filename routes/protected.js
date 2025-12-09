@@ -7,6 +7,10 @@ const Guichet = require('../models/guichet');
 const Magasin = require('../models/magasin');
 const Business = require('../models/business');
 const Affectation = require('../models/affectation');
+const Activity = require('../models/activity');
+const fs = require('fs');
+const path = require('path');
+const cloudinary = require('../services/cloudinary');
 
 const utilisateurController = require('../controllers/utilisateurController');
 const upload = require('../middlewares/upload');
@@ -177,3 +181,93 @@ router.get('/affectations/rapport', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
+
+// POST /api/protected/magasins - créer un magasin (with optional photo)
+router.post('/magasins', authMiddleware, upload.single('photo'), async (req, res) => {
+  try {
+    // Only admin or superviseur can create magasins
+    const requester = req.user;
+    if (!requester || !['admin', 'superviseur'].includes(requester.role)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const { businessId, nom_magasin, adresse, telephone, email, latitude, longitude, managerId } = req.body;
+    if (!businessId || !nom_magasin) return res.status(400).json({ message: 'businessId et nom_magasin requis' });
+    if (!managerId) return res.status(400).json({ message: 'managerId (superviseur) requis' });
+
+    // Vérifier existence entreprise
+    const entreprise = await Business.findById(businessId);
+    if (!entreprise) return res.status(404).json({ message: 'Entreprise non trouvée' });
+
+    // Vérifier que le manager existe et a le rôle superviseur
+    const manager = await Utilisateur.findById(managerId);
+    if (!manager) return res.status(404).json({ message: 'Gestionnaire non trouvé' });
+    if (manager.role !== 'superviseur') return res.status(400).json({ message: 'L\'utilisateur n\'a pas le rôle superviseur' });
+
+    // Handle photo upload (req.file from multer memory storage)
+    // Upload directly to Cloudinary (magasin images stored in 'magasins' folder)
+    let photoUrl = null;
+    if (req.file && req.file.buffer) {
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream({ folder: 'magasins' }, (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          });
+          uploadStream.end(req.file.buffer);
+        });
+        photoUrl = result.secure_url;
+      } catch (upErr) {
+        console.error('cloudinary upload error (magasin)', upErr);
+        return res.status(400).json({ message: 'Erreur lors de l\'upload de la photo.' });
+      }
+    }
+
+    // Create magasin
+    const newMagasin = new Magasin({
+      businessId,
+      nom_magasin,
+      adresse: adresse || undefined,
+      telephone: telephone || undefined,
+      email: email || undefined,
+      latitude: latitude ? parseFloat(latitude) : undefined,
+      longitude: longitude ? parseFloat(longitude) : undefined,
+      photoUrl: photoUrl || undefined,
+      managerId: managerId
+    });
+    await newMagasin.save();
+
+    // Record affectation for manager (create affectation entry)
+    const newAffect = new Affectation({
+      managerId: managerId,
+      magasinId: newMagasin._id,
+      entrepriseId: businessId,
+      dateAffectation: new Date(),
+      status: 1,
+      notes: `Gestionnaire affecté lors de la création du magasin par ${requester.nom || requester.email || requester.id}`
+    });
+    await newAffect.save();
+
+    // Update manager user with businessId and magasinId (optional)
+    await Utilisateur.findByIdAndUpdate(managerId, { $set: { businessId, guichetId: null } });
+
+    // Create activity for business
+    try {
+      const activity = new Activity({
+        businessId,
+        userId: requester.id,
+        title: 'Magasin créé',
+        description: `Magasin '${newMagasin.nom_magasin}' créé et gestionnaire assigné: ${manager.prenom || ''} ${manager.nom || ''}`,
+        icon: 'fas fa-store'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Magasin créé', magasin: newMagasin, affectation: newAffect });
+  } catch (err) {
+    console.error('magasins.create.error', err);
+    return res.status(500).json({ message: 'Erreur création magasin' });
+  }
+});

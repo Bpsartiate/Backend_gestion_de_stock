@@ -121,15 +121,37 @@
             </div>
           </div>
         </div>
-        <div class="col-sm-4">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <h6 class="mb-1">Magasins</h6>
-              <div class="fs-5 text-700" id="companyStoresCount">0</div>
-              <div class="text-500 small mt-1">Guichets: <span id="companyCountersGuichets">0</span></div>
-            </div>
-          </div>
-        </div>
+           <div class="col-sm-4">
+                      <div class="card h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="position-absolute" style="top: -40px; right: -40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                        <div class="position-absolute" style="bottom: -20px; left: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
+                        <div class="card-body text-center position-relative" style="z-index: 1;">
+                          <div class="d-flex align-items-center justify-content-center mb-2">
+                            <span class="fas fa-store" style="font-size: 1.5rem; color: rgba(255,255,255,0.9);"></span>
+                          </div>
+                          <h6 class="mb-2 text-white fw-bold">Réseau</h6>
+                          <div class="row g-2 align-items-center">
+                            <div class="col-6">
+                              <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 12px; backdrop-filter: blur(10px);">
+                                <div class="fs-4 fw-bold text-white" id="companyStoresCount">0</div>
+                                <div class="small text-white" style="font-size: 0.5rem; letter-spacing: 0.5px; opacity: 0.9;">MAGASINS</div>
+                              </div>
+                            </div>
+                            <div class="col-6">
+                              <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 12px; backdrop-filter: blur(10px);">
+                                <div class="fs-4 fw-bold text-white" id="companyCountersGuichets">0</div>
+                                <div class="small text-white" style="font-size: 0.5rem; letter-spacing: 0.5px; opacity: 0.9;">GUICHETS</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mt-3 pt-2" style="border-top: 1px solid rgba(255,255,255,0.2);">
+                            <span class="badge badge-soft-light text-dark small" style="background: rgba(255,255,255,0.95); font-size: 0.7rem;">
+                              <span class="fas fa-arrow-up me-1" style="color: #667eea;"></span><span id="storesTrend">+0</span> ce mois
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
       </div>
 
       <div class="card-body border-top">
@@ -158,17 +180,17 @@
               <div class="card-body">
                 <table class="table table-borderless fs--1 fw-medium mb-0">
                   <tbody id="companyDetailsTable">
-                    <tr><td class="p-1" style="width:35%">Budget:</td><td class="p-1 text-600" id="companyBudget">-</td></tr>
-                    <tr><td class="p-1">Devise:</td><td class="p-1 text-600" id="companyDevise">-</td></tr>
-                    <tr><td class="p-1">Email:</td><td class="p-1 text-600" id="companyEmail">-</td></tr>
-                    <tr><td class="p-1">Téléphone:</td><td class="p-1 text-600" id="companyTelephone">-</td></tr>
-                    <tr><td class="p-1">Adresse:</td><td class="p-1 text-600" id="companyAddress">-</td></tr>
-                    <tr><td class="p-1">RCCM:</td><td class="p-1 text-600" id="companyRCCM">-</td></tr>
-                    <tr><td class="p-1">ID Nat:</td><td class="p-1 text-600" id="companyIDNat">-</td></tr>
-                    <tr><td class="p-1">Site Web:</td><td class="p-1 text-600" id="companySiteWeb">-</td></tr>
-                    <tr><td class="p-1">Forme Juridique:</td><td class="p-1 text-600" id="companyFormeJuridique">-</td></tr>
-                    <tr><td class="p-1">Capital Social:</td><td class="p-1 text-600" id="companyCapitalSocial">-</td></tr>
-                    <tr><td class="p-1">Siège Social:</td><td class="p-1 text-600" id="companySiegeSocial">-</td></tr>
+                    <tr><td class="p-1" style="width:35%"><span class="fas fa-wallet text-primary me-2" style="width:16px;"></span><span class="fw-bold">Budget</span></td><td class="p-1 text-600" id="companyBudgetDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-coins text-info me-2" style="width:16px;"></span><span class="fw-bold">Devise</span></td><td class="p-1 text-600" id="companyDeviseDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-envelope text-success me-2" style="width:16px;"></span><span class="fw-bold">Email</span></td><td class="p-1 text-600" id="companyEmailDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-phone text-danger me-2" style="width:16px;"></span><span class="fw-bold">Téléphone</span></td><td class="p-1 text-600" id="companyTelephoneDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-map-marker-alt text-warning me-2" style="width:16px;"></span><span class="fw-bold">Adresse</span></td><td class="p-1 text-600" id="companyAddressDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-file-contract text-secondary me-2" style="width:16px;"></span><span class="fw-bold">RCCM</span></td><td class="p-1 text-600" id="companyRCCMDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-id-card text-muted me-2" style="width:16px;"></span><span class="fw-bold">ID Nat</span></td><td class="p-1 text-600" id="companyIDNatDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-globe text-info me-2" style="width:16px;"></span><span class="fw-bold">Site Web</span></td><td class="p-1 text-600" id="companySiteWebDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-building text-dark me-2" style="width:16px;"></span><span class="fw-bold">Forme Juridique</span></td><td class="p-1 text-600" id="companyFormeJuridiqueDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-money-bill-wave text-success me-2" style="width:16px;"></span><span class="fw-bold">Capital Social</span></td><td class="p-1 text-600" id="companyCapitalSocialDetail">-</td></tr>
+                    <tr><td class="p-1"><span class="fas fa-landmark text-primary me-2" style="width:16px;"></span><span class="fw-bold">Siège Social</span></td><td class="p-1 text-600" id="companySiegeSocialDetail">-</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -259,6 +281,23 @@
       const rccmEl = document.getElementById('companyRCCM'); if(rccmEl) rccmEl.textContent = b.rccm || '-';
       const idNatEl = document.getElementById('companyIDNat'); if(idNatEl) idNatEl.textContent = b.idNat || '-';
       const assEl = document.getElementById('assignmentScore'); if(assEl) assEl.textContent = b.assignmentScore || '—';
+
+      // Also populate the "Detail" versions for the information table (avoid duplicate IDs)
+      const budgetDetailEl = document.getElementById('companyBudgetDetail'); if(budgetDetailEl) budgetDetailEl.textContent = formatCurrency(b.budget||0, b.devise || 'USD');
+      const devDetailEl = document.getElementById('companyDeviseDetail'); if(devDetailEl) devDetailEl.textContent = b.devise || 'USD';
+      const emailDetailEl = document.getElementById('companyEmailDetail'); if(emailDetailEl) emailDetailEl.textContent = b.email || '-';
+      const telDetailEl = document.getElementById('companyTelephoneDetail'); if(telDetailEl) telDetailEl.textContent = b.telephone || '-';
+      const addrDetailEl = document.getElementById('companyAddressDetail'); if(addrDetailEl) addrDetailEl.textContent = b.adresse || '-';
+      const rccmDetailEl = document.getElementById('companyRCCMDetail'); if(rccmDetailEl) rccmDetailEl.textContent = b.rccm || '-';
+      const idNatDetailEl = document.getElementById('companyIDNatDetail'); if(idNatDetailEl) idNatDetailEl.textContent = b.idNat || '-';
+      const siteDetailEl = document.getElementById('companySiteWebDetail'); if(siteDetailEl) siteDetailEl.textContent = b.siteWeb || '-';
+      const formeDetailEl = document.getElementById('companyFormeJuridiqueDetail'); if(formeDetailEl) formeDetailEl.textContent = b.formeJuridique || '-';
+      const capitalDetailEl = document.getElementById('companyCapitalSocialDetail'); if(capitalDetailEl) capitalDetailEl.textContent = b.capitalSocial ? formatCurrency(b.capitalSocial, b.devise||'USD') : '-';
+      const siegeDetailEl = document.getElementById('companySiegeSocialDetail'); if(siegeDetailEl) siegeDetailEl.textContent = b.siegeSocial || '-';
+
+      // updatedAt display
+      const updatedEl = document.getElementById('companyUpdatedAt'); if(updatedEl) updatedEl.textContent = b.updatedAt ? new Date(b.updatedAt).toLocaleString() : '—';
+      const updatedDetailEl = document.getElementById('companyUpdatedAtDetail'); if(updatedDetailEl) updatedDetailEl.textContent = b.updatedAt ? new Date(b.updatedAt).toLocaleString() : '—';
 
       const statusLink = document.getElementById('statusLink');
       const statusBadge = document.getElementById('statusBadge');
@@ -374,7 +413,6 @@
         fd.append('rccm', formData.get('rccm') || '');
         fd.append('idNat', formData.get('idNat') || '');
         fd.append('siteWeb', formData.get('siteWeb') || '');
-        fd.append('icon', formData.get('icon') || '');
         fd.append('formeJuridique', formData.get('formeJuridique') || '');
         if (formData.get('capitalSocial')) fd.append('capitalSocial', formData.get('capitalSocial'));
         fd.append('siegeSocial', formData.get('siegeSocial') || '');
@@ -399,7 +437,6 @@
         if(formData.get('rccm')) payload.rccm = formData.get('rccm');
         if(formData.get('idNat')) payload.idNat = formData.get('idNat');
         if(formData.get('siteWeb')) payload.siteWeb = formData.get('siteWeb');
-        if(formData.get('icon')) payload.icon = formData.get('icon');
         if(formData.get('formeJuridique')) payload.formeJuridique = formData.get('formeJuridique');
         if(formData.get('capitalSocial')) payload.capitalSocial = Number(formData.get('capitalSocial'));
         if(formData.get('siegeSocial')) payload.siegeSocial = formData.get('siegeSocial');
@@ -528,8 +565,8 @@
         fd.append('logo', logoFile);
         // append fields that might be updated
         ['nomEntreprise','adresse','budget','devise','email','description','telephone','status'].forEach(k => { if(formData.get(k)!==null) fd.append(k, formData.get(k)); });
-        // extended fields
-        ['rccm','idNat','siteWeb','icon','formeJuridique','siegeSocial'].forEach(k => { if(formData.get(k)!==null) fd.append(k, formData.get(k)); });
+        // extended fields (no icon)
+        ['rccm','idNat','siteWeb','formeJuridique','siegeSocial'].forEach(k => { if(formData.get(k)!==null) fd.append(k, formData.get(k)); });
         if(formData.get('capitalSocial')) fd.append('capitalSocial', formData.get('capitalSocial'));
         res = await fetch(apiBase + '/api/business/' + businessId, { method: 'PUT', body: fd, headers: { 'Authorization': 'Bearer ' + token } });
       } else {
@@ -539,7 +576,6 @@
         if(formData.get('rccm')!==null) payload.rccm = formData.get('rccm');
         if(formData.get('idNat')!==null) payload.idNat = formData.get('idNat');
         if(formData.get('siteWeb')!==null) payload.siteWeb = formData.get('siteWeb');
-        if(formData.get('icon')!==null) payload.icon = formData.get('icon');
         if(formData.get('formeJuridique')!==null) payload.formeJuridique = formData.get('formeJuridique');
         if(formData.get('siegeSocial')!==null) payload.siegeSocial = formData.get('siegeSocial');
         if(formData.get('capitalSocial')) payload.capitalSocial = Number(formData.get('capitalSocial'));
@@ -549,6 +585,38 @@
       if(!res.ok){ const txt = await res.text(); throw new Error(txt); }
       const data = await res.json();
       showAlert('Entreprise mise à jour avec succès', 'success', 3000);
+      // compute changes and post an activity
+      try{
+        const oldBiz = window.CURRENT_BUSINESS || {};
+        const newBiz = (data && data.business) ? data.business : {};
+        const changed = [];
+        const checkFields = ['nomEntreprise','budget','telephone','adresse','siteWeb','formeJuridique','capitalSocial','siegeSocial','email'];
+        checkFields.forEach(f => {
+          const oldVal = oldBiz[f] !== undefined ? String(oldBiz[f]) : '';
+          const newVal = newBiz[f] !== undefined ? String(newBiz[f]) : '';
+          if(oldVal !== newVal){
+            changed.push(`${f}: "${oldVal}" → "${newVal}"`);
+          }
+        });
+        const desc = changed.length ? 'Modifications: ' + changed.join('; ') : 'Modification effectuée';
+        // prefer using the page's recordActivity helper (it handles server/local fallback)
+        try{
+          if(typeof window !== 'undefined' && typeof window.recordActivity === 'function'){
+            window.recordActivity('Entreprise modifiée', desc, 'fas fa-edit');
+          }else{
+            // fallback: try to post directly when recordActivity isn't available
+            (async function(){
+              try{
+                const token = getToken();
+                if(!token) return;
+                await fetch(apiBase + '/api/business/' + businessId + '/activities', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()), body: JSON.stringify({ title: 'Entreprise modifiée', description: desc, icon: 'fas fa-edit', ts: Date.now() }) });
+              }catch(e){ console.warn('post activity failed', e); }
+            })();
+          }
+        }catch(e){ console.warn('activity helper call failed', e); }
+
+      }catch(e){ console.warn('activity logging failed', e); }
+
       if(typeof loadCompanies === 'function') loadCompanies();
       if(data.business && data.business._id) selectCompany(data.business._id);
     }catch(err){ console.error('submitUpdateBusiness', err); showAlert('Erreur mise à jour: ' + (err.message||err), 'danger', 4000); }
@@ -586,6 +654,21 @@
           }
         }
         const guichetsEl = document.getElementById('guichetsLight'); if(guichetsEl) guichetsEl.textContent = 'Guichets: ' + totalGuichets;
+        
+        // Update the new network display card
+        const storesCountEl = document.getElementById('companyStoresCount'); if(storesCountEl) storesCountEl.textContent = Array.isArray(magasins) ? magasins.length : 0;
+        const guichetsCountEl = document.getElementById('companyCountersGuichets'); if(guichetsCountEl) guichetsCountEl.textContent = totalGuichets;
+        
+        // Add a trend indicator (random for demo, or could be calculated from historical data)
+        const storesTrend = document.getElementById('storesTrend');
+        if(storesTrend){
+          const prevCount = parseInt(localStorage.getItem('prev_' + id + '_stores')) || 0;
+          const currentCount = Array.isArray(magasins) ? magasins.length : 0;
+          const delta = currentCount - prevCount;
+          storesTrend.textContent = (delta >= 0 ? '+' : '') + delta;
+          storesTrend.parentElement.style.color = delta > 0 ? '#28a745' : (delta < 0 ? '#dc3545' : '#6c757d');
+          localStorage.setItem('prev_' + id + '_stores', currentCount);
+        }
       }catch(e){ console.warn('count guichets', e); }
 
       // sellers count via affectations (best-effort)
@@ -678,6 +761,7 @@
             const bd = document.getElementById('edit_budget'); if(bd) bd.value = business.budget || 0;
             const dv = document.getElementById('edit_devise'); if(dv) dv.value = business.devise || 'USD';
             const em = document.getElementById('edit_email'); if(em) em.value = business.email || '';
+            const telEdit = document.getElementById('edit_telephone'); if(telEdit) telEdit.value = business.telephone || '';
             const preview = document.getElementById('editLogoPreview'); if(preview) preview.src = business.logoUrl || business.photoUrl || 'assets/img/elearning/avatar/student.png';
             const rccm = document.getElementById('edit_rccm'); if(rccm) rccm.value = business.rccm || '';
             const idnat = document.getElementById('edit_idNat'); if(idnat) idnat.value = business.idNat || '';
