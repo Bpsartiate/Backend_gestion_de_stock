@@ -271,3 +271,178 @@ router.post('/magasins', authMiddleware, upload.single('photo'), async (req, res
     return res.status(500).json({ message: 'Erreur création magasin' });
   }
 });
+
+// POST /api/protected/guichets - créer un guichet lié à un magasin
+router.post('/guichets', authMiddleware, async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester || !['admin', 'superviseur'].includes(requester.role)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // If superviseur, optionally check a permission flag
+    if (requester.role === 'superviseur' && requester.canCreateGuichet === false) {
+      return res.status(403).json({ message: 'Permission refusée: le superviseur ne peut pas créer de guichets' });
+    }
+
+    const { magasinId, nomGuichet, codeGuichet, status, vendeurPrincipal, objectifJournalier, stockMax } = req.body;
+    if (!magasinId || !nomGuichet) return res.status(400).json({ message: 'magasinId et nomGuichet requis' });
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) return res.status(404).json({ message: 'Magasin non trouvé' });
+
+    // create the guichet
+    const guichet = new Guichet({
+      magasinId: magasin._id,
+      nom_guichet: nomGuichet,
+      code: codeGuichet || undefined,
+      status: typeof status !== 'undefined' ? Number(status) : 1,
+      vendeurPrincipal: vendeurPrincipal || null,
+      objectifJournalier: objectifJournalier ? Number(objectifJournalier) : 0,
+      stockMax: stockMax ? Number(stockMax) : 0
+    });
+    await guichet.save();
+
+    // If a vendeurPrincipal was provided, create an affectation for them on this guichet
+    if (vendeurPrincipal) {
+      try {
+        const vendeur = await Utilisateur.findById(vendeurPrincipal);
+        if (vendeur && vendeur.role === 'vendeur') {
+          // End previous affectations
+          await Affectation.updateMany({ vendeurId: vendeur._id, status: 1 }, { $set: { status: 0, dateFinAffectation: new Date() } });
+
+          const newAffect = new Affectation({
+            vendeurId: vendeur._id,
+            guichetId: guichet._id,
+            magasinId: magasin._id,
+            entrepriseId: magasin.businessId,
+            dateAffectation: new Date(),
+            status: 1,
+            notes: `Assigné automatiquement lors de la création du guichet par ${requester.prenom||requester.nom||requester.email||requester.id}`
+          });
+          await newAffect.save();
+
+          // update vendeur record
+          await Utilisateur.findByIdAndUpdate(vendeur._id, { $set: { guichetId: guichet._id, businessId: magasin.businessId } });
+        }
+      } catch (e) {
+        console.warn('assign vendeur on guichet failed', e);
+      }
+    }
+
+    // activity
+    try {
+      const activity = new Activity({
+        businessId: magasin.businessId,
+        userId: requester.id,
+        title: 'Guichet créé',
+        description: `Guichet '${guichet.nom_guichet}' créé pour le magasin '${magasin.nom_magasin || magasin.nom}'`,
+        icon: 'fas fa-cash-register'
+      });
+      await activity.save();
+    } catch (actErr) { console.warn('activity save guichet', actErr); }
+
+    return res.json({ message: 'Guichet créé', guichet });
+  } catch (err) {
+    console.error('guichets.create.error', err);
+    return res.status(500).json({ message: 'Erreur création guichet' });
+  }
+});
+
+// GET /api/protected/magasins - Lister tous les magasins de l'utilisateur (admin/superviseur)
+router.get('/magasins', authMiddleware, async (req, res) => {
+  try {
+    const user = req.user;
+    
+    // Les admins voient tous les magasins, les superviseurs voir seulement ceux auxquels ils sont assignés
+    let filter = {};
+    if (user.role === 'superviseur') {
+      filter.managerId = user.id;
+    }
+    
+    const magasins = await Magasin.find(filter)
+      .populate('businessId', 'nomEntreprise')
+      .populate('managerId', 'nom prenom email')
+      .lean()
+      .exec();
+    
+    // Fetch guichets for each magasin
+    const magasinsWithGuichets = await Promise.all(
+      magasins.map(async (m) => {
+        const guichets = await Guichet.find({ magasinId: m._id })
+          .populate('vendeurPrincipal', 'nom prenom email')
+          .lean()
+          .exec();
+        return { ...m, guichets: guichets || [] };
+      })
+    );
+    
+    return res.json(magasinsWithGuichets);
+  } catch (err) {
+    console.error('magasins.list.error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/protected/stats/magasins-guichets - Statistiques magasins/guichets
+router.get('/stats/magasins-guichets', authMiddleware, async (req, res) => {
+  try {
+    const user = req.user;
+    
+    let magasinFilter = {};
+    if (user.role === 'superviseur') {
+      magasinFilter.managerId = user.id;
+    }
+    
+    const totalMagasins = await Magasin.countDocuments(magasinFilter);
+    
+    // Get magasin IDs for guichet filtering
+    const magasinIds = await Magasin.find(magasinFilter).select('_id').lean();
+    const magasinIdList = magasinIds.map(m => m._id);
+    
+    let guichetFilter = {};
+    if (magasinIdList.length > 0) {
+      guichetFilter.magasinId = { $in: magasinIdList };
+    }
+    
+    const totalGuichets = await Guichet.countDocuments(guichetFilter);
+    
+    // Get unique vendeurs (from affectations)
+    const affectations = await Affectation.find({ 
+      status: 1,
+      ...(magasinIdList.length > 0 && { magasinId: { $in: magasinIdList } })
+    }).distinct('vendeurId');
+    const totalVendeurs = affectations.length;
+    
+    // Calculate total stock (sum of stockMax from all guichets)
+    const stockData = await Guichet.aggregate([
+      { $match: guichetFilter },
+      { $group: { _id: null, totalStock: { $sum: '$stockMax' } } }
+    ]);
+    const totalStock = stockData.length > 0 ? stockData[0].totalStock : 0;
+    
+    // Get entreprise info (for admin)
+    let entreprise = null;
+    if (user.role === 'admin') {
+      const businesses = await Business.find().select('nomEntreprise').limit(1);
+      entreprise = businesses.length > 0 ? businesses[0] : null;
+    } else if (user.role === 'superviseur') {
+      // Superviseur: get the business of their first magasin
+      const mag = await Magasin.findOne(magasinFilter).populate('businessId', 'nomEntreprise');
+      entreprise = mag ? mag.businessId : null;
+    }
+    
+    return res.json({
+      totalMagasins,
+      totalGuichets,
+      totalVendeurs,
+      totalStock,
+      entreprise: entreprise || { nomEntreprise: 'Non définie' }
+    });
+  } catch (err) {
+    console.error('stats.magasins-guichets.error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+module.exports = router;

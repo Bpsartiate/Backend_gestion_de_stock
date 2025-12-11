@@ -69,11 +69,11 @@
           }
         </script>
        <!-- nav prime  -->
-        <?php include_once "../includes/sidebar.php"; ?>
+        <?php include_once "../sidebar.php"; ?>
         <!-- content -->
        <?php include_once "../pages/stock/stock_et_entrepo.php"; ?>
        <!-- modal section -->
-        <?php include_once "../modal.php"; ?>
+        
       </div>
     </main>
     <!-- ===============================================-->
@@ -81,7 +81,6 @@
     <!-- ===============================================-->
 
 <!-- setting button -->
- <?php include_once "../settings.php"; ?>
 
 
     <!-- ===============================================-->

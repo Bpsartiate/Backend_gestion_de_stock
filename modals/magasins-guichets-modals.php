@@ -20,7 +20,7 @@
                 <h4 class="modal-title fw-bold mb-0 ms-5">
                     <i class="fas fa-plus-circle me-2"></i>Nouveau Magasin
                 </h4>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="container-fluid">
@@ -35,7 +35,7 @@
                                     <span class="input-group-text bg-light">
                                         <i class="fas fa-store text-primary"></i>
                                     </span>
-                                    <input type="text" class="form-control fw-semibold fs-5" name="nom_magasin" required 
+                                    <input type="text" class="form-control fw-semibold fs-1" name="nom_magasin" required 
                                            placeholder="Ex: Magasin Central Goma">
                                     <span class="invalid-feedback"></span>
                                 </div>
@@ -355,6 +355,9 @@
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+
 <script>
 // JAVASCRIPT INTÉGRÉ POUR MODALS (même méthode que entreprise.php)
 $(document).ready(function() {
@@ -464,10 +467,25 @@ $(document).ready(function() {
         if(!managerSelect) return;
         managerSelect.innerHTML = '<option value="">Chargement des gestionnaires…</option>';
         try{
-            const token = localStorage.getItem('token') || localStorage.getItem('authToken') || null;
-            const res = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/protected/members', { headers: token ? { 'Authorization': 'Bearer ' + token } : {} });
-            if(!res.ok) throw new Error('Erreur chargement gestionnaires');
-            const members = await res.json();
+                // Resolve token from any known localStorage keys or helper
+                const token = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('accessToken') || null);
+                const base = (typeof API_BASE !== 'undefined') ? API_BASE : ((typeof apiBase !== 'undefined') ? apiBase : '');
+                // Use AbortController to avoid hanging fetches
+                const controller = new AbortController();
+                const timeoutMs = 8000; // 8s
+                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+                let members = [];
+                try{
+                    const res = await fetch(base + '/api/protected/members', { headers: token ? { 'Authorization': 'Bearer ' + token } : {}, signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    if(!res.ok) throw new Error('Erreur chargement gestionnaires: ' + res.status);
+                    members = await res.json();
+                }catch(fetchErr){
+                    clearTimeout(timeoutId);
+                    console.error('load managers fetch error', fetchErr);
+                    managerSelect.innerHTML = '<option value="">Erreur chargement</option>';
+                    return;
+                }
             const managers = (members||[]).filter(m=>m.role === 'superviseur');
             if(managers.length===0){ managerSelect.innerHTML = '<option value="">Aucun gestionnaire trouvé</option>'; return; }
             managerSelect.innerHTML = '<option value="">Sélectionner un gestionnaire</option>' + managers.map(m=>`<option value="${m._id}">${(m.prenom||'').trim()} ${(m.nom||'').trim()} ${m.email? '('+m.email+')':''}</option>`).join('');
@@ -477,10 +495,10 @@ $(document).ready(function() {
     // Soumission forms avec validation
     $('#formCreateMagasin').on('submit', async function(e) {
         e.preventDefault();
-        const btn = $(this).find('button[type="submit"]');
+        const $btn = $(this).find('button[type="submit"]');
         const spinner = document.getElementById('submitSpinner1');
         try{
-            if(btn) btn.setAttribute('disabled','disabled');
+            if($btn && $btn.length) $btn.prop('disabled', true);
             if(spinner) spinner.classList.remove('d-none');
             // Build FormData
             const formEl = document.getElementById('formCreateMagasin');
@@ -505,11 +523,35 @@ $(document).ready(function() {
             }catch(e){ console.warn('recordActivity failed', e); }
 
             showToast('Magasin créé avec succès ! ✅', 'success');
-            $('#modalCreateMagasin').modal('hide');
-            // refresh dashboard list
-            if(typeof loadDashboardData === 'function') loadDashboardData();
+            // hide modal (use bootstrap API or jQuery fallback)
+            try{
+                const modalEl = document.getElementById('modalCreateMagasin');
+                if(window.bootstrap && modalEl){
+                    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                } else if(typeof $ === 'function'){
+                    $('#modalCreateMagasin').modal('hide');
+                }
+            }catch(e){ console.warn('hide modal failed', e); }
+
+            // Notify the page that a magasin was created so listeners can refresh UI
+            try{
+                const bizInput = document.getElementById('magasinBusinessId');
+                const businessId = (bizInput && bizInput.value) ? bizInput.value : (window.CURRENT_BUSINESS && (window.CURRENT_BUSINESS._id || window.CURRENT_BUSINESS.id));
+                const eventDetail = { businessId: businessId || null, magasin: data.magasin || null };
+                // Dispatch a custom event for any listeners on the window
+                window.dispatchEvent(new CustomEvent('magasin.created', { detail: eventDetail }));
+
+                // Backward-compatible: attempt direct call if functions are global
+                if(eventDetail.businessId){
+                    if(typeof window.loadMagasins === 'function'){
+                        await window.loadMagasins(eventDetail.businessId);
+                    } else if(typeof window.selectCompany === 'function'){
+                        await window.selectCompany(eventDetail.businessId);
+                    }
+                }
+            }catch(refreshErr){ console.warn('refresh magasins after create failed', refreshErr); }
         }catch(err){ console.error('create magasin', err); showToast('Erreur création magasin: '+(err.message||err), 'danger'); }
-        finally{ if(btn) btn.removeAttribute('disabled'); if(spinner) spinner.classList.add('d-none'); }
+        finally{ if($btn && $btn.length) $btn.prop('disabled', false); if(spinner) spinner.classList.add('d-none'); }
     });
 
     // Auto-remplissage guichet

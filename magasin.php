@@ -79,6 +79,27 @@
             document.getElementById('user-style-rtl').disabled = true;
         }
     </script>
+    <script>
+        // Ensure API_BASE is set to the Render deployment if not already defined
+        if(typeof window.API_BASE === 'undefined' || !window.API_BASE){
+            window.API_BASE = 'https://backend-gestion-de-stock.onrender.com';
+        }
+    </script>
+    <script>
+        // Small auth helpers for this page (use AuthProtection if available)
+        function getTokenLocal(){
+            try{
+                if(window.AuthProtection && typeof window.AuthProtection.getToken === 'function') return window.AuthProtection.getToken();
+            }catch(e){}
+            const keys = ['token','authToken','jwt','accessToken','userToken'];
+            for(const k of keys){ const v = localStorage.getItem(k); if(v) return v; }
+            return null;
+        }
+        function authHeaders(){
+            const t = getTokenLocal();
+            return t ? { 'Authorization': 'Bearer ' + t } : {};
+        }
+    </script>
 </head>
 
 <body>
@@ -123,8 +144,8 @@
                                     </div>
                                     <div class="btn-group" role="group">
                                         <button class="btn btn-outline-light btn-sm" id="refreshAllData" title="Actualiser"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
-                                        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalCreateMagasin"><i class="fas fa-store me-1"></i>Magasin</button>
-                                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalCreateGuichet"><i class="fas fa-cash-register me-1"></i>Guichet</button>
+                                        <!-- <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalCreateMagasin"><i class="fas fa-store me-1"></i>Magasin</button> -->
+                                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalCreateGuichet"><i class="fas fa-cash-register me-1"></i>Ajoutter un Guichet</button>
                                     </div>
                                 </div>
                             </div>
@@ -367,11 +388,29 @@
         async function loadDashboardData() {
             showSpinner('#magasinsList, #guichetsList');
             try {
+                const headers = Object.assign({'Accept':'application/json'}, authHeaders());
+                console.log('[loadDashboardData] Using headers:', headers);
+                console.log('[loadDashboardData] API_BASE:', API_BASE);
+                
                 const [magasins, stats] = await Promise.all([
-                    fetch(`${API_BASE}/api/protected/magasins`),
-                    fetch(`${API_BASE}/api/protected/stats/magasins-guichets`)
+                    fetch(`${API_BASE}/api/protected/magasins`, { headers, mode: 'cors' }),
+                    fetch(`${API_BASE}/api/protected/stats/magasins-guichets`, { headers, mode: 'cors' })
                 ]);
                 
+                if(!magasins.ok){
+                    if(magasins.status===401 || magasins.status===403){
+                        showToast('Accès non autorisé. Veuillez vous reconnecter.', 'danger');
+                        if(window.AuthProtection && typeof window.AuthProtection.redirectToLogin === 'function') setTimeout(()=>window.AuthProtection.redirectToLogin(), 800);
+                    }
+                    throw new Error('Erreur récupération magasins: ' + magasins.status);
+                }
+                if(!stats.ok){
+                    if(stats.status===401 || stats.status===403){
+                        showToast('Accès non autorisé. Veuillez vous reconnecter.', 'danger');
+                        if(window.AuthProtection && typeof window.AuthProtection.redirectToLogin === 'function') setTimeout(()=>window.AuthProtection.redirectToLogin(), 800);
+                    }
+                    throw new Error('Erreur récupération stats: ' + stats.status);
+                }
                 const magasinsData = await magasins.json();
                 const statsData = await stats.json();
                 
@@ -381,43 +420,150 @@
                 $('#currentEntreprise').text(statsData.entreprise?.nom || 'Non définie');
             } catch(err) {
                 console.error('Dashboard load error:', err);
-                showToast('Erreur chargement', 'danger');
+                console.error('Error details:', err.message, err.stack);
+                showToast('Erreur chargement: ' + err.message, 'danger');
             }
         }
 
-        // RENDER MAGASINS (avec drag handle + actions)
+        // RENDER MAGASINS (avec drag handle + actions) — affiche photo si disponible
+        const MAGASINS_CACHE = {};
         function renderMagasins(magasins) {
-            $('#magasinsList').html(magasins.map(m => `
-                <div class="list-group-item list-group-item-action sortable-item px-3 py-3 border-start-0 d-flex justify-content-between align-items-start" 
-                     data-magasin-id="${m._id}">
-                    <div class="d-flex align-items-center flex-grow-1">
-                        <i class="fas fa-grip-vertical drag-handle text-muted me-3 fs-5"></i>
-                        <div class="me-3 d-flex align-items-center justify-content-center" style="width:44px;height:44px;border-radius:8px;background:rgba(0,0,0,0.03);">
-                            <i class="fas fa-store text-primary"></i>
-                        </div>
-                        <div class="flex-fill">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <h6 class="mb-0 fw-semibold">${m.nomMagasin}</h6>
-                                <div class="small text-muted">${m.adresse || ''}</div>
+            // cache magasins by id for later use
+            magasinListHtml = magasins.map(m => {
+                MAGASINS_CACHE[m._id] = m;
+                const photo = m.photoUrl || m.photo || 'assets/img/placeholders/store-placeholder.jpg';
+                const managerId = m.managerId || m.manager || (m.manager && m.manager._id) || null;
+                // role-based visibility: admin sees edit, superviseur only if assigned
+                const token = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || localStorage.getItem('authToken') || null);
+                let currentUser = null;
+                try{ currentUser = token ? (typeof decodeJwt === 'function' ? decodeJwt(token) : null) : null; }catch(e){ currentUser = null; }
+                const isAdmin = currentUser && currentUser.role === 'admin';
+                const isAssignedSupervisor = currentUser && currentUser.role === 'superviseur' && (managerId && (managerId.toString() === (currentUser.id || currentUser._id || '')));
+
+                const showEdit = isAdmin || isAssignedSupervisor;
+
+                return (`
+                    <div class="list-group-item list-group-item-action sortable-item px-3 py-3 border-start-0 d-flex justify-content-between align-items-start" 
+                         data-magasin-id="${m._id}">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <i class="fas fa-grip-vertical drag-handle text-muted me-3 fs-5"></i>
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width:54px;height:54px;border-radius:8px;overflow:hidden;background:rgba(0,0,0,0.03);">
+                                <img src="${photo}" alt="${m.nomMagasin}" style="width:54px;height:54px;object-fit:cover;display:block;" />
                             </div>
-                            <div class="mt-1 d-flex gap-2 align-items-center">
-                                <span class="badge bg-success">${m.guichetsCount || 0} guichet(s)</span>
-                                <small class="text-500">${formatCurrency(m.caMensuel || 0)}</small>
+                            <div class="flex-fill">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <h6 class="mb-0 fw-semibold">${m.nomMagasin}</h6>
+                                    <div class="small text-muted">${m.adresse || ''}</div>
+                                </div>
+                                <div class="mt-1 d-flex gap-2 align-items-center">
+                                    <span class="badge bg-success">${m.guichetsCount || 0} guichet(s)</span>
+                                    <small class="text-500">${formatCurrency(m.caMensuel || 0)}</small>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="ms-3 d-flex flex-column align-items-end">
+                        <div class="ms-3 d-flex flex-column align-items-end">
                             <div class="btn-group mb-2" role="group">
-                            <button class="btn btn-sm btn-outline-secondary btn-view-magasin" data-magasin-id="${m._id}" title="Voir"><i class="fas fa-eye"></i></button>
-                            <button class="btn btn-sm btn-outline-primary btn-edit-magasin" data-magasin-id="${m._id}" title="Modifier"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-outline-secondary btn-view-magasin" data-magasin-id="${m._id}" title="Voir"><i class="fas fa-eye"></i></button>
+                                ${ showEdit ? `<button class="btn btn-sm btn-outline-primary btn-edit-magasin" data-magasin-id="${m._id}" title="Modifier"><i class="fas fa-edit"></i></button>` : '' }
+                            </div>
+                            <small class="text-muted">${m.updatedAt ? new Date(m.updatedAt).toLocaleString() : ''}</small>
                         </div>
-                        <small class="text-muted">Dernière mise à jour</small>
                     </div>
-                </div>
-            `).join(''));
+                `);
+            }).join('');
+
+            $('#magasinsList').html(magasinListHtml);
             $('#totalMagasins').text(magasins.length);
             // update widget count quickly
             $('#widgetTotalMagasins').text(magasins.length);
+
+            // Re-bind handlers for buttons (in case)
+            // view and edit handled by document.on in bindEvents
+        }
+
+        // Load and display magasin details in the right panel
+        async function loadMagasinDetails(id){
+            if(!id) return;
+            // try cache first
+            let m = MAGASINS_CACHE[id] || null;
+            try{
+                if(!m){
+                    const res = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + `/api/protected/magasins/${id}` , { headers: (typeof authHeaders === 'function') ? authHeaders() : {} });
+                    if(res.ok) m = await res.json();
+                    else throw new Error('Magasin non trouvé');
+                    MAGASINS_CACHE[id] = m;
+                }
+                // populate details
+                const photo = m.photoUrl || m.photo || 'assets/img/placeholders/store-placeholder.jpg';
+                $('#magasinName').text(m.nomMagasin || m.nom || 'Magasin');
+                $('#magasinSubtitle').text(m.managerName ? `Géré par ${m.managerName}` : (m.manager ? (m.manager.prenom+' '+(m.manager.nom||'')) : ''));
+                $('#magasinAdresse').text(m.adresse || '-');
+                $('#magasinTelephone').text(m.telephone || '-');
+                $('#magasinCreated').text(m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '-');
+                $('#magasinStatus').text(m.status === 1 ? 'Actif' : 'Inactif').removeClass('bg-secondary bg-success').addClass(m.status === 1 ? 'bg-success' : 'bg-secondary');
+                $('#magasinStatusBadges').html((m.tags||[]).map(t=>`<span class="badge bg-light text-700">${t}</span>`).join(' '));
+                // counts
+                $('#guichetsCount').text(m.guichetsCount || 0);
+                $('#vendeursCount').text(m.vendeursCount || 0);
+                $('#magasinCA').text((m.caMensuel ? formatCurrency(m.caMensuel) : '0') + ' CDF');
+                $('#stockAlertes').text(m.stockAlertes || 0);
+                // set current selected
+                CURRENT_MAGASIN_ID = id;
+                // set image in header icon if possible
+                $('#magasinDetailsCard .card-header div[style]').find('img').remove();
+                // optionally show photo in header as background
+                $('#magasinDetailsCard .card-header').css('background-image', `url(${photo})`).css('background-size','cover').css('background-position','center');
+            }catch(err){ console.error('loadMagasinDetails', err); showToast('Impossible de charger magasin', 'danger'); }
+        }
+
+        // Populate edit modal with magasin data
+        function populateEditModal(id){
+            const m = MAGASINS_CACHE[id];
+            if(!m) return;
+            $('#editMagasinId').val(id);
+            $('#editMagasinName').text(m.nomMagasin || m.nom || '');
+            $('#formEditMagasin input[name="nomMagasin"]').val(m.nomMagasin || m.nom || '');
+            // preview image
+            const preview = document.querySelector('#editMagasinPhotoPreview img');
+            if(preview) preview.src = m.photoUrl || m.photo || 'assets/img/placeholders/photo-placeholder.jpg';
+            // stats
+            $('#editCaTotal').text(m.caTotal || 0);
+            // history - if available
+            if(Array.isArray(m.history)){
+                $('#magasinHistory').html(m.history.map(h=>`<tr><td>${new Date(h.date).toLocaleString()}</td><td>${h.action}</td><td>${h.user}</td><td>${h.details||''}</td></tr>`).join(''));
+            }
+        }
+
+        // Submit update magasin
+        async function submitUpdateMagasin(){
+            const id = $('#editMagasinId').val();
+            if(!id) return showToast('Aucun magasin sélectionné', 'warning');
+            const fd = new FormData(document.getElementById('formEditMagasin'));
+            try{
+                const res = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + `/api/protected/magasins/${id}`, { method: 'PUT', body: fd, headers: (typeof authHeaders === 'function') ? authHeaders() : {} });
+                if(!res.ok) throw new Error('Erreur serveur');
+                const data = await res.json();
+                // update cache and UI
+                MAGASINS_CACHE[id] = data.magasin || data;
+                await loadDashboardData();
+                showToast('Magasin mis à jour', 'success');
+                $('#modalEditMagasin').modal('hide');
+            }catch(err){ console.error('update magasin', err); showToast('Erreur mise à jour','danger'); }
+        }
+
+        // Create guichet submit handler
+        async function submitCreateGuichet(ev){
+            ev.preventDefault();
+            const form = document.getElementById('formCreateGuichet');
+            const fd = new FormData(form);
+            try{
+                const res = await fetch((typeof API_BASE!=='undefined'?API_BASE:'') + '/api/protected/guichets', { method: 'POST', body: fd, headers: (typeof authHeaders === 'function') ? authHeaders() : {} });
+                if(!res.ok) throw new Error('Erreur création guichet');
+                const data = await res.json();
+                showToast('Guichet créé', 'success');
+                $('#modalCreateGuichet').modal('hide');
+                await loadDashboardData();
+            }catch(err){ console.error('create guichet', err); showToast('Erreur création guichet','danger'); }
         }
 
         // Update global stats/widgets using server-calculated statsData
@@ -498,10 +644,18 @@
                 e.stopPropagation();
                 const id = $(this).data('magasin-id');
                 if(!id) return;
-                // open edit modal - reuse existing modal from includes
+                // populate and open edit modal
+                populateEditModal(id);
                 $('#modalEditMagasin').modal('show');
-                // populate later when implementing API consumption
             });
+            
+            // Submit update magasin
+            $('#btnUpdateMagasin').off('click').on('click', function(){
+                submitUpdateMagasin();
+            });
+
+            // Create guichet form submit
+            $('#formCreateGuichet').off('submit').on('submit', submitCreateGuichet);
         }
 
         // CHARTS ANIMÉS

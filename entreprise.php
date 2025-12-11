@@ -909,7 +909,12 @@
           </footer>
         </div>
         <!-- modal -->
-         <?php include_once "/modals/magasins-guichets-modals.php" ?>
+        <script>
+          // Global API base used by inline modal scripts
+          const API_BASE = 'https://backend-gestion-de-stock.onrender.com';
+        </script>
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+         <?php include_once 'modals/magasins-guichets-modals.php'; ?>
        
       </div>
     </main>
@@ -1042,6 +1047,7 @@
     <script src="assets/js/theme.js"></script>
     <script src="assets/js/auth-protection.js"></script>
     <script src="assets/js/entreprise.js"></script>
+
 
     <script>
       (function(){

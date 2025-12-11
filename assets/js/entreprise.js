@@ -5,6 +5,8 @@
   // - Creates company and magasin via AJAX
 
   const apiBase = 'https://backend-gestion-de-stock.onrender.com';
+  // Expose globals for legacy inline scripts/modals that expect a global API_BASE or apiBase
+  try{ window.API_BASE = apiBase; window.apiBase = apiBase; }catch(e){}
 
   function getToken(){
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('jwt') || localStorage.getItem('accessToken') || localStorage.getItem('userToken') || null;
@@ -799,6 +801,25 @@
         });
       }
     }catch(e){ console.warn('chart init failed', e); }
+
+    // Expose refresh helpers for inline modal scripts and listen for creation events
+    try{
+      window.loadMagasins = loadMagasins;
+      window.selectCompany = selectCompany;
+    }catch(e){ /* ignore */ }
+
+    // When a magasin is created by the modal, refresh the magasins list
+    window.addEventListener('magasin.created', async (ev) => {
+      try{
+        const businessId = ev?.detail?.businessId;
+        if(!businessId) return;
+        if(typeof loadMagasins === 'function'){
+          await loadMagasins(businessId);
+        } else if(typeof selectCompany === 'function'){
+          await selectCompany(businessId);
+        }
+      }catch(err){ console.warn('magasin.created handler error', err); }
+    });
 
     // initial load
     loadCompanies();
