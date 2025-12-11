@@ -349,19 +349,12 @@ router.post('/guichets', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/protected/magasins - Lister tous les magasins de l'utilisateur (admin/superviseur)
+// GET /api/protected/magasins - Lister TOUS les magasins de TOUTES les entreprises
 router.get('/magasins', authMiddleware, async (req, res) => {
   try {
-    const user = req.user;
-    
-    // Les admins voient tous les magasins, les superviseurs voir seulement ceux auxquels ils sont assignés
-    let filter = {};
-    if (user.role === 'superviseur') {
-      filter.managerId = user.id;
-    }
-    
-    const magasins = await Magasin.find(filter)
-      .populate('businessId', 'nomEntreprise')
+    // Retourner TOUS les magasins, peu importe le rôle ou l'utilisateur
+    const magasins = await Magasin.find({})
+      .populate('businessId', 'nomEntreprise budget devise')
       .populate('managerId', 'nom prenom email')
       .lean()
       .exec();
@@ -384,60 +377,34 @@ router.get('/magasins', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/protected/stats/magasins-guichets - Statistiques magasins/guichets
+// GET /api/protected/stats/magasins-guichets - Statistiques TOUS les magasins/guichets de TOUTES les entreprises
 router.get('/stats/magasins-guichets', authMiddleware, async (req, res) => {
   try {
-    const user = req.user;
+    // Compter TOUS les magasins peu importe l'entreprise
+    const totalMagasins = await Magasin.countDocuments({});
     
-    let magasinFilter = {};
-    if (user.role === 'superviseur') {
-      magasinFilter.managerId = user.id;
-    }
+    // Compter TOUS les guichets
+    const totalGuichets = await Guichet.countDocuments({});
     
-    const totalMagasins = await Magasin.countDocuments(magasinFilter);
-    
-    // Get magasin IDs for guichet filtering
-    const magasinIds = await Magasin.find(magasinFilter).select('_id').lean();
-    const magasinIdList = magasinIds.map(m => m._id);
-    
-    let guichetFilter = {};
-    if (magasinIdList.length > 0) {
-      guichetFilter.magasinId = { $in: magasinIdList };
-    }
-    
-    const totalGuichets = await Guichet.countDocuments(guichetFilter);
-    
-    // Get unique vendeurs (from affectations)
-    const affectations = await Affectation.find({ 
-      status: 1,
-      ...(magasinIdList.length > 0 && { magasinId: { $in: magasinIdList } })
-    }).distinct('vendeurId');
+    // Get unique vendeurs (from ALL affectations)
+    const affectations = await Affectation.find({ status: 1 }).distinct('vendeurId');
     const totalVendeurs = affectations.length;
     
-    // Calculate total stock (sum of stockMax from all guichets)
+    // Calculate total stock (sum of stockMax from ALL guichets)
     const stockData = await Guichet.aggregate([
-      { $match: guichetFilter },
       { $group: { _id: null, totalStock: { $sum: '$stockMax' } } }
     ]);
     const totalStock = stockData.length > 0 ? stockData[0].totalStock : 0;
     
-    // Get entreprise info (for admin)
-    let entreprise = null;
-    if (user.role === 'admin') {
-      const businesses = await Business.find().select('nomEntreprise').limit(1);
-      entreprise = businesses.length > 0 ? businesses[0] : null;
-    } else if (user.role === 'superviseur') {
-      // Superviseur: get the business of their first magasin
-      const mag = await Magasin.findOne(magasinFilter).populate('businessId', 'nomEntreprise');
-      entreprise = mag ? mag.businessId : null;
-    }
+    // Get first entreprise for display
+    const entreprise = await Business.findOne().select('nomEntreprise').lean();
     
     return res.json({
       totalMagasins,
       totalGuichets,
       totalVendeurs,
       totalStock,
-      entreprise: entreprise || { nomEntreprise: 'Non définie' }
+      entreprise: entreprise || { nomEntreprise: 'Toutes les entreprises' }
     });
   } catch (err) {
     console.error('stats.magasins-guichets.error', err);

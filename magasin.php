@@ -452,12 +452,13 @@
                             </div>
                             <div class="flex-fill">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <h6 class="mb-0 fw-semibold">${m.nomMagasin}</h6>
+                                    <h6 class="mb-0 fw-semibold">${m.nomMagasin || m.nom_magasin}</h6>
                                     <div class="small text-muted">${m.adresse || ''}</div>
                                 </div>
-                                <div class="mt-1 d-flex gap-2 align-items-center">
-                                    <span class="badge bg-success">${m.guichetsCount || 0} guichet(s)</span>
-                                    <small class="text-500">${formatCurrency(m.caMensuel || 0)}</small>
+                                <div class="mt-1 d-flex gap-2 align-items-center flex-wrap">
+                                    ${m.businessId ? `<span class="badge bg-info">${m.businessId.nomEntreprise || 'Entreprise'}</span>` : ''}
+                                    <span class="badge bg-success">${(m.guichets||[]).length} guichet(s)</span>
+                                    <small class="text-500">${m.telephone || ''}</small>
                                 </div>
                             </div>
                         </div>
