@@ -272,6 +272,115 @@ router.post('/magasins', authMiddleware, upload.single('photo'), async (req, res
   }
 });
 
+// PUT /api/protected/magasins/:id - Modifier un magasin
+router.put('/magasins/:id', authMiddleware, upload.single('photo'), async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester || !['admin', 'superviseur'].includes(requester.role)) {
+      return res.status(403).json({ message: 'Accès refusé: seuls les admins et superviseurs peuvent modifier des magasins' });
+    }
+
+    const magasinId = req.params.id;
+    const { nom_magasin, adresse, telephone, description, managerId } = req.body;
+
+    // Vérifier que le magasin existe
+    const magasin = await Magasin.findById(magasinId).populate('managerId');
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    // Mettre à jour les champs
+    if (nom_magasin) magasin.nom_magasin = nom_magasin;
+    if (adresse) magasin.adresse = adresse;
+    if (telephone) magasin.telephone = telephone;
+    if (description) magasin.description = description;
+
+    // Gérer la photo si fournie
+    if (req.file) {
+      try {
+        // Upload stream qui se termine immédiatement
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'magasins' },
+          (error, result) => {
+            if (error) {
+              console.error('Cloudinary error:', error);
+              throw new Error('Erreur upload photo');
+            }
+            if (result) {
+              magasin.photoUrl = result.secure_url;
+            }
+          }
+        );
+        
+        // Écrire le buffer et fermer le stream
+        stream.write(req.file.buffer);
+        stream.end();
+        
+        // Attendre que le stream se termine
+        await new Promise((resolve, reject) => {
+          stream.on('finish', resolve);
+          stream.on('error', reject);
+        });
+      } catch (photoErr) {
+        console.error('Photo upload error:', photoErr);
+        return res.status(500).json({ message: 'Erreur upload photo: ' + photoErr.message });
+      }
+    }
+
+    // Gérer le changement de gestionnaire
+    if (managerId && managerId !== magasin.managerId?.toString()) {
+      const newManager = await Utilisateur.findById(managerId);
+      if (!newManager) {
+        return res.status(404).json({ message: 'Gestionnaire non trouvé' });
+      }
+      
+      // Supprimer l'ancienne affectation
+      if (magasin.managerId) {
+        await Affectation.findOneAndDelete({ utilisateurId: magasin.managerId, magasinId });
+      }
+
+      // Créer la nouvelle affectation
+      const newAffect = new Affectation({
+        utilisateurId: managerId,
+        magasinId,
+        dateAffectation: new Date(),
+        statut: 'active'
+      });
+      await newAffect.save();
+
+      magasin.managerId = managerId;
+    }
+
+    // Sauvegarder
+    await magasin.save();
+
+    // Rafraîchir les données avec le manager
+    const updatedMagasin = await Magasin.findById(magasinId)
+      .populate('managerId', 'prenom nom email role')
+      .lean();
+
+    // Enregistrer l'activité
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'MODIFIER_MAGASIN',
+        entite: 'Magasin',
+        entiteId: magasinId,
+        description: `Magasin '${updatedMagasin.nom_magasin}' modifié`,
+        icon: 'fas fa-edit'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Magasin modifié', magasin: updatedMagasin });
+  } catch (err) {
+    console.error('magasins.update.error', err);
+    return res.status(500).json({ message: 'Erreur modification magasin: ' + err.message });
+  }
+});
+
 // POST /api/protected/guichets - créer un guichet lié à un magasin
 router.post('/guichets', authMiddleware, async (req, res) => {
   try {
@@ -349,6 +458,277 @@ router.post('/guichets', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/protected/guichets/:magasinId - Lister guichets d'un magasin
+router.get('/guichets/:magasinId', authMiddleware, async (req, res) => {
+  try {
+    const magasinId = req.params.magasinId;
+    
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+    
+    const guichets = await Guichet.find({ magasinId })
+      .populate('vendeurPrincipal', 'nom prenom email role')
+      .lean();
+    
+    return res.json(guichets);
+  } catch (err) {
+    console.error('guichets.list.error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/protected/guichets/detail/:guichetId - Détail d'un guichet
+router.get('/guichets/detail/:guichetId', authMiddleware, async (req, res) => {
+  try {
+    const guichetId = req.params.guichetId;
+    
+    const guichet = await Guichet.findById(guichetId)
+      .populate('magasinId')
+      .populate('vendeurPrincipal', 'nom prenom email role')
+      .lean();
+    
+    if (!guichet) {
+      return res.status(404).json({ message: 'Guichet non trouvé' });
+    }
+    
+    // Récupérer les vendeurs affectés à ce guichet
+    const affectations = await Affectation.find({ guichetId })
+      .populate('vendeurId', 'nom prenom email role')
+      .lean();
+    
+    return res.json({
+      ...guichet,
+      vendeurs: affectations.map(a => a.vendeurId)
+    });
+  } catch (err) {
+    console.error('guichets.detail.error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/protected/guichets/:id - Modifier un guichet
+router.put('/guichets/:id', authMiddleware, async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester || !['admin', 'superviseur', 'gestionnaire'].includes(requester.role)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const guichetId = req.params.id;
+    const { nom_guichet, code, status, vendeurPrincipal, objectifJournalier, stockMax } = req.body;
+
+    const guichet = await Guichet.findById(guichetId).populate('magasinId');
+    if (!guichet) {
+      return res.status(404).json({ message: 'Guichet non trouvé' });
+    }
+
+    // Vérifier les droits: gestionnaire ne peut modifier que ses magasins
+    if (requester.role === 'gestionnaire') {
+      const affectation = await Affectation.findOne({
+        utilisateurId: requester.id,
+        magasinId: guichet.magasinId._id,
+        statut: 'active'
+      });
+      if (!affectation) {
+        return res.status(403).json({ message: 'Vous ne pouvez modifier que vos magasins' });
+      }
+    }
+
+    // Mettre à jour les champs
+    if (nom_guichet) guichet.nom_guichet = nom_guichet;
+    if (code) guichet.code = code;
+    if (typeof status !== 'undefined') guichet.status = status;
+    if (objectifJournalier !== undefined) guichet.objectifJournalier = Number(objectifJournalier);
+    if (stockMax !== undefined) guichet.stockMax = Number(stockMax);
+
+    // Gérer le changement de vendeur principal
+    if (vendeurPrincipal && vendeurPrincipal !== guichet.vendeurPrincipal?.toString()) {
+      const vendeur = await Utilisateur.findById(vendeurPrincipal);
+      if (!vendeur || vendeur.role !== 'vendeur') {
+        return res.status(404).json({ message: 'Vendeur non trouvé ou rôle invalide' });
+      }
+
+      // Supprimer les anciennes affectations
+      await Affectation.findOneAndDelete({
+        guichetId,
+        vendeurId: guichet.vendeurPrincipal
+      });
+
+      // Créer la nouvelle affectation
+      const newAffect = new Affectation({
+        vendeurId: vendeurPrincipal,
+        guichetId,
+        magasinId: guichet.magasinId._id,
+        dateAffectation: new Date(),
+        statut: 'active'
+      });
+      await newAffect.save();
+
+      guichet.vendeurPrincipal = vendeurPrincipal;
+    }
+
+    await guichet.save();
+
+    // Enregistrer l'activité
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'MODIFIER_GUICHET',
+        entite: 'Guichet',
+        entiteId: guichetId,
+        description: `Guichet '${guichet.nom_guichet}' modifié`,
+        icon: 'fas fa-cash-register'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Guichet modifié', guichet });
+  } catch (err) {
+    console.error('guichets.update.error', err);
+    return res.status(500).json({ message: 'Erreur modification guichet: ' + err.message });
+  }
+});
+
+// DELETE /api/protected/guichets/:id - Supprimer un guichet
+router.delete('/guichets/:id', authMiddleware, async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester || !['admin', 'superviseur'].includes(requester.role)) {
+      return res.status(403).json({ message: 'Seuls les admins et superviseurs peuvent supprimer des guichets' });
+    }
+
+    const guichetId = req.params.id;
+    const guichet = await Guichet.findById(guichetId);
+    if (!guichet) {
+      return res.status(404).json({ message: 'Guichet non trouvé' });
+    }
+
+    const guichetNom = guichet.nom_guichet;
+
+    // Supprimer les affectations associées
+    await Affectation.deleteMany({ guichetId });
+
+    // Supprimer le guichet
+    await Guichet.findByIdAndDelete(guichetId);
+
+    // Enregistrer l'activité
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'SUPPRIMER_GUICHET',
+        entite: 'Guichet',
+        entiteId: guichetId,
+        description: `Guichet '${guichetNom}' supprimé`,
+        icon: 'fas fa-trash'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Guichet supprimé' });
+  } catch (err) {
+    console.error('guichets.delete.error', err);
+    return res.status(500).json({ message: 'Erreur suppression guichet: ' + err.message });
+  }
+});
+
+// POST /api/protected/guichets/:guichetId/affecter-vendeur - Affecter un vendeur à un guichet
+router.post('/guichets/:guichetId/affecter-vendeur', authMiddleware, async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester || !['admin', 'superviseur', 'gestionnaire'].includes(requester.role)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const guichetId = req.params.guichetId;
+    const { vendeurId } = req.body;
+
+    if (!vendeurId) {
+      return res.status(400).json({ message: 'vendeurId requis' });
+    }
+
+    const guichet = await Guichet.findById(guichetId).populate('magasinId');
+    if (!guichet) {
+      return res.status(404).json({ message: 'Guichet non trouvé' });
+    }
+
+    const vendeur = await Utilisateur.findById(vendeurId);
+    if (!vendeur || vendeur.role !== 'vendeur') {
+      return res.status(404).json({ message: 'Vendeur non trouvé' });
+    }
+
+    // Vérifier les droits du gestionnaire
+    if (requester.role === 'gestionnaire') {
+      const affectation = await Affectation.findOne({
+        utilisateurId: requester.id,
+        magasinId: guichet.magasinId._id,
+        statut: 'active'
+      });
+      if (!affectation) {
+        return res.status(403).json({ message: 'Vous ne pouvez affecter que vos vendeurs' });
+      }
+    }
+
+    // Vérifier si le vendeur est déjà affecté à ce guichet
+    const existingAffect = await Affectation.findOne({
+      vendeurId,
+      guichetId,
+      statut: 'active'
+    });
+
+    if (existingAffect) {
+      return res.status(400).json({ message: 'Vendeur déjà affecté à ce guichet' });
+    }
+
+    // Supprimer les anciennes affectations du vendeur
+    await Affectation.updateMany(
+      { vendeurId, statut: 'active' },
+      { $set: { statut: 'inactive', dateFinAffectation: new Date() } }
+    );
+
+    // Créer la nouvelle affectation
+    const newAffect = new Affectation({
+      vendeurId,
+      guichetId,
+      magasinId: guichet.magasinId._id,
+      dateAffectation: new Date(),
+      statut: 'active'
+    });
+    await newAffect.save();
+
+    // Mettre à jour le vendeur
+    await Utilisateur.findByIdAndUpdate(vendeurId, {
+      guichetId: guichetId,
+      magasinId: guichet.magasinId._id
+    });
+
+    // Enregistrer l'activité
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'AFFECTER_VENDEUR',
+        entite: 'Affectation',
+        entiteId: newAffect._id,
+        description: `Vendeur '${vendeur.prenom} ${vendeur.nom}' affecté au guichet '${guichet.nom_guichet}'`,
+        icon: 'fas fa-user-check'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Vendeur affecté', affectation: newAffect });
+  } catch (err) {
+    console.error('guichets.affecter.error', err);
+    return res.status(500).json({ message: 'Erreur affectation vendeur: ' + err.message });
+  }
+});
+
 // GET /api/protected/magasins - Lister TOUS les magasins de TOUTES les entreprises
 router.get('/magasins', authMiddleware, async (req, res) => {
   try {
@@ -412,4 +792,189 @@ router.get('/stats/magasins-guichets', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/protected/utilisateurs - Lister tous les utilisateurs
+router.get('/utilisateurs', authMiddleware, async (req, res) => {
+  try {
+    const utilisateurs = await Utilisateur.find({})
+      .select('_id prenom nom email role')
+      .lean();
+    
+    return res.json(utilisateurs);
+  } catch (err) {
+    console.error('utilisateurs.list.error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/protected/activites - Lister l'historique d'activités
+router.get('/activites', authMiddleware, async (req, res) => {
+  try {
+    const { limit = 100, skip = 0, action, entityType, entityId } = req.query;
+
+    // Construire le filtre
+    const filter = {};
+    if (action) filter.action = action;
+    if (entityType) filter.entite = entityType;
+    if (entityId) filter.entiteId = entityId;
+
+    const activites = await Activity.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .skip(Number(skip))
+      .populate('utilisateurId', 'nom prenom email role')
+      .lean();
+
+    const total = await Activity.countDocuments(filter);
+
+    return res.json({
+      data: activites,
+      total,
+      limit: Number(limit),
+      skip: Number(skip)
+    });
+  } catch (err) {
+    console.error('activites.list.error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/protected/activites/:entityId - Historique d'une entité spécifique
+router.get('/activites/entite/:entityId', authMiddleware, async (req, res) => {
+  try {
+    const entityId = req.params.entityId;
+
+    const activites = await Activity.find({ entiteId: entityId })
+      .sort({ createdAt: -1 })
+      .populate('utilisateurId', 'nom prenom email role')
+      .lean();
+
+    return res.json(activites);
+  } catch (err) {
+    console.error('activites.entite.error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/protected/affectations - Lister les affectations avec filtres
+router.get('/affectations/list', authMiddleware, async (req, res) => {
+  try {
+    const { vendeurId, guichetId, magasinId, statut = 'active', limit = 100, skip = 0 } = req.query;
+
+    const filter = {};
+    if (vendeurId) filter.vendeurId = vendeurId;
+    if (guichetId) filter.guichetId = guichetId;
+    if (magasinId) filter.magasinId = magasinId;
+    if (statut) filter.statut = statut;
+
+    const affectations = await Affectation.find(filter)
+      .sort({ dateAffectation: -1 })
+      .limit(Number(limit))
+      .skip(Number(skip))
+      .populate('vendeurId', 'nom prenom email role')
+      .populate('guichetId', 'nom_guichet code')
+      .populate('magasinId', 'nom_magasin')
+      .lean();
+
+    const total = await Affectation.countDocuments(filter);
+
+    return res.json({
+      data: affectations,
+      total,
+      limit: Number(limit),
+      skip: Number(skip)
+    });
+  } catch (err) {
+    console.error('affectations.list.error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/protected/affectations/:id - Mettre à jour une affectation
+router.put('/affectations/:id', authMiddleware, async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester || !['admin', 'superviseur', 'gestionnaire'].includes(requester.role)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const affectationId = req.params.id;
+    const { statut, notes } = req.body;
+
+    const affectation = await Affectation.findById(affectationId);
+    if (!affectation) {
+      return res.status(404).json({ message: 'Affectation non trouvée' });
+    }
+
+    if (statut) affectation.statut = statut;
+    if (notes) affectation.notes = notes;
+
+    if (statut === 'inactive' && !affectation.dateFinAffectation) {
+      affectation.dateFinAffectation = new Date();
+    }
+
+    await affectation.save();
+
+    // Enregistrer l'activité
+    try {
+      const vendeur = await Utilisateur.findById(affectation.vendeurId);
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'MODIFIER_AFFECTATION',
+        entite: 'Affectation',
+        entiteId: affectationId,
+        description: `Affectation de '${vendeur?.prenom} ${vendeur?.nom}' modifiée (statut: ${statut})`,
+        icon: 'fas fa-edit'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Affectation mise à jour', affectation });
+  } catch (err) {
+    console.error('affectations.update.error', err);
+    return res.status(500).json({ message: 'Erreur modification affectation: ' + err.message });
+  }
+});
+
+// DELETE /api/protected/affectations/:id - Supprimer une affectation
+router.delete('/affectations/:id', authMiddleware, async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester || !['admin', 'superviseur'].includes(requester.role)) {
+      return res.status(403).json({ message: 'Seuls les admins peuvent supprimer des affectations' });
+    }
+
+    const affectationId = req.params.id;
+    const affectation = await Affectation.findById(affectationId);
+    if (!affectation) {
+      return res.status(404).json({ message: 'Affectation non trouvée' });
+    }
+
+    const vendeur = await Utilisateur.findById(affectation.vendeurId);
+    await Affectation.findByIdAndDelete(affectationId);
+
+    // Enregistrer l'activité
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'SUPPRIMER_AFFECTATION',
+        entite: 'Affectation',
+        entiteId: affectationId,
+        description: `Affectation de '${vendeur?.prenom} ${vendeur?.nom}' supprimée`,
+        icon: 'fas fa-trash'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Affectation supprimée' });
+  } catch (err) {
+    console.error('affectations.delete.error', err);
+    return res.status(500).json({ message: 'Erreur suppression affectation: ' + err.message });
+  }
+});
+
 module.exports = router;
+

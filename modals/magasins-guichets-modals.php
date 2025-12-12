@@ -241,25 +241,58 @@
                     </ul>
 
                     <div class="tab-content">
-                        <!-- TAB 1: Infos (identique à création) -->
+                        <!-- TAB 1: Infos (champs éditables) -->
                         <div class="tab-pane fade show active" id="editInfos">
-                            <!-- Même structure que modalCreateMagasin -->
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Nom</label>
-                                    <input type="text" class="form-control" name="nomMagasin">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-store text-primary"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="editMagasinNom" name="nomMagasin" required placeholder="Nom du magasin">
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Photo (modifier)</label>
+                                    <label class="form-label">Gestionnaire</label>
+                                    <select class="form-select" id="editMagasinManagerId" name="managerId">
+                                        <option value="">Chargement des gestionnaires…</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Adresse</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="editMagasinAdresse" name="adresse" placeholder="Adresse complète">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Téléphone</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-phone"></i>
+                                        </span>
+                                        <input type="tel" class="form-control" id="editMagasinTelephone" name="telephone" placeholder="+243 99X XXX XXX">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-control" id="editMagasinDescription" name="description" rows="3" placeholder="Description du magasin..."></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Photo</label>
                                     <input type="file" class="form-control d-none" id="editMagasinPhotoInput" name="photo" accept="image/*">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <label for="editMagasinPhotoInput" class="btn btn-outline-secondary btn-sm">Remplacer photo</label>
-                                        <div id="editMagasinPhotoPreview" style="width:72px;height:72px;overflow:hidden;border-radius:8px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <label for="editMagasinPhotoInput" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-camera me-2"></i>Remplacer photo
+                                        </label>
+                                        <div id="editMagasinPhotoPreview" style="width:100px;height:100px;overflow:hidden;border-radius:8px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
                                             <img src="assets/img/placeholders/photo-placeholder.jpg" alt="preview" style="width:100%;height:100%;object-fit:cover;" />
                                         </div>
                                     </div>
                                 </div>
-                                <!-- ... autres champs ... -->
                             </div>
                         </div>
 
