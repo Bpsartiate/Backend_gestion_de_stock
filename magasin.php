@@ -1019,11 +1019,11 @@ async function loadGuichetsForMagasin(magasinId) {
 // Créer un guichet
 async function createGuichet(magasinId, data) {
     try {
-        const TOKEN = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = getTokenLocal();
         const response = await fetch(`https://backend-gestion-de-stock.onrender.com/api/protected/guichets`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${TOKEN}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -1050,11 +1050,11 @@ async function createGuichet(magasinId, data) {
 // Modifier un guichet
 async function updateGuichet(guichetId, data) {
     try {
-        const TOKEN = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = getTokenLocal();
         const response = await fetch(`https://backend-gestion-de-stock.onrender.com/api/protected/guichets/${guichetId}`, {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${TOKEN}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(data)
@@ -1075,10 +1075,10 @@ async function deleteGuichet(guichetId) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce guichet?')) return;
     
     try {
-        const TOKEN = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = getTokenLocal();
         const response = await fetch(`https://backend-gestion-de-stock.onrender.com/api/protected/guichets/${guichetId}`, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${TOKEN}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('Erreur suppression');
         showToast('✅ Guichet supprimé', 'success');
@@ -1093,11 +1093,11 @@ async function deleteGuichet(guichetId) {
 // Affecter un vendeur à un guichet
 async function affectVendeurToGuichet(guichetId, vendeurId) {
     try {
-        const TOKEN = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = getTokenLocal();
         const response = await fetch(`https://backend-gestion-de-stock.onrender.com/api/protected/guichets/${guichetId}/affecter-vendeur`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${TOKEN}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ vendeurId })
@@ -1116,10 +1116,10 @@ async function affectVendeurToGuichet(guichetId, vendeurId) {
 // Charger les affectations
 async function loadAffectations(filters = {}) {
     try {
-        const TOKEN = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = getTokenLocal();
         const query = new URLSearchParams(filters).toString();
         const response = await fetch(`https://backend-gestion-de-stock.onrender.com/api/protected/affectations/list?${query}`, {
-            headers: { 'Authorization': `Bearer ${TOKEN}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('Erreur API');
         const result = await response.json();
@@ -1133,10 +1133,10 @@ async function loadAffectations(filters = {}) {
 // Charger l'historique d'activités
 async function loadActivities(filters = {}) {
     try {
-        const TOKEN = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = getTokenLocal();
         const query = new URLSearchParams(filters).toString();
         const response = await fetch(`https://backend-gestion-de-stock.onrender.com/api/protected/activites?${query}`, {
-            headers: { 'Authorization': `Bearer ${TOKEN}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('Erreur API');
         const result = await response.json();
@@ -1158,15 +1158,55 @@ function toastSuccess(msg) { showToast('✅ ' + msg, 'success', 3000); }
 // Charge les gestionnaires depuis l'API
 async function loadManagers() {
     try {
+        const token = getTokenLocal();
+        if (!token) throw new Error('Non authentifié');
+        
+        // ✅ Essayer d'abord /members (utilisé dans le modal create)
+        try {
+            const response = await fetch('https://backend-gestion-de-stock.onrender.com/api/protected/members', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📋 Members reçus:', data.length, data);
+                
+                // Filtrer les superviseurs (utilisé dans le modal create magasin)
+                const managers = (data || []).filter(m => m.role === 'superviseur');
+                console.log('👥 Superviseurs filtrés:', managers.length, managers);
+                
+                if (managers.length > 0) return managers;
+            }
+        } catch (e) {
+            console.log('⚠️ /members endpoint échoué, trying /utilisateurs...');
+        }
+        
+        // ✅ Sinon essayer /utilisateurs
         const response = await fetch('https://backend-gestion-de-stock.onrender.com/api/protected/utilisateurs', {
-            headers: { 'Authorization': `Bearer ${TOKEN}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!response.ok) throw new Error('Erreur API');
-        const utilisateurs = await response.json();
-        return utilisateurs.filter(u => u.role === 'gestionnaire' || u.role === 'manager');
+        if (!response.ok) throw new Error(`Erreur ${response.status}`);
+        const data = await response.json();
+        
+        const utilisateurs = Array.isArray(data) ? data : (data.data || data.utilisateurs || []);
+        console.log('📋 Utilisateurs reçus:', utilisateurs.length, utilisateurs);
+        
+        // Filtrer les gestionnaires/managers/superviseurs
+        const managers = utilisateurs.filter(u => 
+            u.role === 'gestionnaire' || u.role === 'manager' || u.role === 'Gestionnaire' || u.role === 'superviseur'
+        );
+        
+        console.log('👥 Gestionnaires filtrés:', managers.length, managers);
+        
+        if (managers.length === 0) {
+            console.warn('⚠️ Aucun gestionnaire trouvé - rôles disponibles:', 
+                utilisateurs.map(u => u.role).filter((v, i, a) => a.indexOf(v) === i).join(', ')
+            );
+        }
+        
+        return managers;
     } catch (error) {
-        console.error('Erreur chargement gestionnaires:', error);
-        showToast('⚠️ Impossible de charger les gestionnaires', 'warning');
+        console.error('❌ Erreur chargement gestionnaires:', error);
+        showToast('⚠️ Impossible de charger les gestionnaires: ' + error.message, 'warning');
         return [];
     }
 }
@@ -1220,14 +1260,28 @@ async function openEditModal(magasinId) {
     }
     
     // Charger et remplir les gestionnaires
-    const managers = await loadManagers();
+    console.log('⏳ Chargement des gestionnaires...');
     const $select = $('#editMagasinManagerId');
+    $select.html('<option value="">Chargement des gestionnaires...</option>');
+    
+    const managers = await loadManagers();
+    
+    console.log('✅ Gestionnaires chargés:', managers.length, managers);
+    
+    // Remplir le select
     $select.html('<option value="">Sélectionner un gestionnaire...</option>');
     
-    managers.forEach(m => {
-        const selected = magasin.managerId === m._id ? 'selected' : '';
-        $select.append(`<option value="${m._id}" ${selected}>${m.prenom} ${m.nom}</option>`);
-    });
+    if (managers.length === 0) {
+        $select.append(`<option disabled>Aucun gestionnaire disponible</option>`);
+        showToast('⚠️ Aucun gestionnaire trouvé', 'warning', 3000);
+    } else {
+        managers.forEach(m => {
+            const selected = magasin.managerId === m._id ? 'selected' : '';
+            const label = `${m.prenom || ''} ${m.nom || ''}`.trim() || m.email || 'Sans nom';
+            console.log('  → Option:', label, '(ID:', m._id, ')');
+            $select.append(`<option value="${m._id}" ${selected}>${label}</option>`);
+        });
+    }
     
     // Afficher le modal
     const modal = new bootstrap.Modal(document.getElementById('modalEditMagasin'), { keyboard: false });
@@ -1245,12 +1299,62 @@ async function submitUpdateMagasin() {
         return;
     }
     
+    // Récupérer le magasin depuis le cache pour avoir l'entrepriseId
+    const magasin = MAGASINS_CACHE[magasinId];
+    if (!magasin) {
+        showToast('❌ Magasin non trouvé en cache', 'error');
+        return;
+    }
+    
+    // ✅ Extraction robuste de l'entrepriseId
+    let entrepriseId = null;
+    if (magasin.businessId) {
+        // Si businessId est un objet avec _id
+        if (typeof magasin.businessId === 'object' && magasin.businessId._id) {
+            entrepriseId = magasin.businessId._id;
+        }
+        // Si businessId est directement l'ID (string)
+        else if (typeof magasin.businessId === 'string') {
+            entrepriseId = magasin.businessId;
+        }
+    }
+    // Fallback vers entrepriseId directement s'il existe
+    if (!entrepriseId && magasin.entrepriseId) {
+        entrepriseId = magasin.entrepriseId;
+    }
+    
+    // ✅ Validation stricte
+    if (!entrepriseId || entrepriseId === 'undefined' || entrepriseId === 'null' || entrepriseId === '') {
+        console.error('❌ ERREUR CRITIQUE: Impossible d\'extraire entrepriseId:', {
+            businessId: magasin.businessId,
+            businessIdType: typeof magasin.businessId,
+            businessIdIsObject: magasin.businessId && typeof magasin.businessId === 'object',
+            entrepriseId: magasin.entrepriseId,
+            extracted: entrepriseId,
+            magasin: magasin
+        });
+        showToast('❌ Erreur: ID entreprise manquant ou invalide. Contactez le support.', 'error');
+        return;
+    }
+    
+    console.log('📝 Mise à jour magasin:', { magasinId, nom, managerId, entrepriseId });
+    console.log('🔍 Magasin du cache:', magasin);
+    console.log('🔍 enterpriseId AVANT FormData - type:', typeof entrepriseId, 'valeur:', entrepriseId);
+    
     // Créer un FormData pour supporter les fichiers
     const formData = new FormData();
     formData.append('nom_magasin', nom);
     formData.append('adresse', $('#editMagasinAdresse').val());
     formData.append('telephone', $('#editMagasinTelephone').val());
     formData.append('description', $('#editMagasinDescription').val());
+    
+    // ✅ Append entrepriseId (déjà validé ci-dessus)
+    console.log('🔍 Avant append - entrepriseId:', entrepriseId, 'String:', String(entrepriseId));
+    formData.append('entrepriseId', String(entrepriseId));
+    // ✅ ALSO append as businessId for compatibility
+    formData.append('businessId', String(entrepriseId));
+    console.log('✅ entrepriseId et businessId ajoutés à FormData:', String(entrepriseId));
+    
     if (managerId) {
         formData.append('managerId', managerId);
     }
@@ -1264,18 +1368,34 @@ async function submitUpdateMagasin() {
     try {
         $('#btnUpdateMagasin').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Enregistrement...');
         
+        const token = getTokenLocal();
+        if (!token) throw new Error('Non authentifié');
+        
+        // ✅ LOG FormData avant envoi
+        console.log('📤 FormData à envoyer:');
+        const formDataEntries = [];
+        for (let [key, value] of formData.entries()) {
+            formDataEntries.push({ key, value: value instanceof File ? `[File: ${value.name}]` : value });
+            console.log(`  ${key}:`, value instanceof File ? `[File: ${value.name}]` : value);
+        }
+        console.log('📋 Résumé FormData:', formDataEntries);
+        
         const response = await fetch(
             `https://backend-gestion-de-stock.onrender.com/api/protected/magasins/${magasinId}`,
             {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${TOKEN}` },
+                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             }
         );
         
+        console.log('📥 Réponse serveur:', response.status, response.statusText);
+        
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || `Erreur ${response.status} lors de la mise à jour`);
+            const errorData = await response.json();
+            console.error('❌ Erreur serveur détaillée:', errorData);
+            console.error('📋 FormData envoyé était:', formDataEntries);
+            throw new Error(errorData.message || `Erreur ${response.status}: ${errorData.error || 'mise à jour échouée'}`);
         }
         
         const updatedMagasin = await response.json();

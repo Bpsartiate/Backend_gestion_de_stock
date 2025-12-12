@@ -341,8 +341,9 @@ router.put('/magasins/:id', authMiddleware, upload.single('photo'), async (req, 
 
       // Créer la nouvelle affectation
       const newAffect = new Affectation({
-        utilisateurId: managerId,
+        managerId: managerId,
         magasinId,
+        entrepriseId: magasin.businessId,  // ✅ AJOUTER entrepriseId requis
         dateAffectation: new Date(),
         statut: 'active'
       });
