@@ -1,0 +1,111 @@
+  /* ✅ MASQUER ÉLÉMENTS par défaut */
+        #magasinDetailsSpinner {
+            display: none !important;
+        }
+
+        #magasinDetailsData {
+            display: none !important;
+        }
+
+        #magasinDetailsPlaceholder {
+            display: flex !important;
+            justify-content: center;
+            min-height: 400px;
+        }
+
+        /* ✅ Quand jQuery fait .hide() on force display: none */
+        #magasinDetailsPlaceholder.hidden-element {
+            display: none !important;
+        }
+
+        #magasinDetailsData.shown-element {
+            display: block !important;
+        }
+
+        /* ✅ Transitions fluides */
+        #magasinDetailsContent > div {
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        /* ✅ Hauteur fixe pour éviter sauts */
+        #magasinDetailsContent {
+            min-height: 600px;
+        }
+
+        .metric-card { transition: all 0.3s ease; }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important; }
+        #ventesChartDetails {
+            height: 60px !important;
+            width: 100% !important;
+        }
+
+        /* Search focus */
+#searchMagasins:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Résultats cachés fluides */
+#magasinsList .list-group-item {
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Compteur résultats */
+.search-results {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(99,102,241,0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+
+        :root {
+            --primary-glow: 0 0 20px rgba(99, 102, 241, 0.5);
+            --success-glow: 0 0 20px rgba(16, 185, 129, 0.5);
+            --metric-hover: translateY(-8px) scale(1.02);
+        }
+        [data-theme="dark"] { --bg-card: #1e293b; --bg-light: #334155; }
+        
+        .gradient-header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        .metric-card { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none; 
+            backdrop-filter: blur(10px);
+        }
+        .metric-card:hover { 
+            transform: var(--metric-hover); 
+            box-shadow: var(--primary-glow) !important;
+        }
+        /* KPI specific visuals */
+        .metric-card .metric-icon { width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));box-shadow: inset 0 -6px 18px rgba(0,0,0,0.08);} 
+        .metric-card .metric-value { transition: transform .28s ease, color .2s ease; font-variant-numeric: tabular-nums; }
+        .metric-card:hover .metric-value { transform: translateY(-4px); }
+        .bg-gradient-light { background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); }
+        .bg-gradient-info { background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02)); }
+        .bg-gradient-warning { background: linear-gradient(135deg, rgba(250,204,21,0.06), rgba(250,204,21,0.02)); }
+        .metric-badge { font-size:0.75rem; padding:6px 8px; border-radius:8px; }
+
+        /* subtle pulsing for alert numbers */
+        @keyframes pulseAlert { 0% { transform: scale(1); } 50% { transform: scale(1.04); } 100% { transform: scale(1); } }
+        .pulse { animation: pulseAlert 1.6s ease-in-out 1; }
+        .sortable-item { cursor: grab; }
+        .sortable-item:active { cursor: grabbing; }
+        .drag-handle { opacity: 0; transition: opacity 0.2s; }
+        .sortable-item:hover .drag-handle { opacity: 1; }
+        @media (max-width: 992px) { 
+            .pane-lg-3, .pane-lg-4 { display: none !important; }
+            .pane-lg-5 { flex: 0 0 100% !important; max-width: 100% !important; }
+        }
+/* guichet */
+#guichetContent { position: relative; }
+#guichetSpinner { display: none !important; }
+#guichetPlaceholder { display: flex !important; }
+.guichet-kpi { transition: all 0.3s ease; }
+.guichet-kpi:hover { transform: translateY(-3px); }
+.status-online { box-shadow: 0 0 20px rgba(34,197,94,0.3); }

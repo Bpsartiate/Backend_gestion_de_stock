@@ -740,18 +740,24 @@ router.get('/magasins', authMiddleware, async (req, res) => {
       .lean()
       .exec();
     
-    // Fetch guichets for each magasin
-    const magasinsWithGuichets = await Promise.all(
+    // Fetch guichets and vendeurs count for each magasin
+    const magasinsData = await Promise.all(
       magasins.map(async (m) => {
+        // Fetch guichets
         const guichets = await Guichet.find({ magasinId: m._id })
           .populate('vendeurPrincipal', 'nom prenom email')
           .lean()
           .exec();
-        return { ...m, guichets: guichets || [] };
+        
+        // Count active vendeurs for the magasin
+        const vendeurs = await Affectation.find({ magasinId: m._id, status: 1 }).distinct('vendeurId');
+        const vendeursCount = vendeurs.length;
+
+        return { ...m, guichets: guichets || [], vendeursCount };
       })
     );
     
-    return res.json(magasinsWithGuichets);
+    return res.json(magasinsData);
   } catch (err) {
     console.error('magasins.list.error', err);
     return res.status(500).json({ message: 'Erreur serveur' });
@@ -978,4 +984,3 @@ router.delete('/affectations/:id', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
-

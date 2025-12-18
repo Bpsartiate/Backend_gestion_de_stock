@@ -24,112 +24,10 @@
     <link href="assets/css/user.min.css" rel="stylesheet" id="user-style-default">
 
     <!-- Styles custom modernes -->
+     <link href="assets/css/magasin.css" rel="stylesheet">
     <style>
 
-        /* ✅ MASQUER ÉLÉMENTS par défaut */
-        #magasinDetailsSpinner {
-            display: none !important;
-        }
-
-        #magasinDetailsData {
-            display: none !important;
-        }
-
-        #magasinDetailsPlaceholder {
-            display: flex !important;
-            justify-content: center;
-            min-height: 400px;
-        }
-
-        /* ✅ Quand jQuery fait .hide() on force display: none */
-        #magasinDetailsPlaceholder.hidden-element {
-            display: none !important;
-        }
-
-        #magasinDetailsData.shown-element {
-            display: block !important;
-        }
-
-        /* ✅ Transitions fluides */
-        #magasinDetailsContent > div {
-            transition: opacity 0.4s ease-in-out;
-        }
-
-        /* ✅ Hauteur fixe pour éviter sauts */
-        #magasinDetailsContent {
-            min-height: 600px;
-        }
-
-        .metric-card { transition: all 0.3s ease; }
-        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important; }
-        #ventesChartDetails {
-            height: 60px !important;
-            width: 100% !important;
-        }
-
-        /* Search focus */
-#searchMagasins:focus {
-    border-color: #6366f1 !important;
-    box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
-}
-
-/* Résultats cachés fluides */
-#magasinsList .list-group-item {
-    transition: opacity 0.2s ease-in-out;
-}
-
-/* Compteur résultats */
-.search-results {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(99,102,241,0.9);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-}
-
-        :root {
-            --primary-glow: 0 0 20px rgba(99, 102, 241, 0.5);
-            --success-glow: 0 0 20px rgba(16, 185, 129, 0.5);
-            --metric-hover: translateY(-8px) scale(1.02);
-        }
-        [data-theme="dark"] { --bg-card: #1e293b; --bg-light: #334155; }
-        
-        .gradient-header { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        }
-        .metric-card { 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: none; 
-            backdrop-filter: blur(10px);
-        }
-        .metric-card:hover { 
-            transform: var(--metric-hover); 
-            box-shadow: var(--primary-glow) !important;
-        }
-        /* KPI specific visuals */
-        .metric-card .metric-icon { width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));box-shadow: inset 0 -6px 18px rgba(0,0,0,0.08);} 
-        .metric-card .metric-value { transition: transform .28s ease, color .2s ease; font-variant-numeric: tabular-nums; }
-        .metric-card:hover .metric-value { transform: translateY(-4px); }
-        .bg-gradient-light { background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); }
-        .bg-gradient-info { background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02)); }
-        .bg-gradient-warning { background: linear-gradient(135deg, rgba(250,204,21,0.06), rgba(250,204,21,0.02)); }
-        .metric-badge { font-size:0.75rem; padding:6px 8px; border-radius:8px; }
-
-        /* subtle pulsing for alert numbers */
-        @keyframes pulseAlert { 0% { transform: scale(1); } 50% { transform: scale(1.04); } 100% { transform: scale(1); } }
-        .pulse { animation: pulseAlert 1.6s ease-in-out 1; }
-        .sortable-item { cursor: grab; }
-        .sortable-item:active { cursor: grabbing; }
-        .drag-handle { opacity: 0; transition: opacity 0.2s; }
-        .sortable-item:hover .drag-handle { opacity: 1; }
-        @media (max-width: 992px) { 
-            .pane-lg-3, .pane-lg-4 { display: none !important; }
-            .pane-lg-5 { flex: 0 0 100% !important; max-width: 100% !important; }
-        }
+      
     </style>
 
     <script>
@@ -300,8 +198,10 @@
                                         </div>
                                         <!-- TITRE -->
                                         <div>
-                                            <h4 id="magasinName" class="mb-0">Sélectionnez un magasin</h4>
-                                            <div class="small text-white-75" id="magasinSubtitle">Statut et informations rapides</div>
+                                            <h4 id="magasinName" class="mb-0 text-white">Sélectionnez un magasin</h4>
+                                            <div class="info d-flex align-items-center gap-2">
+                                                <i class="fas fa-user-tie" ></i><div class="small text-white-75" id="magasinSubtitle">Statut et informations rapides</div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="btn-group">
@@ -759,7 +659,7 @@ async function loadMagasinDetails(id) {
         // ✅ 3. TITRE + MANAGER
         $('#magasinName').text(m.nom_magasin || 'Magasin sans nom');
         $('#magasinSubtitle').text(
-            m.manager ? `${m.manager.prenom || ''} ${m.manager.nom || ''}`.trim() || 'Gestionnaire' : 
+            m.managerId ? `${m.managerId.prenom || ''} ${m.managerId.nom || ''}`.trim() || 'Gestionnaire' : 
             '📊 Informations rapides'
         );
         
@@ -859,7 +759,16 @@ async function loadMagasinDetails(id) {
             }
         }, 100);
         
-        // ✅ 8. ANIMATION FINALE
+        // ✅ 8. CHARGER ET AFFICHER LES GUICHETS (PANEL 3)
+        try {
+            const guichets = await loadGuichetsForMagasin(id);
+            renderGuichets(guichets || []);
+        } catch(guErr) {
+            console.warn('Erreur chargement guichets:', guErr);
+            renderGuichets([]);
+        }
+        
+        // ✅ 9. ANIMATION FINALE
         setTimeout(() => {
             $('#magasinDetailsSpinner').hide();
             $('#magasinDetailsPlaceholder').addClass('hidden-element');  // ✅ Ajouter classe pour forcer display: none
@@ -867,7 +776,7 @@ async function loadMagasinDetails(id) {
         }, 600);
         
         CURRENT_MAGASIN_ID = id;
-        showToast(`✅ ${m.nom_magasin} chargé`, 'success', 2000);
+        showToast(`${m.nom_magasin} chargé`, 'success', 2000);
         
     } catch (err) {
         console.error('❌', err);
@@ -897,35 +806,42 @@ function bindEvents() {
         filterMagasins($(this).val());
     });
     
-    // CLIC MAGASIN
+    // CLIC MAGASIN (inchangé)
     $(document).on('click', '[data-magasin-id]', function() {
         const id = $(this).data('magasin-id');
         $(this).addClass('active bg-primary-soft').siblings().removeClass('active bg-primary-soft');
-        // Ne pas appeler showSpinner ici, loadMagasinDetails s'en charge
         loadMagasinDetails(id);
     });
     
-    // ✅ BOUTON EDIT MAGASIN
+    // ✅ BOUTON EDIT MAGASIN (inchangé)
     $(document).on('click', '#btnEditMagasin', function() {
         if (CURRENT_MAGASIN_ID) {
             openEditModal(CURRENT_MAGASIN_ID);
         }
     });
     
-    // ✅ SOUMETTRE MODIFICATION
+    // ✅ SOUMETTRE MODIFICATION (inchangé)
     $(document).on('click', '#btnUpdateMagasin', function() {
         submitUpdateMagasin();
     });
     
-    // GUICHET
-    $(document).on('click', '[data-guichet-id]', function() {
-        const id = $(this).data('guichet-id');
-        $(this).addClass('active bg-success-soft').siblings().removeClass('active bg-success-soft');
-        showSpinner('#magasinDetailsCard .p-4');
-        loadGuichetDetails(id);
+    // ✅ REAL-TIME PHOTO PREVIEW (inchangé)
+    $(document).on('click', '#editMagasinPhotoInput', function(e) {
+        // ... votre code photo ...
     });
     
-    // REFRESH
+    // ✅ GUICHET CORRIGÉ 👇 (REMPLACEZ lignes 28-34)
+    $(document).on('click', '[data-guichet-id]', function() {
+        const id = $(this).data('guichet-id');
+        console.log('💰 GUICHET CLIC:', id);
+        $(this).addClass('active bg-success-soft').siblings().removeClass('active bg-success-soft');
+        
+        // OUVRIR MODAL AU LIEU DE PANEL 2
+        $('#modalGuichetDetails').modal('show');
+        loadGuichetDetails(id);  // ✅ SPINNER GUICHET dans MODAL
+    });
+    
+    // REFRESH (inchangé)
     $('#refreshAllData').on('click', function() {
         $(this).find('i').addClass('fa-spin');
         showSpinner();
@@ -935,6 +851,7 @@ function bindEvents() {
         });
     });
 }
+
 
 // SORTABLE VISUEL (sans jQuery UI)
 function initSortable() {
@@ -993,9 +910,360 @@ function animateCount(selector, value, pulse = false) {
     requestAnimationFrame(step);
 }
 
+// =================================================================
+// SYSTÈME GUICHETS COMPLET - MODAL + LISTE + ACTIONS 2025
+// =================================================================
+
+let CURRENT_GUICHET_ID = null;
+let GUICHETS_CACHE = {};
+let guichetChart = null;
+
+// ✅ 1. RENDER GUICHETS (VOTRE CODE AMÉLIORÉ)
+function renderGuichets(guichets) {
+    const guichetsList = document.getElementById('guichetsList');
+    if(!guichetsList) return;
+    
+    // Update badge
+    const badge = document.getElementById('guichetsBadge');
+    if(badge) badge.textContent = guichets.length;
+    
+    if(!guichets || guichets.length === 0) {
+        guichetsList.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center" style="height: 300px;">
+                <div class="text-center">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3" style="opacity: 0.5;"></i>
+                    <p class="text-muted">Aucun guichet</p>
+                    <p class="small text-muted">Créez un nouveau guichet</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    guichetsList.innerHTML = guichets.map(g => `
+        <div class="list-group-item px-3 py-2 border-bottom d-flex justify-content-between align-items-center hover-highlight" 
+             style="cursor: pointer; transition: all 0.2s;" 
+             data-guichet-id="${g._id}"
+             onclick="openGuichetModal('${g._id}')"
+             title="Cliquez pour détails">
+           <div class="d-flex align-items-center flex-grow-1">
+               <div class="avatar avatar-sm me-3">
+                   <div class="avatar-initial rounded-circle bg-success bg-opacity-10 text-success fw-bold fs-2">
+                       ${(g.codeGuichet || 'G').substring(0, 2)}
+                   </div>
+               </div>
+               <div>
+                   <div class="fw-semibold text-dark">${g.nomGuichet || 'Guichet'}</div>
+                   <div class="small text-muted">
+                       <i class="fas fa-user-tie me-1"></i>
+                       ${g.vendeurPrincipal ? (g.vendeurPrincipal.prenom || '') + ' ' + (g.vendeurPrincipal.nom || '') : 'Non assigné'}
+                   </div>
+               </div>
+           </div>
+           <div class="text-end">
+               <span class="badge ${g.status === 1 ? 'bg-success' : 'bg-secondary'} me-2 fs--2">
+                   ${g.status === 1 ? '🟢 Actif' : '🔴 Inactif'}
+               </span>
+               <button class="btn btn-sm btn-outline-danger p-1 ms-1" 
+                       onclick="event.stopPropagation(); deleteGuichet('${g._id}')"
+                       title="Supprimer">
+                   <i class="fas fa-trash fs--1"></i>
+               </button>
+           </div>
+        </div>
+    `).join('');
+    
+    console.log('✅', guichets.length, 'guichets rendus');
+}
+
+// ✅ 2. OUVRIR MODAL + CHARGER
+function openGuichetModal(id) {
+    console.log('🚀 OUVERTURE MODAL GUICHET:', id);
+    CURRENT_GUICHET_ID = id;
+    $('#modalGuichetDetails').modal('show');
+    loadGuichetDetails(id);
+}
+
+// ✅ 3. CHARGEMENT COMPLET GUICHET
 function loadGuichetDetails(id) {
-    // Implémentation simplifiée
-    showToast('Guichet details bientôt !', 'info');
+    console.log('🔄 Guichet details:', id);
+    
+    if (!id) {
+        showToast('❌ ID guichet manquant', 'danger');
+        return;
+    }
+    
+    // SPINNER
+    $('#guichetSpinner').show();
+    $('#guichetPlaceholder, #guichetDetailsData').hide();
+    
+    let g;
+    try {
+        g = GUICHETS_CACHE[id];
+        if (!g) {
+            g = simulateGuichetData(id); // REMPLACEZ PAR VOTRE API
+            GUICHETS_CACHE[id] = g;
+        }
+        
+        injectGuichetContent();
+        updateGuichetHeader(g);
+        updateGuichetKPI(g);
+        updateCaissierInfo(g);
+        updateStocksActifs(g);
+        updateTransactionsRecentes(g);
+        initGuichetChart();
+        
+        setTimeout(() => {
+            $('#guichetSpinner').hide();
+            $('#guichetDetailsData').fadeIn(400);
+        }, 600);
+        
+        showToast(`✅ ${g.nomGuichet || g.nom} chargé`, 'success', 2000);
+        
+    } catch (err) {
+        console.error('❌', err);
+        $('#guichetSpinner').hide();
+        $('#guichetPlaceholder').html(`
+            <div class="text-center p-5">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h5 class="text-danger">Guichet introuvable</h5>
+                <p class="text-muted">${err.message}</p>
+            </div>
+        `).show();
+        showToast('❌ ' + err.message, 'danger');
+    }
+}
+
+// ✅ 4. DONNÉES SIMULÉES (REMPLACEZ PAR API)
+function simulateGuichetData(id) {
+    return {
+        _id: id,
+        nomGuichet: `Guichet ${id.slice(-4)}`,
+        codeGuichet: `G${id.slice(-4)}`,
+        status: 1,
+        caJour: 2450000,
+        nbVentesJour: 47,
+        nbClientsJour: 52,
+        vendeurPrincipal: {
+            prenom: "Marie",
+            nom: "Kabila"
+        },
+        caissierActuel: {
+            nomComplet: "Marie Kabila",
+            lastLogin: new Date().toISOString(),
+            ventesToday: 47
+        },
+        stocksActifs: [
+            { produit: "Paracétamol 500mg", stock: 23, seuil: 10, ca: 156000 },
+            { produit: "Amoxicilline 500mg", stock: 8, seuil: 15, ca: 89000 },
+            { produit: "Ibuprofène 400mg", stock: 45, seuil: 20, ca: 123000 }
+        ],
+        transactions: [
+            { id: "TX001", client: "Jean Dupont", montant: 8500, heure: "09:47", type: "Vente" },
+            { id: "TX002", client: "Marie Ngozi", montant: 12500, heure: "09:42", type: "Vente" },
+            { id: "TX003", client: "Paul Mvemba", montant: 6700, heure: "09:38", type: "Vente" }
+        ]
+    };
+}
+
+// ✅ 5. INJECTER CONTENT MODAL
+function injectGuichetContent() {
+    $('#guichetContent').append(`
+        <div id="guichetDetailsData" style="display:none;">
+            <!-- CAISSIER -->
+            <div class="p-4 border-bottom bg-light">
+                <h6 class="fw-bold mb-3"><i class="fas fa-user-tie me-2 text-primary"></i>Caissier Actuel</h6>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center p-3 bg-white rounded-3 shadow-sm">
+                            <div class="bg-primary text-white rounded-circle p-2 me-3"><i class="fas fa-user fs-5"></i></div>
+                            <div>
+                                <div class="fw-bold fs-5" id="caissierNom">-</div>
+                                <small class="text-muted" id="caissierConnexion">-</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-4 bg-gradient-success rounded-3 h-100">
+                            <div class="h3 fw-bold text-success mb-1" id="caissierVentes">0</div>
+                            <small class="text-muted">Ventes aujourd'hui</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI 2x2 -->
+            <div class="p-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="p-4 text-center bg-gradient-primary rounded-3 h-100 shadow-sm hover-lift">
+                            <i class="fas fa-coins fa-2x text-primary mb-3 d-block"></i>
+                            <h3 class="fw-bold text-primary mb-1" id="guichetCAJour">0 CDF</h3>
+                            <small class="text-muted">CA Jour</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-4 text-center bg-gradient-success rounded-3 h-100 shadow-sm hover-lift">
+                            <i class="fas fa-shopping-cart fa-2x text-success mb-3 d-block"></i>
+                            <h3 class="fw-bold text-success mb-1" id="guichetVentesNb">0</h3>
+                            <small class="text-muted">Ventes</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-4 text-center bg-gradient-info rounded-3 h-100 shadow-sm hover-lift">
+                            <i class="fas fa-users fa-2x text-info mb-3 d-block"></i>
+                            <h3 class="fw-bold text-info mb-1" id="guichetClients">0</h3>
+                            <small class="text-muted">Clients</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-4 text-center bg-gradient-warning rounded-3 h-100 shadow-sm hover-lift">
+                            <i class="fas fa-calculator fa-2x text-warning mb-3 d-block"></i>
+                            <h3 class="fw-bold text-warning mb-1" id="guichetMoyenneTicket">0 CDF</h3>
+                            <small class="text-muted">Ticket moyen</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHART -->
+            <div class="p-4 bg-light border-bottom">
+                <div class="d-flex justify-content-between mb-4">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-info"></i>Ventes heure par heure</h6>
+                    <span class="badge bg-success fs-2">+18%</span>
+                </div>
+                <div style="height: 100px;">
+                    <canvas id="guichetVentesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- STOCKS -->
+            <div class="p-4">
+                <h6 class="fw-bold mb-3"><i class="fas fa-boxes me-2 text-warning"></i>Stocks Actifs</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr><th>Produit</th><th>Stock</th><th>Seuil</th><th>CA</th></tr>
+                        </thead>
+                        <tbody id="guichetStocksTable">
+                            <tr><td colspan="4" class="text-center text-muted py-4">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TRANSACTIONS -->
+            <div class="p-4 border-top">
+                <h6 class="fw-bold mb-3"><i class="fas fa-receipt me-2 text-success"></i>Dernières Transactions</h6>
+                <div class="list-group list-group-flush" id="guichetTransactions" style="max-height: 200px; overflow: auto;">
+                    <div class="list-group-item text-center py-3 text-muted">Chargement...</div>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+// ✅ 6. UPDATE FONCTIONS
+function updateGuichetHeader(g) {
+    $('#guichetNom').text(g.nomGuichet || g.nom || 'Guichet');
+    $('#guichetSubtitle').html(`<i class="fas fa-circle ${g.status === 1 ? 'text-success' : 'text-muted'} me-1"></i> ${g.status === 1 ? '🟢 En ligne' : '🔴 Hors ligne'}`);
+}
+
+function updateGuichetKPI(g) {
+    $('#guichetCAJour').text((g.caJour || 0).toLocaleString() + ' CDF');
+    $('#guichetVentesNb').text(g.nbVentesJour || 0);
+    $('#guichetClients').text(g.nbClientsJour || 0);
+    $('#guichetMoyenneTicket').text(Math.round((g.caJour || 0) / (g.nbVentesJour || 1)).toLocaleString() + ' CDF');
+}
+
+function updateCaissierInfo(g) {
+    const c = g.caissierActuel || g.vendeurPrincipal;
+    $('#caissierNom').text(c?.nomComplet || c?.prenom + ' ' + (c?.nom || '') || 'Aucun');
+    $('#caissierConnexion').text(c?.lastLogin ? new Date(c.lastLogin).toLocaleString('fr-FR') : 'Non connecté');
+    $('#caissierVentes').text(c?.ventesToday || g.nbVentesJour || 0);
+}
+
+function updateStocksActifs(g) {
+    const html = (g.stocksActifs || []).map(s => `
+        <tr class="${s.stock <= s.seuil ? 'table-warning' : ''}">
+            <td class="fw-semibold">${s.produit}</td>
+            <td><span class="badge ${s.stock <= s.seuil ? 'bg-warning' : 'bg-success'}">${s.stock}</span></td>
+            <td><span class="badge bg-secondary">${s.seuil}</span></td>
+            <td class="text-success fw-bold">${(s.ca || 0).toLocaleString()} CDF</td>
+        </tr>
+    `).join('');
+    $('#guichetStocksTable').html(html || '<tr><td colspan="4" class="text-center text-muted py-4">Aucun stock actif</td></tr>');
+}
+
+function updateTransactionsRecentes(g) {
+    const html = (g.transactions || []).slice(0, 5).map(t => `
+        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <div>
+                <div class="fw-semibold">${t.client}</div>
+                <small class="text-muted">${t.heure}</small>
+            </div>
+            <div class="text-end">
+                <div class="fw-bold text-success">${(t.montant || 0).toLocaleString()} CDF</div>
+                <small class="badge bg-success">${t.type || 'Vente'}</small>
+            </div>
+        </div>
+    `).join('');
+    $('#guichetTransactions').html(html || '<div class="list-group-item text-center py-3 text-muted">Aucune transaction</div>');
+}
+
+function initGuichetChart() {
+    const canvas = document.getElementById('guichetVentesChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (guichetChart) guichetChart.destroy();
+    
+    guichetChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['08h', '09h', '10h', '11h', '12h', '13h', '14h'],
+            datasets: [{
+                data: [1200, 3400, 2800, 4500, 3200, 4100, 2900],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 2,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { display: false }, y: { display: false } }
+        }
+    });
+}
+
+// ✅ 7. ACTIONS
+function deleteGuichet(id) {
+    if (confirm('Supprimer ce guichet définitivement ?')) {
+        // VOTRE API DELETE
+        showToast('🗑️ Guichet supprimé', 'success');
+        // Rafraîchir liste
+        loadDashboardData();
+    }
+}
+
+// ✅ 8. ÉVÉNEMENTS GLOBAUX (AJOUTEZ DANS bindEvents())
+function bindGuichetEvents() {
+    $(document).on('click', '[data-guichet-id]', function(e) {
+        e.preventDefault();
+        const id = $(this).data('guichet-id');
+        openGuichetModal(id);
+    });
+    
+    $(document).on('click', '[data-action="delete"]', function(e) {
+        e.stopPropagation();
+        const id = $(this).dataset.guichetId;
+        deleteGuichet(id);
+    });
 }
 
 // ==================== GUICHETS FUNCTIONS ====================
@@ -1003,9 +1271,11 @@ function loadGuichetDetails(id) {
 // Charge les guichets d'un magasin
 async function loadGuichetsForMagasin(magasinId) {
     try {
-        const TOKEN = localStorage.getItem('token') || localStorage.getItem('authToken');
-        const response = await fetch(`https://backend-gestion-de-stock.onrender.com/api/protected/guichets/${magasinId}`, {
-            headers: { 'Authorization': `Bearer ${TOKEN}` }
+        const token = (typeof getTokenLocal === 'function') ? getTokenLocal() : 
+                     (localStorage.getItem('token') || localStorage.getItem('authToken'));
+        const endpoint = (typeof API_BASE !== 'undefined' ? API_BASE : '') + `/api/protected/guichets/${magasinId}`;
+        const response = await fetch(endpoint, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (!response.ok) throw new Error('Erreur API');
         const guichets = await response.json();
@@ -1276,9 +1546,12 @@ async function openEditModal(magasinId) {
         showToast('⚠️ Aucun gestionnaire trouvé', 'warning', 3000);
     } else {
         managers.forEach(m => {
-            const selected = magasin.managerId === m._id ? 'selected' : '';
+            // ✅ Gérer le cas où managerId est un objet ou une string
+            const currentManagerId = magasin.managerId?._id || magasin.managerId;
+            const isSelected = currentManagerId && (currentManagerId === m._id || currentManagerId.toString() === m._id.toString());
+            const selected = isSelected ? 'selected' : '';
             const label = `${m.prenom || ''} ${m.nom || ''}`.trim() || m.email || 'Sans nom';
-            console.log('  → Option:', label, '(ID:', m._id, ')');
+            console.log('  → Option:', label, '(ID:', m._id, ') Selected:', isSelected);
             $select.append(`<option value="${m._id}" ${selected}>${label}</option>`);
         });
     }
@@ -1400,7 +1673,7 @@ async function submitUpdateMagasin() {
         
         const updatedMagasin = await response.json();
         
-        // Mettre à jour le cache
+        // Mettre à jour le cache avec le magasin mis à jour
         MAGASINS_CACHE[magasinId] = updatedMagasin;
         
         // Fermer le modal
@@ -1412,13 +1685,24 @@ async function submitUpdateMagasin() {
             }
         }
         
-        // Rafraîchir les données affichées
-        loadMagasinDetails(magasinId);
-        
-        // Réafficher la liste avec les données mises à jour
-        displayMagasins(MAGASINS_CACHE);
-        
-        toastSuccess('Magasin modifié avec succès');
+        // ✅ Recharger COMPLÈTEMENT le magasin depuis l'API avec tous les détails populés
+        setTimeout(async () => {
+            try {
+                const freshRes = await fetch(`${API_BASE}/api/protected/magasins/${magasinId}`, { 
+                    headers: authHeaders() 
+                });
+                if (freshRes.ok) {
+                    const freshMagasin = await freshRes.json();
+                    MAGASINS_CACHE[magasinId] = freshMagasin;
+                    loadMagasinDetails(magasinId);
+                    toastSuccess('Magasin modifié avec succès');
+                }
+            } catch (e) {
+                console.error('Erreur rechargement magasin:', e);
+                loadMagasinDetails(magasinId);
+                toastSuccess('Magasin modifié avec succès');
+            }
+        }, 500);
         
     } catch (error) {
         console.error('Erreur:', error);

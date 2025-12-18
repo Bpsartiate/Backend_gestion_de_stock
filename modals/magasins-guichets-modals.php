@@ -205,6 +205,44 @@
     </div>
 </div>
 
+<!-- modal edit guichet à faire plus tard -->
+ <!-- MODAL GUICHET ULTRA-DETAIL -->
+<div class="modal fade" id="modalGuichetDetails" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-xl">
+            <!-- HEADER GRADIENT -->
+            <div class="modal-header border-0" id="guichetModalHeader" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div id="guichetAvatar" style="width:60px;height:60px;border-radius:12px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-cash-register fa-2x text-white"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0 text-white fw-bold" id="guichetNom">Guichet #001</h4>
+                        <div class="text-white-75 small" id="guichetSubtitle">En attente</div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-light" id="btnEditGuichet"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-light" id="btnCloturerCaissier"><i class="fas fa-lock"></i></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+
+            <div class="modal-body p-0">
+                <!-- SPINNER + PLACEHOLDER -->
+                <div id="guichetContent" style="min-height: 600px;">
+                    <div id="guichetSpinner" class="d-flex align-items-center justify-content-center h-100" style="display:none;">
+                        <div class="text-center"><div class="spinner-border text-primary mb-3"></div><p>Chargement guichet...</p></div>
+                    </div>
+                    <div id="guichetPlaceholder" class="d-flex align-items-center justify-content-center h-100 text-center p-5">
+                        <div><i class="fas fa-cash-register fa-4x text-muted mb-4"></i><h5 class="text-muted">Sélectionnez un guichet</h5></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ====================================================== -->
 <!-- MODAL ÉDITER MAGASIN (Avancé avec historique) -->
 <!-- ====================================================== -->
@@ -587,9 +625,157 @@ $(document).ready(function() {
         finally{ if($btn && $btn.length) $btn.prop('disabled', false); if(spinner) spinner.classList.add('d-none'); }
     });
 
-    // Auto-remplissage guichet
-    $('#modalCreateGuichet').on('show.bs.modal', function() {
-        $('#guichetMagasinId').val(CURRENT_MAGASIN_ID);
+    // Auto-remplissage guichet avec chargement des vendeurs disponibles
+    $('#modalCreateGuichet').on('show.bs.modal', async function() {
+        const magasinId = CURRENT_MAGASIN_ID;
+        $('#guichetMagasinId').val(magasinId);
+        
+        // ✅ Charger les vendeurs non assignés à un guichet
+        const vendeurSelect = document.querySelector('#modalCreateGuichet select[name="vendeurPrincipal"]');
+        if(!vendeurSelect) return;
+        
+        vendeurSelect.innerHTML = '<option value="">Chargement des vendeurs…</option>';
+        try {
+            const token = (typeof getTokenLocal === 'function') ? getTokenLocal() : 
+                         (localStorage.getItem('token') || localStorage.getItem('authToken'));
+            
+            // ✅ Fetch UNIQUEMENT les vendeurs (role: 'vendeur')
+            const res = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + '/api/protected/members?role=vendeur', {
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+            });
+            
+            if(!res.ok) throw new Error('Erreur chargement vendeurs');
+            const vendeurs = await res.json();
+            
+            if(!vendeurs || vendeurs.length === 0) {
+                vendeurSelect.innerHTML = '<option value="">Aucun vendeur disponible</option>';
+                return;
+            }
+            
+            // ✅ Fetch guichets du magasin pour identifier les vendeurs assignés
+            const guRes = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + `/api/protected/guichets/${magasinId}`, {
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+            });
+            
+            let assignedVendeurs = [];
+            if(guRes.ok) {
+                const guichets = await guRes.json();
+                assignedVendeurs = (guichets || [])
+                    .filter(g => g.vendeurPrincipal && g.vendeurPrincipal._id)
+                    .map(g => g.vendeurPrincipal._id);
+            }
+            
+            // ✅ Filter: vendeurs non assignés
+            const availableVendeurs = vendeurs.filter(v => !assignedVendeurs.includes(v._id));
+            
+            if(!availableVendeurs.length) {
+                vendeurSelect.innerHTML = '<option value="">Tous les vendeurs sont assignés</option>';
+                return;
+            }
+            
+            // ✅ Populate select
+            vendeurSelect.innerHTML = '<option value="">Sélectionner un vendeur (optionnel)</option>' + 
+                availableVendeurs.map(v => 
+                    `<option value="${v._id}">${(v.prenom || '').trim()} ${(v.nom || '').trim()}</option>`
+                ).join('');
+                
+        } catch(err) {
+            console.error('load vendeurs:', err);
+            vendeurSelect.innerHTML = '<option value="">Erreur chargement</option>';
+        }
+    });
+    
+    // ✅ Soumission du formulaire guichet
+    $('#formCreateGuichet').on('submit', async function(e) {
+        e.preventDefault();
+        const $btn = $(this).find('button[type="submit"]');
+        const spinner = $btn.find('.spinner-border');
+        
+        try {
+            if($btn.length) $btn.prop('disabled', true);
+            if(spinner.length) spinner.removeClass('d-none');
+            
+            const magasinId = $('#guichetMagasinId').val();
+            const nomGuichet = $(this).find('input[name="nomGuichet"]').val();
+            const codeGuichet = $(this).find('input[name="codeGuichet"]').val();
+            const status = $(this).find('select[name="status"]').val() || 1;
+            const vendeurId = $(this).find('select[name="vendeurPrincipal"]').val();
+            const objectifJournalier = $(this).find('input[name="objectifJournalier"]').val() || 0;
+            const stockMax = $(this).find('input[name="stockMax"]').val() || 0;
+            
+            if(!magasinId || !nomGuichet) {
+                showToast('Veuillez remplir les champs obligatoires', 'danger');
+                return;
+            }
+            
+            const token = (typeof getTokenLocal === 'function') ? getTokenLocal() : 
+                         (localStorage.getItem('token') || localStorage.getItem('authToken'));
+            
+            const payload = {
+                magasinId,
+                nomGuichet,
+                codeGuichet: codeGuichet || '',
+                status: parseInt(status),
+                vendeurPrincipal: vendeurId || null,
+                objectifJournalier: parseInt(objectifJournalier),
+                stockMax: parseInt(stockMax)
+            };
+            
+            const res = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + '/api/protected/guichets', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if(!res.ok) {
+                const err = await res.text();
+                throw new Error(err || 'Erreur serveur');
+            }
+            
+            const data = await res.json();
+            
+            // ✅ ENREGISTRER L'ACTIVITÉ côté frontend (pour refresh immédiat)
+            try {
+                const vendeurName = vendeurId ? 
+                    $(this).find('select[name="vendeurPrincipal"] option:selected').text() : 'Aucun';
+                
+                if(typeof window !== 'undefined' && typeof window.recordActivity === 'function'){
+                    const desc = `Guichet '${nomGuichet}' créé. Vendeur assigné: ${vendeurName}`;
+                    window.recordActivity('Guichet créé', desc, 'fas fa-cash-register');
+                }
+            }catch(e){ console.warn('recordActivity failed', e); }
+            
+            showToast('✅ Guichet créé avec succès !', 'success');
+            
+            // Hide modal
+            const modalEl = document.getElementById('modalCreateGuichet');
+            if(window.bootstrap && modalEl) {
+                bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+            } else if(typeof $ === 'function') {
+                $('#modalCreateGuichet').modal('hide');
+            }
+            
+            // ✅ Rafraîchir le panel 3 (guichets) si fonction disponible
+            if(typeof window.loadGuichetsForMagasin === 'function') {
+                const freshGuichets = await window.loadGuichetsForMagasin(magasinId);
+                if(freshGuichets && typeof window.renderGuichets === 'function') {
+                    window.renderGuichets(freshGuichets);
+                }
+            }
+            
+            // Reset form
+            this.reset();
+            
+        } catch(err) {
+            console.error('create guichet:', err);
+            showToast('❌ Erreur: ' + (err.message || err), 'danger');
+        } finally {
+            if($btn.length) $btn.prop('disabled', false);
+            if(spinner.length) spinner.addClass('d-none');
+        }
     });
 });
 
