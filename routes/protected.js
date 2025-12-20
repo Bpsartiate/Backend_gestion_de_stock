@@ -835,20 +835,19 @@ router.get('/magasins', authMiddleware, blockVendeur, async (req, res) => {
 
     // Admin: voir TOUS les magasins
     if (requester.role === 'admin') {
-      magasins = await Magasin.find({});
+      magasins = await Magasin.find({})
+        .populate('businessId', 'nomEntreprise budget devise')
+        .populate('managerId', 'nom prenom email')
+        .lean();
     } 
     // Gestionnaire: voir UNIQUEMENT ses magasins assignés
     else if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
-      magasins = await Magasin.find({ managerId: requester._id });
+      magasins = await Magasin.find({ managerId: requester._id })
+        .populate('businessId', 'nomEntreprise budget devise')
+        .populate('managerId', 'nom prenom email')
+        .lean();
     }
-
-    // Populating the result
-    magasins = await Magasin.populate(magasins, [
-      .populate('businessId', 'nomEntreprise budget devise')
-      .populate('managerId', 'nom prenom email')
-      .lean()
-      .exec();
-    
+      
     // Fetch guichets and vendeurs count for each magasin
     const magasinsData = await Promise.all(
       magasins.map(async (m) => {
