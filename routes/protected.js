@@ -562,6 +562,7 @@ router.put('/guichets/:id', authMiddleware, async (req, res) => {
         vendeurId: vendeurPrincipal,
         guichetId,
         magasinId: guichet.magasinId._id,
+        entrepriseId: guichet.magasinId.businessId,
         dateAffectation: new Date(),
         statut: 'active'
       });

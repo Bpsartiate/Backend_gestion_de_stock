@@ -102,10 +102,622 @@
             .pane-lg-3, .pane-lg-4 { display: none !important; }
             .pane-lg-5 { flex: 0 0 100% !important; max-width: 100% !important; }
         }
-/* guichet */
-#guichetContent { position: relative; }
-#guichetSpinner { display: none !important; }
-#guichetPlaceholder { display: flex !important; }
 .guichet-kpi { transition: all 0.3s ease; }
 .guichet-kpi:hover { transform: translateY(-3px); }
 .status-online { box-shadow: 0 0 20px rgba(34,197,94,0.3); }
+
+/* ✨ Produits vendus - Améliorations */
+#guichetProduitsVendusTable tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+#guichetProduitsVendusTable tbody tr:hover {
+    background-color: rgba(16,185,129,0.05);
+    transform: scaleX(1.01);
+}
+
+/* ✨ MODAL GUICHET ULTRA-DETAIL - CSS AMÉLIORÉ */
+
+/* Header sticky */
+#guichetModalHeader {
+    position: sticky !important;
+    top: 0;
+    z-index: 15;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Stats cards améliorées */
+.modal-body .card {
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.modal-body .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.modal-body .card i {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+/* Badge styling amélioré */
+#guichetStatus {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 6px 12px !important;
+    border-radius: 20px !important;
+}
+
+/* Table des produits - design premium */
+#guichetProduitsTable {
+    font-size: 0.95rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+#guichetProduitsTable thead {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #374151;
+}
+
+#guichetProduitsTable thead th {
+    padding: 12px 8px !important;
+    border: none;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+#guichetProduitsTable tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: all 0.25s ease;
+}
+
+#guichetProduitsTable tbody tr:hover {
+    background-color: #f9fafb;
+    box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+#guichetProduitsTable tbody td {
+    padding: 11px 8px !important;
+    vertical-align: middle;
+    color: #1f2937;
+}
+
+#guichetProduitsTable .badge {
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 6px 10px !important;
+}
+
+#guichetProduitsTable tfoot {
+    border-top: 3px solid #3b82f6;
+    background: linear-gradient(135deg, #f0f7ff 0%, #e0eeff 100%);
+}
+
+#guichetProduitsTable tfoot tr {
+    font-weight: 700;
+    color: #1e40af;
+}
+
+#guichetProduitsTable tfoot td {
+    padding: 14px 8px !important;
+}
+
+/* Section titles avec icônes */
+.modal-body h6 {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #1f2937;
+    font-size: 1rem;
+}
+
+.modal-body h6 i {
+    opacity: 0.85;
+    margin-right: 8px;
+}
+
+/* Badge couleurs pour les marges */
+.badge.bg-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; }
+.badge.bg-info { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important; }
+.badge.bg-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important; }
+.badge.bg-primary-subtle { 
+    background: rgba(59, 130, 246, 0.1) !important;
+    color: #1d4ed8 !important;
+}
+
+/* Actions rapides */
+.modal-body .d-grid {
+    gap: 8px;
+}
+
+.modal-body .btn-outline-primary:hover,
+.modal-body .btn-outline-success:hover,
+.modal-body .btn-outline-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* ========== GUICHET MODAL STATE MANAGEMENT ========== */
+
+/* Content - Hidden by default, shown when guichet loaded */
+#guichetContent {
+    position: relative;
+    display: none !important;  /* Important to prevent CSS cascade issues */
+    animation: slideUp 0.4s ease-out;
+}
+
+/* When displayed, remove !important for animation */
+#guichetContent[style*="display: block"] {
+    display: block !important;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Placeholder - Shown by default, hidden when data loaded */
+#guichetPlaceholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 600px;
+    position: relative;
+    z-index: 10;
+}
+
+/* When hidden, ensure it stays hidden */
+#guichetPlaceholder[style*="display: none"] {
+    display: none !important;
+}
+
+/* Spinner - Hidden by default */
+#guichetSpinner {
+    display: none !important;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+}
+
+/* When shown, display as flex */
+#guichetSpinner[style*="display: flex"] {
+    display: flex !important;
+}
+
+#guichetSpinner .spinner-border {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-width: 0.25rem;
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+    #guichetProduitsTable {
+        font-size: 0.8rem;
+    }
+    
+    #guichetProduitsTable thead th {
+        padding: 8px 4px !important;
+        font-size: 0.75rem;
+    }
+    
+    #guichetProduitsTable tbody td {
+        padding: 8px 4px !important;
+    }
+    
+    .modal-body .row.g-3 {
+        gap: 0.75rem !important;
+    }
+    
+    .modal-body .card {
+        padding: 1rem !important;
+    }
+    
+    .modal-body .card h5 {
+        font-size: 0.95rem;
+    }
+}
+
+/* Print style */
+@media print {
+    .modal-header,
+    .btn-group,
+    .modal-footer {
+        display: none !important;
+    }
+    
+    #guichetContent {
+        display: block !important;
+    }
+}
+
+/* ========== MODAL Z-INDEX MANAGEMENT ========== */
+/* Ensure edit modal appears above details modal */
+#modalEditGuichet {
+    z-index: 1100 !important;
+}
+
+#modalEditGuichet .modal-backdrop {
+    z-index: 1099 !important;
+}
+
+/* ========== PANEL 1 TOGGLE - AVATAR STYLE ========== */
+
+/* Panel 1 - Stay as col-lg-4 always, keep original design */
+#panelMagasins {
+    transition: all 0.3s ease;
+}
+
+#panelMagasins .card {
+    transition: max-height 0.3s ease;
+    height: 100%;
+}
+
+/* When collapsed: hide list, show photos only as avatars */
+#panelMagasins.collapsed .panel-expanded {
+    display: none !important;
+}
+
+#panelMagasins.collapsed .panel-collapsed {
+    display: block !important;
+}
+
+#panelMagasins.collapsed .text-label {
+    display: none;
+}
+
+#panelMagasins.collapsed .toggle-panel-btn i {
+    transform: rotate(180deg);
+}
+
+/* Normal state: show list, hide photos */
+#panelMagasins .panel-expanded {
+    display: block !important;
+}
+
+#panelMagasins .panel-collapsed {
+    display: none !important;
+}
+
+/* Photos avatars for collapsed view - Circular style */
+#magasinsPhotosGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px;
+}
+
+/* ========== PANEL COLLAPSE/EXPAND SYSTEM - CORRIGÉ ========== */
+#dashboardMagasins {
+    display: flex;
+    gap: 1rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ÉTAT EXPANDED: Tailles normales */
+#panelMagasins {
+    flex: 0 0 calc(33.333% - 0.67rem);
+    max-width: calc(33.333% - 0.67rem);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+#panelMagasins + .pane-lg-5 {
+    flex: 0 0 calc(41.667% - 0.67rem);
+    max-width: calc(41.667% - 0.67rem);
+}
+
+#panelMagasins + .pane-lg-5 + .pane-lg-3 {
+    flex: 0 0 calc(25% - 0.67rem);
+    max-width: calc(25% - 0.67rem);
+}
+
+/* ÉTAT COLLAPSED: Panel 1 réduit */
+#panelMagasins.collapsed {
+    flex: 0 0 calc(14% - 0.67rem) !important;
+    max-width: calc(14% - 0.67rem) !important;
+}
+
+#panelMagasins.collapsed + .pane-lg-5 {
+    flex: 0 0 calc(52% - 0.67rem) !important;
+    max-width: calc(52% - 0.67rem) !important;
+}
+
+#panelMagasins.collapsed + .pane-lg-5 + .pane-lg-3 {
+    flex: 0 0 calc(34% - 0.67rem) !important;
+    max-width: calc(34% - 0.67rem) !important;
+}
+
+/* Avatar mini-card styles */
+.avatar-mini {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 70px;
+    height: auto;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.avatar-mini:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.avatar-mini img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-mini i {
+    font-size: 28px;
+}
+
+.avatar-mini.selected {
+    box-shadow: 0 0 0 3px #3b82f6, 0 8px 20px rgba(59, 130, 246, 0.3);
+    transform: scale(1.1);
+}
+
+/* Grid container pour avatars */
+#magasinsPhotosGrid {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 8px;
+    width: 100%;
+}
+
+/* Back button appearance when collapsed */
+#backButtonContainer {
+    transition: all 0.3s ease;
+}
+
+#backButtonContainer.show {
+    display: block !important;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth transitions for panel content */
+.panel-expanded,
+.panel-collapsed {
+    transition: all 0.3s ease;
+}
+
+/* Mobile responsive */
+@media (max-width: 992px) {
+    #dashboardMagasins {
+        flex-direction: column;
+    }
+    
+    #panelMagasins,
+    #panelMagasins + .pane-lg-5,
+    #panelMagasins + .pane-lg-5 + .pane-lg-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    #dashboardMagasins.panels-collapsed #panelMagasins {
+        flex: 0 0 auto;
+        max-width: auto;
+    }
+    
+    #dashboardMagasins.panels-collapsed #panelMagasins + .pane-lg-3 {
+        display: none;
+    }
+}
+    /* justify-content: flex-start;
+    align-content: flex-start;
+} */
+
+.magasin-photo-item {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 3px solid transparent;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    flex-shrink: 0;
+}
+
+.magasin-photo-item:hover {
+    transform: scale(1.12);
+    border-color: #3b82f6;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.magasin-photo-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.magasin-photo-item.active {
+    border-color: #10b981;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
+}
+
+.magasin-photo-item.active::after {
+    content: '✓';
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 22px;
+    height: 22px;
+    background: #10b981;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid white;
+}
+
+/* Toggle button styling */
+.toggle-panel-btn {
+    transition: all 0.3s ease;
+}
+
+.toggle-panel-btn:hover {
+    background-color: #e2e8f0 !important;
+    transform: scale(1.05);
+}
+
+/* Back button - hide by default */
+#backButtonContainer {
+    display: none !important;
+}
+
+#backButtonContainer.show {
+    display: block !important;
+}
+
+/* Panels 2 and 3 stay fixed at their col size */
+#panelMagasinDetails,
+#panelGuichets {
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+/* Responsive pour les données guichets */
+#panelGuichets .card-body {
+    overflow: auto;
+    min-height: 300px;
+}
+
+#panelGuichets .list-group-item {
+    min-width: 0;
+    overflow: hidden;
+}
+
+#panelGuichets .list-group-item-text {
+    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* Responsive: Stack panels on small screens */
+@media (max-width: 1200px) {
+    #panelMagasins:not(.collapsed) {
+        max-width: 100%;
+    }
+    
+    #panelMagasinDetails,
+    #panelGuichets {
+        max-width: 100% !important;
+    }
+    
+    #panelGuichets .list-group-item {
+        font-size: 0.9rem;
+    }
+}
+
+/* Table responsiveness améliorée */
+@media (max-width: 992px) {
+    #dashboardMagasins {
+        flex-wrap: wrap;
+    }
+    
+    #panelMagasins {
+        flex: 0 0 calc(20% - 0.67rem) !important;
+        max-width: calc(20% - 0.67rem) !important;
+    }
+    
+    #panelMagasins.collapsed {
+        flex: 0 0 calc(15% - 0.67rem) !important;
+        max-width: calc(15% - 0.67rem) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #dashboardMagasins {
+        flex-direction: column;
+    }
+    
+    #panelMagasins,
+    #panelMagasinDetails,
+    #panelGuichets {
+        flex: 1 1 100% !important;
+        max-width: 100% !important;
+    }
+    
+    #guichetProduitsVendusTable {
+        font-size: 0.85rem;
+    }
+    
+    #guichetProduitsVendusTable th,
+    #guichetProduitsVendusTable td {
+        padding: 0.5rem 0.25rem !important;
+    }
+}
+
+/* ✅ STYLING DES BOUTONS "AJOUTER GUICHET" */
+#btnAddGuichet,
+#quickAddGuichet,
+#btnAddGuichetFooter {
+    transition: all 0.3s ease;
+}
+
+#btnAddGuichet:disabled,
+#quickAddGuichet:disabled,
+#btnAddGuichetFooter:disabled {
+    cursor: not-allowed !important;
+    background-color: #e9ecef !important;
+    border-color: #dee2e6 !important;
+    color: #6c757d !important;
+}
+
+#btnAddGuichet:disabled:hover,
+#quickAddGuichet:disabled:hover,
+#btnAddGuichetFooter:disabled:hover {
+    background-color: #e9ecef !important;
+    border-color: #dee2e6 !important;
+    transform: none !important;
+}

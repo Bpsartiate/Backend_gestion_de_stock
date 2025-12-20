@@ -1,7 +1,4 @@
-<?php
-// modals/magasins-guichets-modals.php
-// Modals ultra-modernes avec validation, preview, drag-drop, animations
-?>
+
 
 <!-- ====================================================== -->
 <!-- MODAL CRÉER MAGASIN (Glassmorphism + Animations) -->
@@ -205,37 +202,229 @@
     </div>
 </div>
 
-<!-- modal edit guichet à faire plus tard -->
- <!-- MODAL GUICHET ULTRA-DETAIL -->
+<!-- ====================================================== -->
+<!-- MODAL ÉDITER GUICHET (FORMULAIRE COMPLET) -->
+<!-- ====================================================== -->
+<div class="modal fade" id="modalEditGuichet" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 bg-gradient-warning text-white rounded-top-3">
+                <h5 class="modal-title mb-0">
+                    <i class="fas fa-edit me-2"></i>Modifier Guichet
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form id="formEditGuichet">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editGuichetId">
+                    <input type="hidden" id="editGuichetMagasinId">
+                    <input type="hidden" id="editGuichetEntrepriseId">
+                    
+                    <div class="row g-3">
+                        <!-- Nom du guichet -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Nom du guichet <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-cash-register text-warning"></i>
+                                </span>
+                                <input type="text" class="form-control fw-semibold" id="editGuichetNom" required>
+                            </div>
+                        </div>
+
+                        <!-- Code + Status -->
+                        <div class="col-md-6">
+                            <label class="form-label">Code court</label>
+                            <input type="text" class="form-control text-center fw-bold fs-5 text-primary" 
+                                   id="editGuichetCode" maxlength="6">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Statut</label>
+                            <select class="form-select" id="editGuichetStatus">
+                                <option value="1">🟢 Actif</option>
+                                <option value="0">🔴 Inactif</option>
+                            </select>
+                        </div>
+
+                        <!-- Vendeur -->
+                        <div class="col-12">
+                            <label class="form-label">Vendeur principal</label>
+                            <select class="form-select" id="editGuichetVendeur">
+                                <option value="">Sélectionner un vendeur...</option>
+                            </select>
+                        </div>
+
+                        <!-- Objectifs -->
+                        <div class="col-md-6">
+                            <label class="form-label">Objectif journalier</label>
+                            <div class="input-group">
+                                <span class="input-group-text">CDF</span>
+                                <input type="number" class="form-control" id="editGuichetObjectif" value="50000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Limite stock max</label>
+                            <input type="number" class="form-control" id="editGuichetStockMax" value="1000">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 bg-light px-4 py-3 rounded-bottom-3">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning px-4">
+                        <i class="fas fa-save me-2"></i>Enregistrer
+                        <span class="spinner-border spinner-border-sm ms-2 d-none"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+ <!-- MODAL GUICHET ULTRA-DETAIL (APPROCHE HYBRIDE) -->
 <div class="modal fade" id="modalGuichetDetails" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-xl">
-            <!-- HEADER GRADIENT -->
-            <div class="modal-header border-0" id="guichetModalHeader" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
-                <div class="d-flex align-items-center gap-3">
-                    <div id="guichetAvatar" style="width:60px;height:60px;border-radius:12px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+        <div class="modal-content border-0 shadow-xl overflow-hidden">
+            <!-- HEADER GRADIENT DYNAMIQUE -->
+            <div class="modal-header border-0" id="guichetModalHeader" style="background: linear-gradient(135deg, #1269f5ff 0%, #164ff9ff 100%); position: sticky; top: 0; z-index: 10;">
+                <div class="d-flex align-items-center gap-3 w-100">
+                    <div id="guichetAvatar" style="width:60px;height:60px;border-radius:12px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i class="fas fa-cash-register fa-2x text-white"></i>
                     </div>
-                    <div>
-                        <h4 class="mb-0 text-white fw-bold" id="guichetNom">Guichet #001</h4>
-                        <div class="text-white-75 small" id="guichetSubtitle">En attente</div>
+                    <div class="flex-grow-1">
+                        <h4 class="mb-1 text-white fw-bold" id="guichetNom">Guichet rgba(255, 255, 255, 1)</h4>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="badge bg-white text-primary" id="guichetStatus">En attente</span>
+                            <small class="text-white" id="guichetSubtitle">Vendeur: -</small>
+                        </div>
                     </div>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-sm btn-light" id="btnEditGuichet"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-light" id="btnCloturerCaissier"><i class="fas fa-lock"></i></button>
+                    <button class="btn btn-sm btn-light" id="editGuichetModal" title="Modifier"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-light" id="btnCloturerCaissier" title="Clôturer caissier"><i class="fas fa-lock"></i></button>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
             </div>
 
             <div class="modal-body p-0">
                 <!-- SPINNER + PLACEHOLDER -->
-                <div id="guichetContent" style="min-height: 600px;">
-                    <div id="guichetSpinner" class="d-flex align-items-center justify-content-center h-100" style="display:none;">
-                        <div class="text-center"><div class="spinner-border text-primary mb-3"></div><p>Chargement guichet...</p></div>
+                <div id="guichetSpinner" class="d-flex align-items-center justify-content-center" style="min-height:600px;display:none;">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <p class="text-muted">Chargement des détails...</p>
                     </div>
-                    <div id="guichetPlaceholder" class="d-flex align-items-center justify-content-center h-100 text-center p-5">
-                        <div><i class="fas fa-cash-register fa-4x text-muted mb-4"></i><h5 class="text-muted">Sélectionnez un guichet</h5></div>
+                </div>
+
+                <div id="guichetPlaceholder" class="d-flex align-items-center justify-content-center text-center p-5" style="min-height:600px;">
+                    <div>
+                        <i class="fas fa-cash-register fa-4x text-muted mb-4" style="opacity:0.3;"></i>
+                        <h5 class="text-muted">Sélectionnez un guichet</h5>
+                    </div>
+                </div>
+
+                <!-- CONTENU PRINCIPAL (Rempli par JS) -->
+                <div id="guichetContent" style="display:none;">
+                    <!-- ROW 1: STATS PRINCIPALES -->
+                    <div class="p-4 border-bottom">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="card border-0 bg-light rounded-3 text-center p-3">
+                                    <i class="fas fa-money-bill-wave text-success fa-2x mb-2"></i>
+                                    <p class="text-muted small mb-1">CA Aujourd'hui</p>
+                                    <h5 class="text-success fw-bold" id="guichetCaJour">0 CDF</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 bg-light rounded-3 text-center p-3">
+                                    <i class="fas fa-box-open text-info fa-2x mb-2"></i>
+                                    <p class="text-muted small mb-1">Produits Vendus</p>
+                                    <h5 class="text-info fw-bold" id="guichetNbProduits">0</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 bg-light rounded-3 text-center p-3">
+                                    <i class="fas fa-receipt text-primary fa-2x mb-2"></i>
+                                    <p class="text-muted small mb-1">Nb Transactions</p>
+                                    <h5 class="text-primary fw-bold" id="guichetNbTransactions">0</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 bg-light rounded-3 text-center p-3">
+                                    <i class="fas fa-percent text-warning fa-2x mb-2"></i>
+                                    <p class="text-muted small mb-1">Marge Moyenne</p>
+                                    <h5 class="text-warning fw-bold" id="guichetMargeMoyenne">0%</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ROW 2: GRAPHIQUE VENTES -->
+                    <div class="p-4 border-bottom">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-bold mb-0">
+                                <i class="fas fa-chart-line text-primary me-2"></i>Ventes par Heure
+                            </h6>
+                            <small class="text-muted">Aujourd'hui</small>
+                        </div>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="guichetChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- ROW 3: TABLE PRODUITS VENDUS -->
+                    <div class="p-4 border-bottom">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-bold mb-0">
+                                <i class="fas fa-shopping-bag text-success me-2"></i>Produits Vendus Aujourd'hui
+                            </h6>
+                            <span class="badge bg-success" id="guichetNbProduitsUnique">0</span>
+                        </div>
+
+                        <!-- Table Responsive -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0" id="guichetProduitsTable">
+                                <thead class="table-light fw-bold">
+                                    <tr>
+                                        <th style="width:35%;"><i class="fas fa-boxes text-primary me-1"></i>Produit</th>
+                                        <th style="width:18%;" class="text-center"><i class="fas fa-tag text-info me-1"></i>Catégorie</th>
+                                        <th style="width:12%;" class="text-end"><i class="fas fa-cubes text-success me-1"></i>Qté</th>
+                                        <th style="width:18%;" class="text-end"><i class="fas fa-coins text-warning me-1"></i>P.U.</th>
+                                        <th style="width:20%;" class="text-end"><i class="fas fa-chart-bar text-danger me-1"></i>Total</th>
+                                        <th style="width:10%;" class="text-center"><i class="fas fa-percent text-secondary me-1"></i>Marge</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="guichetProduitsVendusTable">
+                                    <tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i>Aucun produit vendu</td></tr>
+                                </tbody>
+                                <tfoot class="table-light fw-bold border-top-2">
+                                    <tr>
+                                        <td colspan="3" class="text-end">
+                                            <strong>TOTAL</strong>
+                                        </td>
+                                        <td class="text-end">-</td>
+                                        <td class="text-end text-success" id="guichetTotalVentes">0 CDF</td>
+                                        <td class="text-center"><span class="badge bg-secondary" id="guichetMoyenneMarge">0%</span></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ROW 4: ACTIONS RAPIDES -->
+                    <div class="p-4 bg-light border-top">
+                        <p class="text-muted small mb-3"><i class="fas fa-bolt text-warning me-2"></i>Actions Rapides</p>
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button class="btn btn-sm btn-outline-primary" id="btnExportGuichet" title="Exporter les données">
+                                <i class="fas fa-download me-1"></i>Exporter
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" id="btnImprimerGuichet" title="Imprimer le détail">
+                                <i class="fas fa-print me-1"></i>Imprimer
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" id="btnTransfertGuichet" title="Transfert produits">
+                                <i class="fas fa-exchange-alt me-1"></i>Transfert
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -786,4 +975,242 @@ function showToast(message, type = 'success') {
                   .addClass(`bg-${type}`);
     toast.show();
 }
+
+// ✅ MODAL EDIT GUICHET
+async function editGuichetModal(guichetId) {
+    try {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const API_BASE = window.API_BASE || '';
+        
+        let guichet = null;
+        
+        // ✅ TRY 1: Fetch guichet details from API (using correct endpoint)
+        try {
+            const response = await fetch(`${API_BASE}/api/protected/guichets/detail/${guichetId}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            
+            if (response.ok) {
+                guichet = await response.json();
+                console.log('✅ Guichet chargé via API directe');
+            } else {
+                throw new Error(`API returned ${response.status}`);
+            }
+        } catch (apiErr) {
+            console.warn('⚠️ API endpoint échoué, essai fallbacks:', apiErr.message);
+            
+            // ✅ FALLBACK 1: Chercher dans lastLoadedGuichets
+            if (window.lastLoadedGuichets && Array.isArray(window.lastLoadedGuichets)) {
+                guichet = window.lastLoadedGuichets.find(g => g._id === guichetId);
+                if (guichet) {
+                    console.log('✅ Guichet trouvé dans lastLoadedGuichets (Fallback 1)');
+                }
+            }
+            
+            // ✅ FALLBACK 2: Chercher dans allGuichets
+            if (!guichet && window.allGuichets && Array.isArray(window.allGuichets)) {
+                guichet = window.allGuichets.find(g => g._id === guichetId);
+                if (guichet) {
+                    console.log('✅ Guichet trouvé dans allGuichets (Fallback 2)');
+                }
+            }
+            
+            // ✅ FALLBACK 3: Get from current magasin's guichets list
+            if (!guichet && typeof window.CURRENT_MAGASIN_ID !== 'undefined' && window.CURRENT_MAGASIN_ID) {
+                try {
+                    const listRes = await fetch(`${API_BASE}/api/protected/guichets/${window.CURRENT_MAGASIN_ID}`, {
+                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                    });
+                    
+                    if (listRes.ok) {
+                        const guichets = await listRes.json();
+                        guichet = guichets.find(g => g._id === guichetId);
+                        if (guichet) {
+                            console.log('✅ Guichet trouvé dans liste magasin (Fallback 3)');
+                            // Sauvegarder pour réutilisation
+                            if (!window.allGuichets) window.allGuichets = [];
+                            if (!window.allGuichets.find(g => g._id === guichetId)) {
+                                window.allGuichets.push(guichet);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Fallback 3 échoué:', e.message);
+                }
+            }
+            
+            // ✅ FALLBACK 4: Search in all business magasins
+            if (!guichet && typeof window.CURRENT_BUSINESS !== 'undefined' && window.CURRENT_BUSINESS) {
+                try {
+                    const biz_id = window.CURRENT_BUSINESS._id || window.CURRENT_BUSINESS.id;
+                    const bizRes = await fetch(`${API_BASE}/api/protected/businesses/${biz_id}`, {
+                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                    });
+                    
+                    if (bizRes.ok) {
+                        const bizData = await bizRes.json();
+                        const allMags = bizData.magasins || [];
+                        for (const mag of allMags) {
+                            const magRes = await fetch(`${API_BASE}/api/protected/guichets/${mag._id}`, {
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                            });
+                            if (magRes.ok) {
+                                const magGuichets = await magRes.json();
+                                guichet = magGuichets.find(g => g._id === guichetId);
+                                if (guichet) {
+                                    console.log('✅ Guichet trouvé dans entreprise (Fallback 4)');
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Fallback 4 échoué:', e.message);
+                }
+            }
+            
+            // ❌ Si aucun fallback n'a marché
+            if (!guichet) {
+                console.error('❌ Guichet introuvable partout. ID:', guichetId, 'Erreur API:', apiErr.message);
+                showToast('❌ Guichet introuvable - ' + apiErr.message, 'danger');
+                throw apiErr;
+            }
+        }
+        
+        // ✅ Normalize fields
+        if (!guichet.nomGuichet && guichet.nom_guichet) {
+            guichet.nomGuichet = guichet.nom_guichet;
+        }
+        if (!guichet.codeGuichet && guichet.code) {
+            guichet.codeGuichet = guichet.code;
+        }
+        
+        // Populate modal with guichet data
+        $('#editGuichetId').val(guichet._id);
+        $('#editGuichetMagasinId').val(guichet.magasinId || window.CURRENT_MAGASIN_ID || '');
+        
+        // Get entrepriseId from guichet's magasin data or current business
+        let entrepriseId = '';
+        if (guichet.magasinId && typeof guichet.magasinId === 'object' && guichet.magasinId.businessId) {
+            entrepriseId = guichet.magasinId.businessId._id || guichet.magasinId.businessId;
+        } else if (guichet.businessId) {
+            entrepriseId = guichet.businessId._id || guichet.businessId;
+        } else if (window.CURRENT_BUSINESS) {
+            entrepriseId = window.CURRENT_BUSINESS._id || window.CURRENT_BUSINESS.id;
+        }
+        $('#editGuichetEntrepriseId').val(entrepriseId || '');
+        
+        $('#editGuichetNom').val(guichet.nomGuichet || '');
+        $('#editGuichetCode').val(guichet.codeGuichet || '');
+        $('#editGuichetStatus').val(guichet.status || 1);
+        $('#editGuichetObjectif').val(guichet.objectifJournalier || 0);
+        $('#editGuichetStockMax').val(guichet.stockMax || 0);
+        
+        if (guichet.vendeurPrincipal && guichet.vendeurPrincipal._id) {
+            $('#editGuichetVendeur').val(guichet.vendeurPrincipal._id);
+        }
+        
+        // Load vendeurs in select
+        const vendeurSelect = $('#editGuichetVendeur');
+        vendeurSelect.html('<option value="">Chargement des vendeurs…</option>');
+        
+        try {
+            const vendRes = await fetch(`${API_BASE}/api/protected/members?role=vendeur`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            
+            if (vendRes.ok) {
+                const vendeurs = await vendRes.json();
+                vendeurSelect.html('<option value="">Sélectionner un vendeur</option>');
+                vendeurs.forEach(v => {
+                    const selected = guichet.vendeurPrincipal && guichet.vendeurPrincipal._id === v._id ? 'selected' : '';
+                    vendeurSelect.append(`<option value="${v._id}" ${selected}>${v.prenom} ${v.nom}</option>`);
+                });
+            }
+        } catch (e) {
+            console.warn('Erreur chargement vendeurs:', e);
+        }
+        
+        // Show modal
+        if (window.bootstrap) {
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditGuichet'));
+            modal.show();
+        } else {
+            $('#modalEditGuichet').modal('show');
+        }
+    } catch (err) {
+        console.error('editGuichetModal:', err);
+        showToast('❌ ' + (err.message || 'Erreur chargement'), 'danger');
+    }
+}
+
+// ✅ SAVE EDIT GUICHET
+$(document).ready(function() {
+    $('#formEditGuichet').on('submit', async function(e) {
+        e.preventDefault();
+        
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const API_BASE = window.API_BASE || '';
+        const $btn = $(this).find('button[type="submit"]');
+        const $spinner = $btn.find('.spinner-border');
+        
+        try {
+            $btn.prop('disabled', true);
+            $spinner?.removeClass('d-none');
+            
+            const guichetId = $('#editGuichetId').val();
+            const magasinId = $('#editGuichetMagasinId').val();
+            const entrepriseId = $('#editGuichetEntrepriseId').val();
+            const payload = {
+                entrepriseId: entrepriseId,
+                magasinId: magasinId,
+                nomGuichet: $('#editGuichetNom').val(),
+                codeGuichet: $('#editGuichetCode').val(),
+                status: parseInt($('#editGuichetStatus').val()),
+                vendeurPrincipal: $('#editGuichetVendeur').val() || null,
+                objectifJournalier: parseInt($('#editGuichetObjectif').val()) || 0,
+                stockMax: parseInt($('#editGuichetStockMax').val()) || 0
+            };
+            
+            const response = await fetch(`${API_BASE}/api/protected/guichets/${guichetId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errData = await response.text();
+                throw new Error(`Erreur serveur ${response.status}: ${errData}`);
+            }
+            
+            const data = await response.json();
+            showToast('✅ Guichet modifié avec succès', 'success');
+            
+            // Close modal
+            if (window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditGuichet')).hide();
+            } else {
+                $('#modalEditGuichet').modal('hide');
+            }
+            
+            // Refresh guichets list
+            if (typeof window.CURRENT_MAGASIN_ID !== 'undefined' && typeof window.loadGuichetsForMagasin === 'function') {
+                const freshGuichets = await window.loadGuichetsForMagasin(window.CURRENT_MAGASIN_ID);
+                if (freshGuichets && typeof window.renderGuichets === 'function') {
+                    window.renderGuichets(freshGuichets);
+                }
+            }
+            
+        } catch (err) {
+            console.error('edit guichet:', err);
+            showToast('❌ ' + (err.message || 'Erreur'), 'danger');
+        } finally {
+            $btn.prop('disabled', false);
+            $spinner?.addClass('d-none');
+        }
+    });
+});
 </script>
