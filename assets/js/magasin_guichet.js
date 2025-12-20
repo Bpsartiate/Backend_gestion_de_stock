@@ -504,19 +504,21 @@ function togglePanel1() {
     localStorage.setItem('panelState', isNowCollapsed ? 'collapsed' : 'expanded');
     console.log('Saved to localStorage:', isNowCollapsed ? 'collapsed' : 'expanded');
     
-    // If collapsing, reset magasin details DISPLAY (mais pas le magasinId!)
+    // If collapsing, reset magasin details UI mais GARDER la sélection
     if (isNowCollapsed) {
         const detailsData = document.getElementById('magasinDetailsData');
         const placeholder = document.getElementById('magasinDetailsPlaceholder');
         if (detailsData) detailsData.style.display = 'none';
         if (placeholder) placeholder.style.display = 'flex';
         
-        document.querySelectorAll('#magasinsList .list-group-item').forEach(item => {
+        document.querySelectorAll('#magasinsListDetails .list-group-item').forEach(item => {
             item.classList.remove('active', 'bg-primary-soft');
         });
-        // ⚠️ NE PAS réinitialiser CURRENT_MAGASIN_ID ici!
-        // Les boutons doivent rester actifs car le magasin est toujours sélectionné
-        console.log('✅ Details display reset on collapse, but magasin selection remains');
+        
+        // ⚠️ NE PAS remettre CURRENT_MAGASIN_ID à null ! 
+        // Les boutons "Ajouter Guichet" doivent rester actifs même si les détails sont masqués
+        // CURRENT_MAGASIN_ID reste défini pour que les boutons restent actifs
+        console.log('✅ Details masqués (collapse) - CURRENT_MAGASIN_ID conservé:', CURRENT_MAGASIN_ID);
     }
 }
 
@@ -578,27 +580,38 @@ function selectMagasinAvatar(magasinId) {
 function updateAddGuichetButtonState() {
     const buttons = [
         document.getElementById('btnAddGuichet'),        // Panel details
-        document.getElementById('btnAddGuichetKPI'),     // KPI card
+        document.getElementById('btnAddGuichetKPI'),     // KPI card (NOUVEAU)
         document.getElementById('btnAddGuichetHeader'),  // Header panel guichets
         document.getElementById('quickAddGuichet'),      // Icon
         document.getElementById('btnAddGuichetFooter')   // Footer
     ];
     
+    console.log('🔄 updateAddGuichetButtonState() appelée - CURRENT_MAGASIN_ID:', CURRENT_MAGASIN_ID);
+    
     buttons.forEach((btn, idx) => {
-        if (!btn) return; // Ignorer si bouton pas présent
+        if (!btn) {
+            console.warn(`⚠️ Bouton ${idx} non trouvé`);
+            return;
+        }
         
         if (CURRENT_MAGASIN_ID) {
             // 🟢 MAGASIN SÉLECTIONNÉ = BOUTON ACTIF
             btn.disabled = false;
+            btn.removeAttribute('disabled');
             btn.classList.remove('disabled');
             btn.style.opacity = '1';
             btn.style.cursor = 'pointer';
+            btn.style.pointerEvents = 'auto';
+            console.log(`✅ Bouton ${idx} activé - CURRENT_MAGASIN_ID: ${CURRENT_MAGASIN_ID}`);
         } else {
             // 🔴 PAS DE MAGASIN = BOUTON DÉSACTIVÉ
             btn.disabled = true;
+            btn.setAttribute('disabled', 'disabled');
             btn.classList.add('disabled');
             btn.style.opacity = '0.5';
             btn.style.cursor = 'not-allowed';
+            btn.style.pointerEvents = 'none';
+            console.log(`❌ Bouton ${idx} désactivé`);
         }
     });
 }
@@ -931,6 +944,14 @@ function renderGuichets(guichets) {
                     </span>
                     
                   
+                    
+                    <!-- Edit Button -->
+                    <button class="btn btn-sm btn-outline-primary" 
+                            onclick="event.stopPropagation(); openGuichetEditModal('${g._id}')"
+                            title="Modifier"
+                            style="padding: 4px 8px; font-size: 12px; transition: all 0.2s;">
+                        <i class="fas fa-edit"></i>
+                    </button>
                     
                     <!-- Delete Button -->
                     <button class="btn btn-sm btn-outline-danger" 
@@ -1858,6 +1879,17 @@ $(document).on('click', '#btnCloturerCaissier', function() {
         // TODO: API call pour clôture
     }
 });
+
+// ✅ Fonction pour ouvrir modal édition depuis liste de guichets
+function openGuichetEditModal(guichetId) {
+    console.log('🖊️ Ouverture modal d\'édition pour:', guichetId);
+    if (typeof window.editGuichetModal === 'function') {
+        window.editGuichetModal(guichetId);
+    } else {
+        console.error('❌ editGuichetModal function not found');
+        showToast('❌ Fonction d\'édition non disponible', 'danger');
+    }
+}
 
 // ✅ BOUTON MODIFIER GUICHET - Dans le modal de détails
 $(document).on('click', '#editGuichetModal', function() {

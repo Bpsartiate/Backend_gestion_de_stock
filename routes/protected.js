@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth');
-const { canModifyUser } = require('../middlewares/authorization');
+const { canModifyUser, checkMagasinAccess, checkBusinessAccess, blockVendeur } = require('../middlewares/authorization');
 const Utilisateur = require('../models/utilisateur');
 const Guichet = require('../models/guichet');
 const Magasin = require('../models/magasin');
@@ -17,6 +17,34 @@ const upload = require('../middlewares/upload');
 
 // Profil et membres protégés
 router.get('/members', authMiddleware, utilisateurController.listerMembres);
+
+// GET /api/protected/vendeurs-available - Retourne les vendeurs sans affectation active
+router.get('/vendeurs-available', authMiddleware, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1] || '';
+    
+    // Récupérer tous les vendeurs
+    const vendeurs = await Utilisateur.find({ role: 'vendeur' })
+      .select('_id prenom nom email telephone')
+      .lean();
+    
+    // Récupérer les IDs des vendeurs avec affectation active
+    const affectationsActives = await Affectation.find({ statut: 'active' })
+      .select('vendeurId')
+      .lean();
+    
+    const vendeurIdsActifs = affectationsActives.map(a => a.vendeurId?.toString()).filter(Boolean);
+    
+    // Filtrer les vendeurs disponibles (sans affectation active)
+    const vendeursDispo = vendeurs.filter(v => !vendeurIdsActifs.includes(v._id.toString()));
+    
+    return res.json(vendeursDispo);
+  } catch(err) {
+    console.error('vendeurs-available:', err);
+    res.status(500).json({ message: 'Erreur chargement vendeurs disponibles' });
+  }
+});
+
 router.get('/profile/:id', authMiddleware, utilisateurController.getProfil);
 router.put('/profile/:id', authMiddleware, canModifyUser, upload.single('photo'), utilisateurController.modifierProfil);
 router.put('/assign-vendeur', authMiddleware, utilisateurController.assignerVendeur);
@@ -276,18 +304,31 @@ router.post('/magasins', authMiddleware, upload.single('photo'), async (req, res
 router.put('/magasins/:id', authMiddleware, upload.single('photo'), async (req, res) => {
   try {
     const requester = req.user;
-    if (!requester || !['admin', 'superviseur'].includes(requester.role)) {
-      return res.status(403).json({ message: 'Accès refusé: seuls les admins et superviseurs peuvent modifier des magasins' });
-    }
-
     const magasinId = req.params.id;
-    const { nom_magasin, adresse, telephone, description, managerId } = req.body;
 
     // Vérifier que le magasin existe
     const magasin = await Magasin.findById(magasinId).populate('managerId');
     if (!magasin) {
       return res.status(404).json({ message: 'Magasin non trouvé' });
     }
+
+    // ✅ CONTRÔLE D'ACCÈS
+    // Admin: accès complet
+    // Gestionnaire: UNIQUEMENT s'il est manager du magasin
+    // Vendeur: refusé
+    if (requester.role === 'vendeur') {
+      return res.status(403).json({ message: 'Accès refusé: les vendeurs ne peuvent pas modifier les magasins' });
+    }
+
+    if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
+      if (magasin.managerId?.toString() !== requester._id.toString()) {
+        return res.status(403).json({ message: 'Accès refusé: ce magasin ne vous appartient pas' });
+      }
+    } else if (requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès refusé: seuls les admins et gestionnaires peuvent modifier des magasins' });
+    }
+
+    const { nom_magasin, adresse, telephone, description, managerId } = req.body;
 
     // Mettre à jour les champs
     if (nom_magasin) magasin.nom_magasin = nom_magasin;
@@ -386,20 +427,26 @@ router.put('/magasins/:id', authMiddleware, upload.single('photo'), async (req, 
 router.post('/guichets', authMiddleware, async (req, res) => {
   try {
     const requester = req.user;
-    if (!requester || !['admin', 'superviseur'].includes(requester.role)) {
+    const { magasinId } = req.body;
+
+    // Vendeur: pas d'accès
+    if (requester.role === 'vendeur') {
+      return res.status(403).json({ message: 'Accès refusé: les vendeurs ne peuvent pas créer de guichets' });
+    }
+
+    // Gestionnaire: vérifier que le magasin lui appartient
+    if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
+      const magasin = await Magasin.findById(magasinId);
+      if (!magasin) return res.status(404).json({ message: 'Magasin non trouvé' });
+      if (magasin.managerId?.toString() !== requester._id.toString()) {
+        return res.status(403).json({ message: 'Accès refusé: ce magasin ne vous appartient pas' });
+      }
+      if (requester.role === 'superviseur' && requester.canCreateGuichet === false) {
+        return res.status(403).json({ message: 'Permission refusée: le gestionnaire ne peut pas créer de guichets' });
+      }
+    } else if (requester.role !== 'admin') {
       return res.status(403).json({ message: 'Accès refusé' });
     }
-
-    // If superviseur, optionally check a permission flag
-    if (requester.role === 'superviseur' && requester.canCreateGuichet === false) {
-      return res.status(403).json({ message: 'Permission refusée: le superviseur ne peut pas créer de guichets' });
-    }
-
-    const { magasinId, nomGuichet, codeGuichet, status, vendeurPrincipal, objectifJournalier, stockMax } = req.body;
-    if (!magasinId || !nomGuichet) return res.status(400).json({ message: 'magasinId et nomGuichet requis' });
-
-    const magasin = await Magasin.findById(magasinId);
-    if (!magasin) return res.status(404).json({ message: 'Magasin non trouvé' });
 
     // create the guichet
     const guichet = new Guichet({
@@ -483,6 +530,7 @@ router.get('/guichets/:magasinId', authMiddleware, async (req, res) => {
 // GET /api/protected/guichets/detail/:guichetId - Détail d'un guichet
 router.get('/guichets/detail/:guichetId', authMiddleware, async (req, res) => {
   try {
+    const requester = req.user;
     const guichetId = req.params.guichetId;
     
     const guichet = await Guichet.findById(guichetId)
@@ -492,6 +540,16 @@ router.get('/guichets/detail/:guichetId', authMiddleware, async (req, res) => {
     
     if (!guichet) {
       return res.status(404).json({ message: 'Guichet non trouvé' });
+    }
+
+    // ✅ CONTRÔLE D'ACCÈS
+    if (requester.role === 'vendeur') {
+      return res.status(403).json({ message: 'Accès refusé: les vendeurs ne peuvent pas accéder aux détails des guichets' });
+    }
+    if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
+      if (guichet.magasinId?.managerId?.toString() !== requester._id.toString()) {
+        return res.status(403).json({ message: 'Accès refusé: ce guichet ne vous appartient pas' });
+      }
     }
     
     // Récupérer les vendeurs affectés à ce guichet
@@ -513,29 +571,29 @@ router.get('/guichets/detail/:guichetId', authMiddleware, async (req, res) => {
 router.put('/guichets/:id', authMiddleware, async (req, res) => {
   try {
     const requester = req.user;
-    if (!requester || !['admin', 'superviseur', 'gestionnaire'].includes(requester.role)) {
-      return res.status(403).json({ message: 'Accès refusé' });
-    }
-
     const guichetId = req.params.id;
-    const { nom_guichet, code, status, vendeurPrincipal, objectifJournalier, stockMax } = req.body;
 
     const guichet = await Guichet.findById(guichetId).populate('magasinId');
     if (!guichet) {
       return res.status(404).json({ message: 'Guichet non trouvé' });
     }
 
-    // Vérifier les droits: gestionnaire ne peut modifier que ses magasins
-    if (requester.role === 'gestionnaire') {
-      const affectation = await Affectation.findOne({
-        utilisateurId: requester.id,
-        magasinId: guichet.magasinId._id,
-        statut: 'active'
-      });
-      if (!affectation) {
-        return res.status(403).json({ message: 'Vous ne pouvez modifier que vos magasins' });
-      }
+    // ✅ CONTRÔLE D'ACCÈS
+    // Vendeur: pas d'accès
+    if (requester.role === 'vendeur') {
+      return res.status(403).json({ message: 'Accès refusé: les vendeurs ne peuvent pas modifier les guichets' });
     }
+
+    // Gestionnaire: UNIQUEMENT ses magasins
+    if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
+      if (guichet.magasinId?.managerId?.toString() !== requester._id.toString()) {
+        return res.status(403).json({ message: 'Accès refusé: ce guichet ne vous appartient pas' });
+      }
+    } else if (requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const { nom_guichet, code, status, vendeurPrincipal, objectifJournalier, stockMax } = req.body;
 
     // Mettre à jour les champs
     if (nom_guichet) guichet.nom_guichet = nom_guichet;
@@ -599,14 +657,26 @@ router.put('/guichets/:id', authMiddleware, async (req, res) => {
 router.delete('/guichets/:id', authMiddleware, async (req, res) => {
   try {
     const requester = req.user;
-    if (!requester || !['admin', 'superviseur'].includes(requester.role)) {
-      return res.status(403).json({ message: 'Seuls les admins et superviseurs peuvent supprimer des guichets' });
-    }
-
     const guichetId = req.params.id;
-    const guichet = await Guichet.findById(guichetId);
+
+    const guichet = await Guichet.findById(guichetId).populate('magasinId');
     if (!guichet) {
       return res.status(404).json({ message: 'Guichet non trouvé' });
+    }
+
+    // ✅ CONTRÔLE D'ACCÈS
+    // Vendeur: pas d'accès
+    if (requester.role === 'vendeur') {
+      return res.status(403).json({ message: 'Accès refusé: les vendeurs ne peuvent pas supprimer les guichets' });
+    }
+
+    // Gestionnaire: UNIQUEMENT ses magasins
+    if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
+      if (guichet.magasinId?.managerId?.toString() !== requester._id.toString()) {
+        return res.status(403).json({ message: 'Accès refusé: ce guichet ne vous appartient pas' });
+      }
+    } else if (requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Seuls les admins et gestionnaires peuvent supprimer des guichets' });
     }
 
     const guichetNom = guichet.nom_guichet;
@@ -643,18 +713,32 @@ router.delete('/guichets/:id', authMiddleware, async (req, res) => {
 router.post('/guichets/:guichetId/affecter-vendeur', authMiddleware, async (req, res) => {
   try {
     const requester = req.user;
-    if (!requester || !['admin', 'superviseur', 'gestionnaire'].includes(requester.role)) {
+    const guichetId = req.params.guichetId;
+
+    // Vendeur: pas d'accès
+    if (requester.role === 'vendeur') {
+      return res.status(403).json({ message: 'Accès refusé: les vendeurs ne peuvent pas affecter de vendeurs' });
+    }
+
+    const guichet = await Guichet.findById(guichetId).populate('magasinId');
+    if (!guichet) {
+      return res.status(404).json({ message: 'Guichet non trouvé' });
+    }
+
+    // Gestionnaire: UNIQUEMENT ses magasins
+    if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
+      if (guichet.magasinId?.managerId?.toString() !== requester._id.toString()) {
+        return res.status(403).json({ message: 'Accès refusé: ce guichet ne vous appartient pas' });
+      }
+    } else if (requester.role !== 'admin') {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    const guichetId = req.params.guichetId;
     const { vendeurId } = req.body;
 
     if (!vendeurId) {
       return res.status(400).json({ message: 'vendeurId requis' });
     }
-
-    const guichet = await Guichet.findById(guichetId).populate('magasinId');
     if (!guichet) {
       return res.status(404).json({ message: 'Guichet non trouvé' });
     }
@@ -682,6 +766,18 @@ router.post('/guichets/:guichetId/affecter-vendeur', authMiddleware, async (req,
       guichetId,
       statut: 'active'
     });
+
+    // Validation: verifier qu'aucun autre vendeur n'est a ce guichet
+    const otherAffectations = await Affectation.find({
+      guichetId,
+      statut: 'active',
+      vendeurId: { $ne: null, $ne: vendeurId }
+    }).populate('vendeurId', 'prenom nom');
+
+    if (otherAffectations.length > 0) {
+      const vendeurExistant = otherAffectations[0].vendeurId;
+      return res.status(400).json({ message: 'Ce guichet a deja un vendeur: ' + vendeurExistant.prenom + ' ' + vendeurExistant.nom });
+    }
 
     if (existingAffect) {
       return res.status(400).json({ message: 'Vendeur déjà affecté à ce guichet' });
@@ -732,10 +828,22 @@ router.post('/guichets/:guichetId/affecter-vendeur', authMiddleware, async (req,
 });
 
 // GET /api/protected/magasins - Lister TOUS les magasins de TOUTES les entreprises
-router.get('/magasins', authMiddleware, async (req, res) => {
+router.get('/magasins', authMiddleware, blockVendeur, async (req, res) => {
   try {
-    // Retourner TOUS les magasins, peu importe le rôle ou l'utilisateur
-    const magasins = await Magasin.find({})
+    const requester = req.user;
+    let magasins = [];
+
+    // Admin: voir TOUS les magasins
+    if (requester.role === 'admin') {
+      magasins = await Magasin.find({});
+    } 
+    // Gestionnaire: voir UNIQUEMENT ses magasins assignés
+    else if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
+      magasins = await Magasin.find({ managerId: requester._id });
+    }
+
+    // Populating the result
+    magasins = await Magasin.populate(magasins, [
       .populate('businessId', 'nomEntreprise budget devise')
       .populate('managerId', 'nom prenom email')
       .lean()
@@ -985,3 +1093,7 @@ router.delete('/affectations/:id', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
+
+
+
+

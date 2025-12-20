@@ -819,7 +819,7 @@ $(document).ready(function() {
         const magasinId = CURRENT_MAGASIN_ID;
         $('#guichetMagasinId').val(magasinId);
         
-        // ✅ Charger les vendeurs non assignés à un guichet
+        // ✅ Charger les vendeurs sans affectation active
         const vendeurSelect = document.querySelector('#modalCreateGuichet select[name="vendeurPrincipal"]');
         if(!vendeurSelect) return;
         
@@ -828,8 +828,8 @@ $(document).ready(function() {
             const token = (typeof getTokenLocal === 'function') ? getTokenLocal() : 
                          (localStorage.getItem('token') || localStorage.getItem('authToken'));
             
-            // ✅ Fetch UNIQUEMENT les vendeurs (role: 'vendeur')
-            const res = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + '/api/protected/members?role=vendeur', {
+            // ✅ Fetch les vendeurs DISPONIBLES (sans affectation active)
+            const res = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + '/api/protected/vendeurs-available', {
                 headers: token ? { 'Authorization': 'Bearer ' + token } : {}
             });
             
@@ -841,30 +841,9 @@ $(document).ready(function() {
                 return;
             }
             
-            // ✅ Fetch guichets du magasin pour identifier les vendeurs assignés
-            const guRes = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + `/api/protected/guichets/${magasinId}`, {
-                headers: token ? { 'Authorization': 'Bearer ' + token } : {}
-            });
-            
-            let assignedVendeurs = [];
-            if(guRes.ok) {
-                const guichets = await guRes.json();
-                assignedVendeurs = (guichets || [])
-                    .filter(g => g.vendeurPrincipal && g.vendeurPrincipal._id)
-                    .map(g => g.vendeurPrincipal._id);
-            }
-            
-            // ✅ Filter: vendeurs non assignés
-            const availableVendeurs = vendeurs.filter(v => !assignedVendeurs.includes(v._id));
-            
-            if(!availableVendeurs.length) {
-                vendeurSelect.innerHTML = '<option value="">Tous les vendeurs sont assignés</option>';
-                return;
-            }
-            
             // ✅ Populate select
             vendeurSelect.innerHTML = '<option value="">Sélectionner un vendeur (optionnel)</option>' + 
-                availableVendeurs.map(v => 
+                vendeurs.map(v => 
                     `<option value="${v._id}">${(v.prenom || '').trim()} ${(v.nom || '').trim()}</option>`
                 ).join('');
                 
@@ -1077,7 +1056,7 @@ async function editGuichetModal(guichetId) {
             }
         }
         
-        // ✅ Normalize fields
+        // ✅ Normalize fields from API response
         if (!guichet.nomGuichet && guichet.nom_guichet) {
             guichet.nomGuichet = guichet.nom_guichet;
         }
@@ -1087,7 +1066,7 @@ async function editGuichetModal(guichetId) {
         
         // Populate modal with guichet data
         $('#editGuichetId').val(guichet._id);
-        $('#editGuichetMagasinId').val(guichet.magasinId || window.CURRENT_MAGASIN_ID || '');
+        $('#editGuichetMagasinId').val(guichet.magasinId && typeof guichet.magasinId === 'object' ? guichet.magasinId._id : (guichet.magasinId || window.CURRENT_MAGASIN_ID || ''));
         
         // Get entrepriseId from guichet's magasin data or current business
         let entrepriseId = '';
@@ -1100,9 +1079,16 @@ async function editGuichetModal(guichetId) {
         }
         $('#editGuichetEntrepriseId').val(entrepriseId || '');
         
-        $('#editGuichetNom').val(guichet.nomGuichet || '');
-        $('#editGuichetCode').val(guichet.codeGuichet || '');
-        $('#editGuichetStatus').val(guichet.status || 1);
+        $('#editGuichetNom').val(guichet.nomGuichet || guichet.nom_guichet || '');
+        $('#editGuichetCode').val(guichet.codeGuichet || guichet.code || '');
+        
+        // ⚠️ Status must be a number, handle all possible formats
+        let statusValue = guichet.status;
+        if (typeof statusValue === 'string') statusValue = parseInt(statusValue);
+        if (!statusValue && statusValue !== 0) statusValue = 1;
+        $('#editGuichetStatus').val(statusValue);
+        console.log('📊 Status récupéré:', statusValue, 'Type:', typeof statusValue);
+        
         $('#editGuichetObjectif').val(guichet.objectifJournalier || 0);
         $('#editGuichetStockMax').val(guichet.stockMax || 0);
         
@@ -1110,21 +1096,29 @@ async function editGuichetModal(guichetId) {
             $('#editGuichetVendeur').val(guichet.vendeurPrincipal._id);
         }
         
-        // Load vendeurs in select
+        // Load vendeurs DISPONIBLES in select
         const vendeurSelect = $('#editGuichetVendeur');
         vendeurSelect.html('<option value="">Chargement des vendeurs…</option>');
         
         try {
-            const vendRes = await fetch(`${API_BASE}/api/protected/members?role=vendeur`, {
+            const vendRes = await fetch(`${API_BASE}/api/protected/vendeurs-available`, {
                 headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             });
             
             if (vendRes.ok) {
                 const vendeurs = await vendRes.json();
                 vendeurSelect.html('<option value="">Sélectionner un vendeur</option>');
+                
+                // Ajouter le vendeur actuellement assigné en premier (s'il existe)
+                if (guichet.vendeurPrincipal && guichet.vendeurPrincipal._id) {
+                    vendeurSelect.append(`<option value="${guichet.vendeurPrincipal._id}" selected>${guichet.vendeurPrincipal.prenom} ${guichet.vendeurPrincipal.nom}</option>`);
+                }
+                
+                // Ajouter les vendeurs disponibles (sauf celui déjà assigné)
                 vendeurs.forEach(v => {
-                    const selected = guichet.vendeurPrincipal && guichet.vendeurPrincipal._id === v._id ? 'selected' : '';
-                    vendeurSelect.append(`<option value="${v._id}" ${selected}>${v.prenom} ${v.nom}</option>`);
+                    if (!guichet.vendeurPrincipal || guichet.vendeurPrincipal._id !== v._id) {
+                        vendeurSelect.append(`<option value="${v._id}">${v.prenom} ${v.nom}</option>`);
+                    }
                 });
             }
         } catch (e) {
@@ -1164,8 +1158,8 @@ $(document).ready(function() {
             const payload = {
                 entrepriseId: entrepriseId,
                 magasinId: magasinId,
-                nomGuichet: $('#editGuichetNom').val(),
-                codeGuichet: $('#editGuichetCode').val(),
+                nom_guichet: $('#editGuichetNom').val(),
+                code: $('#editGuichetCode').val(),
                 status: parseInt($('#editGuichetStatus').val()),
                 vendeurPrincipal: $('#editGuichetVendeur').val() || null,
                 objectifJournalier: parseInt($('#editGuichetObjectif').val()) || 0,
@@ -1189,19 +1183,36 @@ $(document).ready(function() {
             const data = await response.json();
             showToast('✅ Guichet modifié avec succès', 'success');
             
-            // Close modal
-            if (window.bootstrap) {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditGuichet')).hide();
-            } else {
-                $('#modalEditGuichet').modal('hide');
-            }
+            // Close BOTH modals (detail et edit) - Utiliser Backdrop click
+            try {
+                const backdrop = document.querySelector('.modal-backdrop');
+                const modals = document.querySelectorAll('.modal.show');
+                modals.forEach(modal => {
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    if (modalInstance) modalInstance.hide();
+                });
+            } catch(e) { console.warn('Error closing modals:', e); }
+            
+            // Small delay to ensure modals are closed before refresh
+            await new Promise(resolve => setTimeout(resolve, 500));
             
             // Refresh guichets list
-            if (typeof window.CURRENT_MAGASIN_ID !== 'undefined' && typeof window.loadGuichetsForMagasin === 'function') {
-                const freshGuichets = await window.loadGuichetsForMagasin(window.CURRENT_MAGASIN_ID);
-                if (freshGuichets && typeof window.renderGuichets === 'function') {
-                    window.renderGuichets(freshGuichets);
+            try {
+                // Récupérer magasinId du formulaire au lieu de la variable globale
+                const magasinId = $('#editGuichetMagasinId').val();
+                console.log('🔄 Rafraîchissement des guichets pour magasin:', magasinId);
+                if (magasinId && typeof window.loadGuichetsForMagasin === 'function') {
+                    const freshGuichets = await window.loadGuichetsForMagasin(magasinId);
+                    console.log('✅ Guichets rafraîchis:', freshGuichets?.length || 0);
+                    if (freshGuichets && typeof window.renderGuichets === 'function') {
+                        window.renderGuichets(freshGuichets);
+                        console.log('✅ Liste affichée');
+                    }
+                } else {
+                    console.warn('⚠️ Impossible de rafraîchir: magasinId=', magasinId, 'loadGuichetsForMagasin exists?', typeof window.loadGuichetsForMagasin);
                 }
+            } catch(refreshErr) {
+                console.error('Erreur rafraîchissement:', refreshErr);
             }
             
         } catch (err) {
