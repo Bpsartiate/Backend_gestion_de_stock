@@ -506,20 +506,31 @@ router.post('/guichets', authMiddleware, async (req, res) => {
 
     // activity
     try {
-      const activity = new Activity({
-        businessId: magasin.businessId,
-        userId: requester.id,
-        title: 'Guichet créé',
-        description: `Guichet '${guichet.nom_guichet}' créé pour le magasin '${magasin.nom_magasin || magasin.nom}'`,
-        icon: 'fas fa-cash-register'
-      });
-      await activity.save();
-    } catch (actErr) { console.warn('activity save guichet', actErr); }
+      // ✅ Get businessId from magasin or from requester context
+      const businessId = magasin.businessId || magasin.entrepriseId || null;
+      
+      if (businessId) {
+        const activity = new Activity({
+          businessId: businessId,
+          title: 'Guichet créé',
+          description: `Guichet '${guichet.nom_guichet}' créé pour le magasin '${magasin.nom_magasin || magasin.nom}'`,
+          icon: 'fas fa-cash-register'
+        });
+        await activity.save();
+        console.log('✅ Activity saved for guichet creation');
+      } else {
+        console.warn('⚠️ No businessId found for activity - skipping');
+      }
+    } catch (actErr) { 
+      console.warn('activity.save.error (non-blocking):', actErr.message);
+      // Ne pas bloquer la réponse si l'activité échoue
+    }
 
+    console.log('✅ Guichet creation complete - returning response');
     return res.json({ message: 'Guichet créé', guichet });
   } catch (err) {
-    console.error('guichets.create.error', err);
-    return res.status(500).json({ message: 'Erreur création guichet' });
+    console.error('guichets.create.error (CRITICAL):', err);
+    return res.status(500).json({ message: 'Erreur création guichet: ' + err.message });
   }
 });
 
