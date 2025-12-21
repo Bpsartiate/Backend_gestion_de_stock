@@ -427,7 +427,7 @@ router.put('/magasins/:id', authMiddleware, upload.single('photo'), async (req, 
 router.post('/guichets', authMiddleware, async (req, res) => {
   try {
     const requester = req.user;
-    const { magasinId } = req.body;
+    const { magasinId, nomGuichet, codeGuichet, status, vendeurPrincipal, objectifJournalier, stockMax } = req.body;
 
     // Vendeur: pas d'accès
     if (requester.role === 'vendeur') {

@@ -815,8 +815,16 @@ $(document).ready(function() {
     });
 
     // Auto-remplissage guichet avec chargement des vendeurs disponibles
-    $('#modalCreateGuichet').on('show.bs.modal', async function() {
+    $('#modalCreateGuichet').off('show.bs.modal').on('show.bs.modal', async function(e) {
         const magasinId = CURRENT_MAGASIN_ID;
+        
+        // ❌ PREVENT opening modal without magasin selected
+        if (!magasinId) {
+            e.preventDefault();
+            showToast('Veuillez sélectionner un magasin d\'abord', 'warning');
+            return;
+        }
+        
         $('#guichetMagasinId').val(magasinId);
         
         // ✅ Charger les vendeurs sans affectation active
@@ -854,9 +862,14 @@ $(document).ready(function() {
     });
     
     // ✅ Soumission du formulaire guichet
-    $('#formCreateGuichet').on('submit', async function(e) {
+    $('#formCreateGuichet').off('submit').on('submit', async function(e) {
         e.preventDefault();
+        
+        // ✅ PREVENT DOUBLE SUBMIT
         const $btn = $(this).find('button[type="submit"]');
+        if($btn.prop('disabled')) return;
+        
+        const $form = $(this);
         const spinner = $btn.find('.spinner-border');
         
         try {
@@ -889,6 +902,8 @@ $(document).ready(function() {
                 stockMax: parseInt(stockMax)
             };
             
+            console.log('📤 Payload envoyé:', payload);
+            
             const res = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + '/api/protected/guichets', {
                 method: 'POST',
                 headers: {
@@ -918,24 +933,31 @@ $(document).ready(function() {
             
             showToast('✅ Guichet créé avec succès !', 'success');
             
-            // Hide modal
-            const modalEl = document.getElementById('modalCreateGuichet');
-            if(window.bootstrap && modalEl) {
-                bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-            } else if(typeof $ === 'function') {
-                $('#modalCreateGuichet').modal('hide');
-            }
+            // Reset form FIRST
+            this.reset();
             
-            // ✅ Rafraîchir le panel 3 (guichets) si fonction disponible
-            if(typeof window.loadGuichetsForMagasin === 'function') {
-                const freshGuichets = await window.loadGuichetsForMagasin(magasinId);
-                if(freshGuichets && typeof window.renderGuichets === 'function') {
-                    window.renderGuichets(freshGuichets);
+            // Hide modal - Use ONLY Bootstrap API
+            const modalEl = document.getElementById('modalCreateGuichet');
+            if(modalEl) {
+                try {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if(modal) {
+                        modal.hide();
+                    }
+                } catch(e) {
+                    console.warn('Modal close error:', e);
                 }
             }
             
-            // Reset form
-            this.reset();
+            // ✅ Rafraîchir le panel 3 (guichets) - AFTER modal closes
+            setTimeout(async () => {
+                if(typeof window.loadGuichetsForMagasin === 'function') {
+                    const freshGuichets = await window.loadGuichetsForMagasin(magasinId);
+                    if(freshGuichets && typeof window.renderGuichets === 'function') {
+                        window.renderGuichets(freshGuichets);
+                    }
+                }
+            }, 300);
             
         } catch(err) {
             console.error('create guichet:', err);

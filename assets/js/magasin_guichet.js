@@ -644,89 +644,9 @@ function bindEvents() {
         });
     });
     
-    // ✅ PRÉVENTION BOOTSTRAP: Empêcher l'ouverture du modal si pas de magasin
-    const modalCreateGuichet = document.getElementById('modalCreateGuichet');
-    if (modalCreateGuichet) {
-        modalCreateGuichet.addEventListener('show.bs.modal', function(e) {
-            // ✅ TOUJOURS remplir le magasinId et les vendeurs (même s'on va bloquer après)
-            const magasinId = CURRENT_MAGASIN_ID;
-            const magasinIdInput = document.getElementById('guichetMagasinId');
-            if (magasinIdInput) {
-                magasinIdInput.value = magasinId || '';
-            }
-            
-            // ✅ CHARGER LES VENDEURS du magasin
-            const vendeurSelect = modalCreateGuichet.querySelector('select[name="vendeurPrincipal"]');
-            if (vendeurSelect) {
-                vendeurSelect.innerHTML = '<option value="">Chargement des vendeurs…</option>';
-                
-                if (magasinId) {
-                    // Fetch vendeurs
-                    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-                    fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + '/api/protected/members?role=vendeur', {
-                        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
-                    })
-                    .then(res => res.ok ? res.json() : [])
-                    .then(vendeurs => {
-                        if (!vendeurs || vendeurs.length === 0) {
-                            vendeurSelect.innerHTML = '<option value="">Aucun vendeur disponible</option>';
-                            return;
-                        }
-                        
-                        // Fetch guichets du magasin pour voir qui est assigné
-                        fetch((typeof API_BASE !== 'undefined' ? API_BASE : '') + `/api/protected/guichets/${magasinId}`, {
-                            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
-                        })
-                        .then(res => res.ok ? res.json() : [])
-                        .then(guichets => {
-                            const assignedVendeurs = (guichets || [])
-                                .filter(g => g.vendeurPrincipal && g.vendeurPrincipal._id)
-                                .map(g => g.vendeurPrincipal._id);
-                            
-                            const availableVendeurs = vendeurs.filter(v => !assignedVendeurs.includes(v._id));
-                            
-                            if (!availableVendeurs.length) {
-                                vendeurSelect.innerHTML = '<option value="">Tous les vendeurs sont assignés</option>';
-                                return;
-                            }
-                            
-                            vendeurSelect.innerHTML = '<option value="">Sélectionner un vendeur (optionnel)</option>' + 
-                                availableVendeurs.map(v => 
-                                    `<option value="${v._id}">${(v.prenom || '').trim()} ${(v.nom || '').trim()}</option>`
-                                ).join('');
-                        })
-                        .catch(err => console.warn('Erreur guichets:', err));
-                    })
-                    .catch(err => {
-                        console.warn('Erreur vendeurs:', err);
-                        vendeurSelect.innerHTML = '<option value="">Erreur chargement</option>';
-                    });
-                }
-            }
-            
-            // ✅ VÉRIFIER: Si pas de magasin, bloquer l'ouverture
-            if (!CURRENT_MAGASIN_ID) {
-                e.preventDefault();
-                console.warn('❌ Pas de magasin sélectionné - Modal bloqué');
-                showToast('⚠️ Veuillez sélectionner un magasin avant d\'ajouter un guichet', 'warning', 3000);
-                return false;
-            }
-            
-            console.log('✅ Modal s\'ouvre pour magasin:', CURRENT_MAGASIN_ID);
-            modalCreateGuichet.setAttribute('data-magasin-id', CURRENT_MAGASIN_ID);
-        });
-    }
-    
-    // ✅ BOUTON AJOUTER GUICHET (tous les boutons)
-    $(document).on('click', '[data-bs-target="#modalCreateGuichet"]', function(e) {
-        if (!CURRENT_MAGASIN_ID) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.warn('❌ Pas de magasin sélectionné');
-            showToast('⚠️ Veuillez sélectionner un magasin avant d\'ajouter un guichet', 'warning', 3000);
-            return false;
-        }
-    });
+    // ❌ LISTENER SUPPRIMÉ - Désormais géré dans modals/magasins-guichets-modals.php
+    // Les listeners pour le modal de création de guichet sont maintenant consolidés dans le PHP
+    // pour éviter les doublons et les appels de fetch multiples
     
     // ✅ BOUTON EDIT MAGASIN (inchangé)
     $(document).on('click', '#btnEditMagasin', function() {
