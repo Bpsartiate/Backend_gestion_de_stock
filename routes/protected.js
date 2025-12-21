@@ -21,27 +21,36 @@ router.get('/members', authMiddleware, utilisateurController.listerMembres);
 // GET /api/protected/vendeurs-available - Retourne les vendeurs sans affectation active
 router.get('/vendeurs-available', authMiddleware, async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1] || '';
-    
     // Récupérer tous les vendeurs
     const vendeurs = await Utilisateur.find({ role: 'vendeur' })
       .select('_id prenom nom email telephone')
       .lean();
     
     // Récupérer les IDs des vendeurs avec affectation active
-    const affectationsActives = await Affectation.find({ statut: 'active' })
+    // ✅ Chercher avec SOIT statut: 'active' SOIT status: 1 (pour couvrir les deux formats)
+    const affectationsActives = await Affectation.find({
+      $or: [
+        { statut: 'active' },
+        { status: 1 },
+        { status: true }
+      ]
+    })
       .select('vendeurId')
       .lean();
     
     const vendeurIdsActifs = affectationsActives.map(a => a.vendeurId?.toString()).filter(Boolean);
     
+    console.log('📊 Total vendeurs:', vendeurs.length, '| Affectés:', vendeurIdsActifs.length);
+    
     // Filtrer les vendeurs disponibles (sans affectation active)
     const vendeursDispo = vendeurs.filter(v => !vendeurIdsActifs.includes(v._id.toString()));
+    
+    console.log('✅ Vendeurs disponibles:', vendeursDispo.length);
     
     return res.json(vendeursDispo);
   } catch(err) {
     console.error('vendeurs-available:', err);
-    res.status(500).json({ message: 'Erreur chargement vendeurs disponibles' });
+    res.status(500).json({ message: 'Erreur chargement vendeurs disponibles: ' + err.message });
   }
 });
 
@@ -482,8 +491,8 @@ router.post('/guichets', authMiddleware, async (req, res) => {
       try {
         const vendeur = await Utilisateur.findById(vendeurPrincipal);
         if (vendeur && vendeur.role === 'vendeur') {
-          // End previous affectations
-          await Affectation.updateMany({ vendeurId: vendeur._id, status: 1 }, { $set: { status: 0, dateFinAffectation: new Date() } });
+          // ✅ End previous affectations avec le bon champ
+          await Affectation.updateMany({ vendeurId: vendeur._id, $or: [{ status: 1 }, { statut: 'active' }] }, { $set: { status: 0, statut: 'inactive', dateFinAffectation: new Date() } });
 
           const newAffect = new Affectation({
             vendeurId: vendeur._id,
@@ -492,6 +501,7 @@ router.post('/guichets', authMiddleware, async (req, res) => {
             entrepriseId: magasin.businessId,
             dateAffectation: new Date(),
             status: 1,
+            statut: 'active',  // ✅ Aussi enregistrer avec le champ text
             notes: `Assigné automatiquement lors de la création du guichet par ${requester.prenom||requester.nom||requester.email||requester.id}`
           });
           await newAffect.save();
