@@ -429,15 +429,26 @@ router.post('/guichets', authMiddleware, async (req, res) => {
     const requester = req.user;
     const { magasinId, nomGuichet, codeGuichet, status, vendeurPrincipal, objectifJournalier, stockMax } = req.body;
 
+    // ✅ VALIDATION: Champs obligatoires
+    if (!magasinId || !nomGuichet) {
+      return res.status(400).json({ message: 'Champs obligatoires manquants: magasinId, nomGuichet' });
+    }
+
+    console.log('📝 Creating guichet with:', { magasinId, nomGuichet, codeGuichet, status, vendeurPrincipal });
+
     // Vendeur: pas d'accès
     if (requester.role === 'vendeur') {
       return res.status(403).json({ message: 'Accès refusé: les vendeurs ne peuvent pas créer de guichets' });
     }
 
+    // Get magasin
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
     // Gestionnaire: vérifier que le magasin lui appartient
     if (requester.role === 'superviseur' || requester.role === 'gestionnaire') {
-      const magasin = await Magasin.findById(magasinId);
-      if (!magasin) return res.status(404).json({ message: 'Magasin non trouvé' });
       if (magasin.managerId?.toString() !== requester._id.toString()) {
         return res.status(403).json({ message: 'Accès refusé: ce magasin ne vous appartient pas' });
       }
@@ -449,16 +460,22 @@ router.post('/guichets', authMiddleware, async (req, res) => {
     }
 
     // create the guichet
-    const guichet = new Guichet({
+    const guichetData = {
       magasinId: magasin._id,
       nom_guichet: nomGuichet,
-      code: codeGuichet || undefined,
+      code: codeGuichet || '',
       status: typeof status !== 'undefined' ? Number(status) : 1,
       vendeurPrincipal: vendeurPrincipal || null,
       objectifJournalier: objectifJournalier ? Number(objectifJournalier) : 0,
       stockMax: stockMax ? Number(stockMax) : 0
-    });
+    };
+
+    console.log('🛠️ Guichet data prepared:', guichetData);
+
+    const guichet = new Guichet(guichetData);
     await guichet.save();
+
+    console.log('✅ Guichet saved:', guichet._id);
 
     // If a vendeurPrincipal was provided, create an affectation for them on this guichet
     if (vendeurPrincipal) {
