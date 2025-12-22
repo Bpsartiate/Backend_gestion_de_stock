@@ -51,6 +51,13 @@
         userLinkRTL.setAttribute('disabled', true);
       }
     </script>
+
+    <!-- ✅ Configuration API centralisée -->
+    <script>
+      if(typeof window.API_BASE === 'undefined' || !window.API_BASE){
+        window.API_BASE = 'https://backend-gestion-de-stock.onrender.com';
+      }
+    </script>
   </head>
 
   <body>
@@ -96,6 +103,8 @@
    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="../vendors/list.js/list.min.js"></script>
     <script src="../vendors/bootstrap/bootstrap.min.js"></script>
+    <!-- ✅ Configuration API centralisée -->
+    <script src="../assets/js/api-config.js"></script>
     <script src="../pages/stock/add.js"></script>
     <script src="../pages/stock/reception.js"></script>
     <!-- toast -->

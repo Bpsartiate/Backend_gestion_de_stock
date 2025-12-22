@@ -74,7 +74,7 @@
                 <?php include_once 'topbar.php'; ?>
 
                 <!-- HEADER ULTRA-MODERNE -->
-                <div class="card mb-4 shadow-lg border-0 overflow-hidden">
+                <div class="card mb-2  border-0 overflow-hidden">
                     <div class="gradient-header text-white p-3 p-md-4 position-relative" style="background: linear-gradient(90deg,#5b6be6 0%, #8a5bd6 100%);">
                         <div class="row align-items-center gx-3">
                             <div class="col-auto d-none d-md-block">
@@ -154,11 +154,11 @@
                     </div>
                 </div>
 
-                <!-- DASHBOARD 3-PANES PRO -->
-                <div class="row g-3" id="dashboardMagasins" style="display: flex; gap: 1rem;">
-                    <!-- PANEL 1: Liste Magasins (Collapsible) -->
-                    <div id="panelMagasins">
-                        <div class="card h-100 shadow-lg border-0">
+                <!-- DASHBOARD 3-PANES PRO (Responsive) - 3 panneaux côte à côte -->
+                <div class="row g-3" id="dashboardMagasins" style="display: flex; gap: 1rem; flex-wrap: nowrap; margin: 0;">
+                    <!-- PANEL 1: Liste Magasins (Collapsible) - Responsive -->
+                    <div id="panelMagasins" style="flex: 0 0 22%; min-width: 220px;">
+                        <div class="card border-0 h-100">
                             <!-- HEADER avec Toggle -->
                             <div class="card-header bg-light d-flex justify-content-between align-items-center p-3">
                                 <h6 class="mb-0 fw-semibold text-label">
@@ -193,17 +193,17 @@
                                 </div>
                             </div>
 
-                            <!-- COLLAPSED: Photos Grid en Mini-Avatars -->
-                            <div class="panel-collapsed p-2">
-                                <div id="magasinsPhotosGrid" class="d-flex flex-column gap-2" style="max-height: 70vh; overflow: auto;">
+                            <!-- COLLAPSED: Photos Grid en Mini-Avatars (réduit) -->
+                            <div class="panel-collapsed p-1">
+                                <div id="magasinsPhotosGrid" class="d-flex flex-column gap-1" style="max-height: 70vh; overflow: auto;">
                                     <!-- Photos mini-avatars générées dynamiquement -->
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- PANEL 2: Détails Magasin + KPI -->
-                    <div class="pane-lg-5 panel-details" id="panelMagasinDetails">
+                    <!-- PANEL 2: Détails Magasin + KPI - Responsive -->
+                    <div class="pane-lg-5 panel-details" id="panelMagasinDetails" style="flex: 1 1 auto; min-width: 300px;">
                         <div class="card h-100 shadow-xl border-0 metric-card" id="magasinDetailsCard">
                             <!-- HEADER PHOTO GRADIENT -->
                             <div class="card-header text-white p-3 p-md-4 position-relative" id="magasinHeader" style="background: linear-gradient(180deg,#0ea5a4 0%, #059669 100%);">
@@ -342,9 +342,9 @@
                         </div>
                     </div>
 
-                    <!-- PANEL 3: Guichets -->
-                    <div class="pane-lg-3 panel-guichets" id="panelGuichets">
-                        <div class="card h-100 shadow-lg border-0 metric-card">
+                    <!-- PANEL 3: Guichets - Responsive -->
+                    <div class="pane-lg-3 panel-guichets" id="panelGuichets" style="flex: 0 0 22%; min-width: 220px;">
+                        <div class="card h-100  border-0 metric-card">
                             <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center p-3">
                                 <h6 class="mb-0 d-flex align-items-center">
                                     <i class="fas fa-cash-register me-2"></i>Guichets
@@ -403,9 +403,139 @@
     <!-- jQuery UI COMPLET (avec sortable) -->
     <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.3/themes/ui-lightness/jquery-ui.css">
+    <!-- ✅ Configuration API centralisée -->
+    <script src="assets/js/api-config.js"></script>
     <script src="assets/js/magasin_guichet.js"></script>
 
-    
+    <!-- RESPONSIVE STYLES FOR MOBILE -->
+    <style>
+        /* DESKTOP - 3 panneaux côte à côte sans wrap */
+        @media (min-width: 1201px) {
+            #dashboardMagasins { flex-wrap: nowrap !important; }
+            #panelMagasins, #panelMagasinDetails, #panelGuichets {
+                flex: none !important;
+            }
+        }
+
+        /* TABLET & LARGE (1024px-1200px) - Commencer à stack */
+        @media (max-width: 1200px) {
+            #dashboardMagasins { 
+                flex-wrap: wrap !important;
+                gap: 1rem !important;
+            }
+            #panelMagasins { flex: 0 0 25% !important; }
+            #panelMagasinDetails { flex: 1 1 auto !important; }
+            #panelGuichets { flex: 0 0 22% !important; }
+        }
+
+        /* TABLET (768px-1023px) - 2 lignes */
+        @media (max-width: 1023px) {
+            #dashboardMagasins { 
+                flex-direction: column !important;
+                flex-wrap: wrap !important;
+            }
+            #panelMagasins, #panelMagasinDetails, #panelGuichets {
+                flex: 0 0 100% !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: unset !important;
+            }
+            
+            .gradient-header { padding: 1rem !important; }
+            .gradient-header h2 { font-size: 1.25rem !important; }
+            
+            #magasinsWidgets .col-md-3 {
+                flex: 0 0 50% !important;
+            }
+            
+            #magasinDetailsData .row.g-3 .col-6 {
+                flex: 0 0 100% !important;
+            }
+            
+            #magasinDetailsContent { 
+                min-height: 300px !important;
+                padding: 1rem !important;
+            }
+            
+            .avatar { display: none !important; }
+        }
+
+        /* MOBILE (576px-767px) */
+        @media (max-width: 767px) {
+            #dashboardMagasins {
+                gap: 0.75rem !important;
+            }
+            
+            #panelMagasins, #panelMagasinDetails, #panelGuichets {
+                flex: 0 0 100% !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: unset !important;
+            }
+            
+            .gradient-header { padding: 0.75rem !important; }
+            .gradient-header h2 { font-size: 1rem !important; }
+            
+            #magasinsWidgets .col-md-3 {
+                flex: 0 0 100% !important;
+            }
+            
+            #magasinsList, #guichetsList {
+                max-height: 60vh !important;
+            }
+            
+            .card-header { padding: 0.75rem !important; }
+            .list-group-item { padding: 0.5rem !important; }
+            h6 { font-size: 0.9rem !important; }
+            
+            .btn { min-height: 44px; }
+        }
+
+        /* SMALL MOBILE (max 575px) */
+        @media (max-width: 575px) {
+            .d-md-flex { display: none !important; }
+            
+            #dashboardMagasins {
+                gap: 0.5rem !important;
+            }
+            
+            /* Cacher le bouton toggle sur mobile */
+            #togglePanelMagasins {
+                display: none !important;
+            }
+            
+            /* Panel 1 compact mais PAS de collapse automatique */
+            #panelMagasins {
+                flex: 0 0 100% !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: unset !important;
+            }
+            
+            #panelMagasinDetails, #panelGuichets {
+                flex: 0 0 100% !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: unset !important;
+            }
+            
+            /* ✅ FORCE Panel 3 FULL WIDTH sur mobile */
+            #panelGuichets {
+                display: block !important;
+                visibility: visible !important;
+            }
+            
+            #guichetsList {
+                max-height: 50vh !important;
+                display: block !important;
+            }
+            
+            #magasinsList {
+                max-height: 50vh !important;
+            }
+        }
+    </style>
+
     <!-- Settings Panel (votre code existant) -->
     <!-- <?php include_once 'settings-panel.php'; ?> -->
 

@@ -14,6 +14,13 @@ const cloudinary = require('../services/cloudinary');
 
 const utilisateurController = require('../controllers/utilisateurController');
 const upload = require('../middlewares/upload');
+const Rayon = require('../models/rayon');
+const TypeProduit = require('../models/typeProduit');
+const Produit = require('../models/produit');
+const StockMovement = require('../models/stockMovement');
+const Lot = require('../models/lot');
+const AlerteStock = require('../models/alerteStock');
+const RapportInventaire = require('../models/rapportInventaire');
 
 // Profil et membres protégés
 router.get('/members', authMiddleware, utilisateurController.listerMembres);
@@ -1126,6 +1133,1207 @@ router.delete('/affectations/:id', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('affectations.delete.error', err);
     return res.status(500).json({ message: 'Erreur suppression affectation: ' + err.message });
+  }
+});
+
+// ================================
+// 📦 ROUTES STOCK - RAYONS
+// ================================
+
+// GET /api/protected/magasins/:magasinId/rayons - Lister les rayons
+router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+
+    // Vérifier l'accès au magasin
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    // Vérifier les permissions: Admin voit tout, Gestionnaire voit seulement SES magasins
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const rayons = await Rayon.find({ magasinId })
+      .populate('typesProduitsAutorises', 'nomType')
+      .sort({ codeRayon: 1 })
+      .lean();
+
+    return res.json(rayons);
+  } catch (err) {
+    console.error('rayons.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// POST /api/protected/magasins/:magasinId/rayons - Créer un rayon
+router.post('/magasins/:magasinId/rayons', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const { codeRayon, nomRayon, typeRayon, capaciteMax, couleurRayon, iconeRayon, typesProduitsAutorises, description } = req.body;
+
+    // Vérifier l'accès au magasin
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // Vérifier que le code rayon est unique pour ce magasin
+    const existant = await Rayon.findOne({ magasinId, codeRayon: codeRayon.toUpperCase() });
+    if (existant) {
+      return res.status(400).json({ message: 'Code rayon déjà existant' });
+    }
+
+    const rayon = new Rayon({
+      magasinId,
+      codeRayon,
+      nomRayon,
+      typeRayon,
+      capaciteMax,
+      couleurRayon,
+      iconeRayon,
+      typesProduitsAutorises,
+      description
+    });
+
+    await rayon.save();
+
+    // Enregistrer l'activité
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'CREER_RAYON',
+        entite: 'Rayon',
+        entiteId: rayon._id,
+        description: `Rayon '${nomRayon}' créé`,
+        icon: 'fas fa-plus'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.status(201).json(rayon);
+  } catch (err) {
+    console.error('rayons.create.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// PUT /api/protected/rayons/:rayonId - Modifier un rayon
+router.put('/rayons/:rayonId', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { rayonId } = req.params;
+    const requester = req.user;
+    const { nomRayon, typeRayon, capaciteMax, couleurRayon, iconeRayon, typesProduitsAutorises, description } = req.body;
+
+    const rayon = await Rayon.findById(rayonId);
+    if (!rayon) {
+      return res.status(404).json({ message: 'Rayon non trouvé' });
+    }
+
+    // Vérifier l'accès
+    const magasin = await Magasin.findById(rayon.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // Mettre à jour les champs
+    rayon.nomRayon = nomRayon || rayon.nomRayon;
+    rayon.typeRayon = typeRayon || rayon.typeRayon;
+    rayon.capaciteMax = capaciteMax !== undefined ? capaciteMax : rayon.capaciteMax;
+    rayon.couleurRayon = couleurRayon || rayon.couleurRayon;
+    rayon.iconeRayon = iconeRayon || rayon.iconeRayon;
+    rayon.typesProduitsAutorises = typesProduitsAutorises || rayon.typesProduitsAutorises;
+    rayon.description = description !== undefined ? description : rayon.description;
+
+    await rayon.save();
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'MODIFIER_RAYON',
+        entite: 'Rayon',
+        entiteId: rayonId,
+        description: `Rayon '${nomRayon}' modifié`,
+        icon: 'fas fa-edit'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json(rayon);
+  } catch (err) {
+    console.error('rayons.update.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// DELETE /api/protected/rayons/:rayonId - Supprimer un rayon
+router.delete('/rayons/:rayonId', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { rayonId } = req.params;
+    const requester = req.user;
+
+    const rayon = await Rayon.findById(rayonId);
+    if (!rayon) {
+      return res.status(404).json({ message: 'Rayon non trouvé' });
+    }
+
+    const magasin = await Magasin.findById(rayon.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const nomRayon = rayon.nomRayon;
+    await Rayon.findByIdAndDelete(rayonId);
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'SUPPRIMER_RAYON',
+        entite: 'Rayon',
+        entiteId: rayonId,
+        description: `Rayon '${nomRayon}' supprimé`,
+        icon: 'fas fa-trash'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Rayon supprimé' });
+  } catch (err) {
+    console.error('rayons.delete.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// ================================
+// 📦 ROUTES STOCK - TYPES PRODUITS
+// ================================
+
+// GET /api/protected/magasins/:magasinId/types-produits - Lister les types de produits
+router.get('/magasins/:magasinId/types-produits', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const typesProduits = await TypeProduit.find({ magasinId })
+      .sort({ nomType: 1 })
+      .lean();
+
+    return res.json(typesProduits);
+  } catch (err) {
+    console.error('types-produits.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// POST /api/protected/magasins/:magasinId/types-produits - Créer un type de produit
+router.post('/magasins/:magasinId/types-produits', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const { nomType, unitePrincipale, champsSupplementaires, seuilAlerte, capaciteMax, photoRequise } = req.body;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // Vérifier l'unicité du nom par magasin
+    const existant = await TypeProduit.findOne({ magasinId, nomType });
+    if (existant) {
+      return res.status(400).json({ message: 'Type de produit déjà existant' });
+    }
+
+    const typeProduit = new TypeProduit({
+      magasinId,
+      nomType,
+      unitePrincipale,
+      champsSupplementaires,
+      seuilAlerte,
+      capaciteMax,
+      photoRequise
+    });
+
+    await typeProduit.save();
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'CREER_TYPE_PRODUIT',
+        entite: 'TypeProduit',
+        entiteId: typeProduit._id,
+        description: `Type produit '${nomType}' créé`,
+        icon: 'fas fa-plus'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.status(201).json(typeProduit);
+  } catch (err) {
+    console.error('types-produits.create.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// PUT /api/protected/types-produits/:typeProduitId - Modifier un type de produit
+router.put('/types-produits/:typeProduitId', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { typeProduitId } = req.params;
+    const requester = req.user;
+    const { nomType, unitePrincipale, champsSupplementaires, seuilAlerte, capaciteMax, photoRequise } = req.body;
+
+    const typeProduit = await TypeProduit.findById(typeProduitId);
+    if (!typeProduit) {
+      return res.status(404).json({ message: 'Type de produit non trouvé' });
+    }
+
+    const magasin = await Magasin.findById(typeProduit.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    typeProduit.nomType = nomType || typeProduit.nomType;
+    typeProduit.unitePrincipale = unitePrincipale || typeProduit.unitePrincipale;
+    typeProduit.champsSupplementaires = champsSupplementaires || typeProduit.champsSupplementaires;
+    typeProduit.seuilAlerte = seuilAlerte !== undefined ? seuilAlerte : typeProduit.seuilAlerte;
+    typeProduit.capaciteMax = capaciteMax !== undefined ? capaciteMax : typeProduit.capaciteMax;
+    typeProduit.photoRequise = photoRequise !== undefined ? photoRequise : typeProduit.photoRequise;
+
+    await typeProduit.save();
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'MODIFIER_TYPE_PRODUIT',
+        entite: 'TypeProduit',
+        entiteId: typeProduitId,
+        description: `Type produit '${nomType}' modifié`,
+        icon: 'fas fa-edit'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json(typeProduit);
+  } catch (err) {
+    console.error('types-produits.update.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// DELETE /api/protected/types-produits/:typeProduitId - Supprimer un type de produit
+router.delete('/types-produits/:typeProduitId', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { typeProduitId } = req.params;
+    const requester = req.user;
+
+    const typeProduit = await TypeProduit.findById(typeProduitId);
+    if (!typeProduit) {
+      return res.status(404).json({ message: 'Type de produit non trouvé' });
+    }
+
+    const magasin = await Magasin.findById(typeProduit.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const nomType = typeProduit.nomType;
+    await TypeProduit.findByIdAndDelete(typeProduitId);
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'SUPPRIMER_TYPE_PRODUIT',
+        entite: 'TypeProduit',
+        entiteId: typeProduitId,
+        description: `Type produit '${nomType}' supprimé`,
+        icon: 'fas fa-trash'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Type de produit supprimé' });
+  } catch (err) {
+    console.error('types-produits.delete.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// ================================
+// 📦 ROUTE MAÎTRESSE STOCK
+// ================================
+
+// GET /api/protected/magasins/:magasinId/stock-config - Récupère toute la config stock pour un magasin
+router.get('/magasins/:magasinId/stock-config', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+
+    // Vérifier l'accès: Admin voit tout, Gestionnaire voit seulement SES magasins
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // Récupérer rayons et types de produits
+    const rayons = await Rayon.find({ magasinId })
+      .select('_id codeRayon nomRayon typeRayon capaciteMax couleurRayon iconeRayon typesProduitsAutorises status')
+      .sort({ codeRayon: 1 })
+      .lean();
+
+    const typesProduits = await TypeProduit.find({ magasinId })
+      .select('_id nomType unitePrincipale champsSupplementaires seuilAlerte capaciteMax photoRequise status')
+      .sort({ nomType: 1 })
+      .lean();
+
+    return res.json({
+      magasinId,
+      rayons,
+      typesProduits
+    });
+  } catch (err) {
+    console.error('stock-config.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// ================================
+// 📦 ROUTES STOCK - PRODUITS
+// ================================
+
+// GET /api/protected/magasins/:magasinId/produits - Lister les produits
+router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const produits = await Produit.find({ magasinId, status: 1 })
+      .populate('typeProduitId', 'nomType unitePrincipale')
+      .populate('rayonId', 'nomRayon codeRayon')
+      .sort({ designation: 1 })
+      .lean();
+
+    return res.json(produits);
+  } catch (err) {
+    console.error('produits.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// POST /api/protected/magasins/:magasinId/produits - Créer un produit
+router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const {
+      reference,
+      designation,
+      typeProduitId,
+      rayonId,
+      quantiteEntree,
+      prixUnitaire,
+      champsDynamiques,
+      etat,
+      dateEntree,
+      seuilAlerte,
+      photoUrl,
+      notes
+    } = req.body;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // Vérifier que la référence est unique par magasin
+    const existant = await Produit.findOne({ magasinId, reference });
+    if (existant) {
+      return res.status(400).json({ message: 'Référence déjà existante pour ce magasin' });
+    }
+
+    // Vérifier que le rayon accepte ce type de produit
+    const rayon = await Rayon.findById(rayonId);
+    if (!rayon || rayon.magasinId.toString() !== magasinId) {
+      return res.status(400).json({ message: 'Rayon invalide' });
+    }
+
+    const typeProduit = await TypeProduit.findById(typeProduitId);
+    if (!typeProduit || typeProduit.magasinId.toString() !== magasinId) {
+      return res.status(400).json({ message: 'Type de produit invalide' });
+    }
+
+    // Vérifier que le rayon accepte ce type
+    if (rayon.typesProduitsAutorises && rayon.typesProduitsAutorises.length > 0) {
+      const accepte = rayon.typesProduitsAutorises.some(t => t.toString() === typeProduitId);
+      if (!accepte) {
+        return res.status(400).json({ message: 'Ce rayon n\'accepte pas ce type de produit' });
+      }
+    }
+
+    const produit = new Produit({
+      magasinId,
+      reference,
+      designation,
+      typeProduitId,
+      rayonId,
+      quantiteActuelle: quantiteEntree || 0,
+      quantiteEntree: quantiteEntree || 0,
+      prixUnitaire,
+      champsDynamiques,
+      etat,
+      dateEntree,
+      seuilAlerte,
+      photoUrl,
+      notes
+    });
+
+    await produit.save();
+
+    // Créer un mouvement de stock pour la réception
+    if (quantiteEntree && quantiteEntree > 0) {
+      const movement = new StockMovement({
+        magasinId,
+        produitId: produit._id,
+        type: 'RECEPTION',
+        quantite: quantiteEntree,
+        utilisateurId: requester.id,
+        prixUnitaire,
+        numeroDocument: `REC-${produit._id.toString().slice(-8)}`,
+        dateDocument: dateEntree || new Date(),
+        observations: `Produit créé avec réception initiale`
+      });
+      await movement.save();
+    }
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'CREER_PRODUIT',
+        entite: 'Produit',
+        entiteId: produit._id,
+        description: `Produit '${designation}' créé avec ${quantiteEntree || 0} unités`,
+        icon: 'fas fa-box'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.status(201).json(produit);
+  } catch (err) {
+    console.error('produits.create.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// PUT /api/protected/produits/:produitId - Modifier un produit
+router.put('/produits/:produitId', authMiddleware, async (req, res) => {
+  try {
+    const { produitId } = req.params;
+    const requester = req.user;
+    const { designation, prixUnitaire, etat, seuilAlerte, notes } = req.body;
+
+    const produit = await Produit.findById(produitId);
+    if (!produit) {
+      return res.status(404).json({ message: 'Produit non trouvé' });
+    }
+
+    const magasin = await Magasin.findById(produit.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    produit.designation = designation || produit.designation;
+    produit.prixUnitaire = prixUnitaire !== undefined ? prixUnitaire : produit.prixUnitaire;
+    produit.etat = etat || produit.etat;
+    produit.seuilAlerte = seuilAlerte !== undefined ? seuilAlerte : produit.seuilAlerte;
+    produit.notes = notes !== undefined ? notes : produit.notes;
+
+    await produit.save();
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'MODIFIER_PRODUIT',
+        entite: 'Produit',
+        entiteId: produitId,
+        description: `Produit '${designation}' modifié`,
+        icon: 'fas fa-edit'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json(produit);
+  } catch (err) {
+    console.error('produits.update.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// DELETE /api/protected/produits/:produitId - Soft delete un produit
+router.delete('/produits/:produitId', authMiddleware, async (req, res) => {
+  try {
+    const { produitId } = req.params;
+    const requester = req.user;
+
+    const produit = await Produit.findById(produitId);
+    if (!produit) {
+      return res.status(404).json({ message: 'Produit non trouvé' });
+    }
+
+    const magasin = await Magasin.findById(produit.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    produit.status = 0; // Soft delete
+    await produit.save();
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'SUPPRIMER_PRODUIT',
+        entite: 'Produit',
+        entiteId: produitId,
+        description: `Produit '${produit.designation}' supprimé`,
+        icon: 'fas fa-trash'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json({ message: 'Produit supprimé' });
+  } catch (err) {
+    console.error('produits.delete.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// ================================
+// 📦 ROUTES STOCK - MOUVEMENTS
+// ================================
+
+// POST /api/protected/magasins/:magasinId/stock-movements - Créer un mouvement
+router.post('/magasins/:magasinId/stock-movements', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const {
+      produitId,
+      type,
+      quantite,
+      magasinDestinationId,
+      numeroDocument,
+      fournisseur,
+      prixUnitaire,
+      observations,
+      dateDocument
+    } = req.body;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const produit = await Produit.findById(produitId);
+    if (!produit || produit.magasinId.toString() !== magasinId) {
+      return res.status(400).json({ message: 'Produit invalide' });
+    }
+
+    // Vérifier les quantités disponibles pour les sorties/transferts
+    if ((type === 'SORTIE' || type === 'TRANSFERT' || type === 'RETOUR') && produit.quantiteActuelle < quantite) {
+      return res.status(400).json({ 
+        message: `Stock insuffisant. Disponible: ${produit.quantiteActuelle}, Demandé: ${quantite}` 
+      });
+    }
+
+    // Créer le mouvement
+    const movement = new StockMovement({
+      magasinId,
+      produitId,
+      type,
+      quantite,
+      magasinDestinationId: type === 'TRANSFERT' ? magasinDestinationId : undefined,
+      numeroDocument,
+      fournisseur,
+      utilisateurId: requester.id,
+      prixUnitaire,
+      observations,
+      dateDocument: dateDocument || new Date()
+    });
+
+    await movement.save();
+
+    // Mettre à jour le stock du produit
+    if (type === 'RECEPTION') {
+      produit.quantiteActuelle += quantite;
+      produit.quantiteEntree += quantite;
+    } else if (type === 'SORTIE') {
+      produit.quantiteActuelle -= quantite;
+      produit.quantiteSortie += quantite;
+    } else if (type === 'TRANSFERT') {
+      produit.quantiteActuelle -= quantite;
+      produit.quantiteSortie += quantite;
+      // Créer un mouvement de réception dans le magasin destination
+      const movementDest = new StockMovement({
+        magasinId: magasinDestinationId,
+        produitId,
+        type: 'RECEPTION',
+        quantite,
+        numeroDocument,
+        utilisateurId: requester.id,
+        prixUnitaire,
+        observations: `Transfert depuis ${magasin.nom_magasin}`,
+        dateDocument: dateDocument || new Date()
+      });
+      await movementDest.save();
+    } else if (type === 'RETOUR') {
+      produit.quantiteActuelle += quantite;
+      produit.quantiteEntree += quantite;
+    }
+
+    await produit.save();
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'MOUVEMENT_STOCK',
+        entite: 'StockMovement',
+        entiteId: movement._id,
+        description: `${type} de ${quantite} unités du produit '${produit.designation}'`,
+        icon: 'fas fa-exchange-alt'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.status(201).json({ movement, produit });
+  } catch (err) {
+    console.error('stock-movements.create.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// GET /api/protected/magasins/:magasinId/stock-movements - Lister les mouvements
+router.get('/magasins/:magasinId/stock-movements', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const { type, produitId, limit = 50, skip = 0 } = req.query;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const filter = { magasinId };
+    if (type) filter.type = type;
+    if (produitId) filter.produitId = produitId;
+
+    const movements = await StockMovement.find(filter)
+      .populate('produitId', 'reference designation quantiteActuelle')
+      .populate('utilisateurId', 'prenom nom')
+      .sort({ dateDocument: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(skip))
+      .lean();
+
+    const total = await StockMovement.countDocuments(filter);
+
+    return res.json({
+      movements,
+      total,
+      limit: parseInt(limit),
+      skip: parseInt(skip)
+    });
+  } catch (err) {
+    console.error('stock-movements.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// GET /api/protected/produits/:produitId/mouvements - Historique d'un produit
+router.get('/produits/:produitId/mouvements', authMiddleware, async (req, res) => {
+  try {
+    const { produitId } = req.params;
+    const requester = req.user;
+
+    const produit = await Produit.findById(produitId);
+    if (!produit) {
+      return res.status(404).json({ message: 'Produit non trouvé' });
+    }
+
+    const magasin = await Magasin.findById(produit.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const movements = await StockMovement.find({ produitId })
+      .populate('utilisateurId', 'prenom nom')
+      .sort({ dateDocument: -1 })
+      .lean();
+
+    return res.json(movements);
+  } catch (err) {
+    console.error('produit.mouvements.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// ================================
+// 📦 ROUTES STOCK - LOTS (FIFO/LIFO)
+// ================================
+
+// POST /api/protected/magasins/:magasinId/lots - Créer un lot
+router.post('/magasins/:magasinId/lots', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const {
+      produitId,
+      numeroBatch,
+      quantiteEntree,
+      prixUnitaireAchat,
+      dateEntree,
+      dateExpiration,
+      numeroDocument,
+      fournisseur,
+      rayonId
+    } = req.body;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const produit = await Produit.findById(produitId);
+    if (!produit || produit.magasinId.toString() !== magasinId) {
+      return res.status(400).json({ message: 'Produit invalide' });
+    }
+
+    const lot = new Lot({
+      magasinId,
+      produitId,
+      numeroBatch,
+      quantiteEntree,
+      quantiteDisponible: quantiteEntree,
+      prixUnitaireAchat,
+      prixTotal: prixUnitaireAchat * quantiteEntree,
+      dateEntree,
+      dateExpiration,
+      numeroDocument,
+      fournisseur,
+      rayonId
+    });
+
+    await lot.save();
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'CREER_LOT',
+        entite: 'Lot',
+        entiteId: lot._id,
+        description: `Lot '${numeroBatch}' créé avec ${quantiteEntree} unités`,
+        icon: 'fas fa-box'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.status(201).json(lot);
+  } catch (err) {
+    console.error('lots.create.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// GET /api/protected/magasins/:magasinId/lots - Lister les lots
+router.get('/magasins/:magasinId/lots', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const { produitId, statut = 'ACTIF' } = req.query;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const filter = { magasinId };
+    if (produitId) filter.produitId = produitId;
+    if (statut) filter.status = statut;
+
+    // Trier par date entrée (FIFO)
+    const lots = await Lot.find(filter)
+      .populate('produitId', 'reference designation')
+      .sort({ dateEntree: 1 })
+      .lean();
+
+    return res.json(lots);
+  } catch (err) {
+    console.error('lots.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// ================================
+// 🚨 ROUTES STOCK - ALERTES
+// ================================
+
+// Fonction utilitaire: Créer alerte stock
+async function creerAlerte(magasinId, produitId, type, severite, data) {
+  try {
+    const produit = await Produit.findById(produitId).populate('magasinId');
+    if (!produit) return;
+
+    let message = '';
+    let actionRecommandee = 'COMMANDER_FOURNISSEUR';
+
+    if (type === 'STOCK_BAS') {
+      message = `${produit.designation}: Stock à ${produit.quantiteActuelle} unités, seuil: ${produit.seuilAlerte}`;
+      actionRecommandee = 'COMMANDER_FOURNISSEUR';
+    } else if (type === 'RUPTURE_STOCK') {
+      message = `${produit.designation}: RUPTURE DE STOCK`;
+      actionRecommandee = 'COMMANDER_FOURNISSEUR';
+    } else if (type === 'PRODUIT_EXPIRE') {
+      message = `${produit.designation}: PRODUIT EXPIRÉ`;
+      actionRecommandee = 'EVACUER_PRODUIT';
+    }
+
+    const alerte = new AlerteStock({
+      magasinId,
+      produitId,
+      type,
+      severite,
+      message,
+      actionRecommandee,
+      ...data
+    });
+
+    await alerte.save();
+    return alerte;
+  } catch (err) {
+    console.error('creerAlerte.error', err);
+  }
+}
+
+// GET /api/protected/magasins/:magasinId/alertes - Lister les alertes
+router.get('/magasins/:magasinId/alertes', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const { statut = 'ACTIVE', type } = req.query;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const filter = { magasinId };
+    if (statut) filter.statut = statut;
+    if (type) filter.type = type;
+
+    const alertes = await AlerteStock.find(filter)
+      .populate('produitId', 'reference designation')
+      .sort({ dateCreation: -1 })
+      .lean();
+
+    return res.json(alertes);
+  } catch (err) {
+    console.error('alertes.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// PUT /api/protected/alertes/:alerteId - Mettre à jour statut alerte
+router.put('/alertes/:alerteId', authMiddleware, async (req, res) => {
+  try {
+    const { alerteId } = req.params;
+    const requester = req.user;
+    const { statut, notes } = req.body;
+
+    const alerte = await AlerteStock.findById(alerteId);
+    if (!alerte) {
+      return res.status(404).json({ message: 'Alerte non trouvée' });
+    }
+
+    const magasin = await Magasin.findById(alerte.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    alerte.statut = statut;
+    alerte.utilisateurId = requester.id;
+    if (statut === 'RESOLUE' || statut === 'FAUSSE_ALERTE') {
+      alerte.dateResolution = new Date();
+    }
+    if (notes) alerte.notes = notes;
+
+    await alerte.save();
+    return res.json(alerte);
+  } catch (err) {
+    console.error('alertes.update.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// ================================
+// 📊 ROUTES STOCK - RAPPORTS INVENTAIRE
+// ================================
+
+// POST /api/protected/magasins/:magasinId/inventaires - Démarrer inventaire
+router.post('/magasins/:magasinId/inventaires', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const { observations } = req.body;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // Générer numéro inventaire
+    const date = new Date();
+    const count = await RapportInventaire.countDocuments({ magasinId });
+    const numeroInventaire = `INV-${date.getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+
+    const rapport = new RapportInventaire({
+      magasinId,
+      numeroInventaire,
+      utilisateurCreateur: requester.id,
+      observations
+    });
+
+    await rapport.save();
+
+    return res.status(201).json(rapport);
+  } catch (err) {
+    console.error('inventaires.create.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// GET /api/protected/magasins/:magasinId/inventaires - Lister inventaires
+router.get('/magasins/:magasinId/inventaires', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const inventaires = await RapportInventaire.find({ magasinId })
+      .populate('utilisateurCreateur', 'prenom nom')
+      .populate('utilisateurValidateur', 'prenom nom')
+      .sort({ dateDebut: -1 })
+      .lean();
+
+    return res.json(inventaires);
+  } catch (err) {
+    console.error('inventaires.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// PUT /api/protected/inventaires/:rapportId/lignes - Ajouter une ligne à inventaire
+router.put('/inventaires/:rapportId/lignes', authMiddleware, async (req, res) => {
+  try {
+    const { rapportId } = req.params;
+    const requester = req.user;
+    const { produitId, quantitePhysique, rayonId, notes } = req.body;
+
+    const rapport = await RapportInventaire.findById(rapportId);
+    if (!rapport) {
+      return res.status(404).json({ message: 'Rapport non trouvé' });
+    }
+
+    if (rapport.statut !== 'EN_COURS') {
+      return res.status(400).json({ message: 'Cet inventaire n\'est pas en cours' });
+    }
+
+    const produit = await Produit.findById(produitId);
+    if (!produit) {
+      return res.status(400).json({ message: 'Produit invalide' });
+    }
+
+    const ligne = {
+      produitId,
+      reference: produit.reference,
+      designation: produit.designation,
+      quantiteTheorique: produit.quantiteActuelle,
+      quantitePhysique,
+      quantiteDifference: quantitePhysique - produit.quantiteActuelle,
+      percentageEcart: ((quantitePhysique - produit.quantiteActuelle) / (produit.quantiteActuelle || 1) * 100).toFixed(2),
+      rayonId,
+      notes
+    };
+
+    rapport.ligneProduits.push(ligne);
+    await rapport.save();
+
+    return res.json(rapport);
+  } catch (err) {
+    console.error('inventaires.lignes.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// PUT /api/protected/inventaires/:rapportId/valider - Valider l'inventaire
+router.put('/inventaires/:rapportId/valider', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { rapportId } = req.params;
+    const requester = req.user;
+
+    const rapport = await RapportInventaire.findById(rapportId);
+    if (!rapport) {
+      return res.status(404).json({ message: 'Rapport non trouvé' });
+    }
+
+    if (rapport.statut !== 'EN_COURS') {
+      return res.status(400).json({ message: 'Cet inventaire n\'est pas en cours' });
+    }
+
+    // Calculer résumé
+    let totalAvecEcart = 0;
+    let valeurTheorique = 0;
+    let valeurPhysique = 0;
+    let ecartPositif = 0;
+    let ecartNegatif = 0;
+
+    rapport.ligneProduits.forEach(ligne => {
+      if (ligne.quantiteDifference !== 0) totalAvecEcart++;
+      
+      const produit = Produit.findById(ligne.produitId);
+      valeurTheorique += (ligne.quantiteTheorique * (produit?.prixUnitaire || 0));
+      valeurPhysique += (ligne.quantitePhysique * (produit?.prixUnitaire || 0));
+
+      if (ligne.quantiteDifference > 0) {
+        ecartPositif += ligne.quantiteDifference;
+      } else {
+        ecartNegatif += Math.abs(ligne.quantiteDifference);
+      }
+    });
+
+    rapport.resume = {
+      totalProduitsInventories: rapport.ligneProduits.length,
+      totalProduitsAvecEcart: totalAvecEcart,
+      pourcentageEcart: (totalAvecEcart / rapport.ligneProduits.length * 100).toFixed(2),
+      valeurTheorique,
+      valeurPhysique,
+      differenceMontant: valeurPhysique - valeurTheorique,
+      ecartPositif,
+      ecartNegatif
+    };
+
+    rapport.statut = 'VALIDEE';
+    rapport.utilisateurValidateur = requester.id;
+    rapport.dateFin = new Date();
+
+    await rapport.save();
+
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'VALIDER_INVENTAIRE',
+        entite: 'RapportInventaire',
+        entiteId: rapport._id,
+        description: `Inventaire ${rapport.numeroInventaire} validé`,
+        icon: 'fas fa-check'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    return res.json(rapport);
+  } catch (err) {
+    console.error('inventaires.valider.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
   }
 });
 

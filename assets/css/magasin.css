@@ -392,12 +392,30 @@
     display: none !important;
 }
 
-/* Photos avatars for collapsed view - Circular style */
+/* Photos avatars for collapsed view - Circular style (SIDEBAR MODE) */
 #magasinsPhotosGrid {
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 12px;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 0.5rem;
+    align-items: center;
+}
+
+#magasinsPhotosGrid .list-group-item {
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem !important;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.65rem;
+    word-break: break-word;
+    max-width: 80px;
+    transition: all 0.2s ease;
+}
+
+#magasinsPhotosGrid .list-group-item:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+    transform: scale(1.05);
 }
 
 /* ========== PANEL COLLAPSE/EXPAND SYSTEM - CORRIGÉ ========== */
@@ -425,20 +443,45 @@
     max-width: calc(25% - 0.67rem);
 }
 
-/* ÉTAT COLLAPSED: Panel 1 réduit */
+/* ÉTAT COLLAPSED: Panel 1 en SIDEBAR - Ultra compact */
 #panelMagasins.collapsed {
-    flex: 0 0 calc(14% - 0.67rem) !important;
-    max-width: calc(14% - 0.67rem) !important;
+    flex: 0 0 90px !important;
+    max-width: 100px !important;
+    min-width: 100px !important;
+}
+
+#panelMagasins.collapsed .card {
+    width: 100%;
+}
+
+#panelMagasins.collapsed .card-header {
+    padding: 0.5rem !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#panelMagasins.collapsed .card-header h6 {
+    font-size: 0.7rem;
+    text-align: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+}
+
+#panelMagasins.collapsed .toggle-panel-btn {
+    padding: 0.25rem 0.4rem !important;
+    font-size: 0.7rem;
 }
 
 #panelMagasins.collapsed + .pane-lg-5 {
-    flex: 0 0 calc(52% - 0.67rem) !important;
-    max-width: calc(52% - 0.67rem) !important;
+    flex: 0 0 calc(45% - 0.67rem) !important;
+    max-width: calc(45% - 0.67rem) !important;
 }
 
 #panelMagasins.collapsed + .pane-lg-5 + .pane-lg-3 {
-    flex: 0 0 calc(34% - 0.67rem) !important;
-    max-width: calc(34% - 0.67rem) !important;
+    flex: 0 0 calc(42% - 0.67rem) !important;
+    max-width: calc(42% - 0.67rem) !important;
 }
 
 /* Avatar mini-card styles */
@@ -448,7 +491,7 @@
     justify-content: center;
     width: 100%;
     aspect-ratio: 1 / 1;
-    max-width: 70px;
+    max-width: 60px;
     height: auto;
     border-radius: 12px;
     cursor: pointer;
@@ -458,7 +501,8 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     position: relative;
     overflow: hidden;
-    margin: 0 auto;
+    margin-bottom:  5px;
+    
 }
 
 .avatar-mini:hover {
@@ -678,14 +722,22 @@
 
 @media (max-width: 768px) {
     #dashboardMagasins {
-        flex-direction: column;
+        flex-direction: column !important;
+        gap: 0.75rem !important;
     }
     
     #panelMagasins,
     #panelMagasinDetails,
     #panelGuichets {
-        flex: 1 1 100% !important;
+        flex: 0 0 100% !important;
+        width: 100% !important;
         max-width: 100% !important;
+        min-width: unset !important;
+        display: block !important;
+    }
+    
+    #magasinsList, #guichetsList {
+        max-height: 60vh !important;
     }
     
     #guichetProduitsVendusTable {
@@ -695,6 +747,32 @@
     #guichetProduitsVendusTable th,
     #guichetProduitsVendusTable td {
         padding: 0.5rem 0.25rem !important;
+    }
+}
+
+/* ✅ MOBILE ULTRA - Assurer que tous les panneaux sont FULL WIDTH */
+@media (max-width: 575px) {
+    #dashboardMagasins {
+        gap: 0.5rem !important;
+    }
+    
+    #panelMagasins,
+    #panelMagasinDetails,
+    #panelGuichets {
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: unset !important;
+        display: block !important;
+    }
+    
+    #panelGuichets {
+        visibility: visible !important;
+    }
+    
+    #guichetsList, #magasinsList {
+        max-height: 50vh !important;
+        display: block !important;
     }
 }
 

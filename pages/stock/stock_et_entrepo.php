@@ -34,9 +34,16 @@
         <div class="card-body position-relative">
           <div class="row">
             <div class="d-flex justify-content-between mt-2 align-items-center mb-4">
-              <h3 class="mb-0">
-                <i class="fas fa-truck-loading me-2"></i>Stock & Entreposage
-              </h3>
+              <div>
+                <h3 class="mb-2">
+                  <i class="fas fa-truck-loading me-2"></i>Stock & Entreposage
+                </h3>
+                <!-- Bouton de sélection magasin -->
+                <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalSelectMagasin">
+                  <i class="fas fa-store me-1"></i>
+                  <span id="magasinActuelText">Sélectionner magasin</span>
+                </button>
+              </div>
               <div class="d-flex gap-2">
                 <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalReception">
                   <i class="fas fa-truck-loading me-1"></i> Nouvelle réception
@@ -218,6 +225,37 @@
     
   </div>
 
+  <!-- 🏪 MODAL SÉLECTION MAGASIN -->
+  <div class="modal fade" id="modalSelectMagasin" tabindex="-1" aria-labelledby="modalSelectMagasinLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-xl border-0">
+        <div class="modal-header bg-gradient-primary text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-store me-2"></i>Sélectionner un magasin
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Spinner de chargement -->
+          <div id="magasinsSpinner" class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status">
+              <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="text-muted">Chargement des magasins...</p>
+          </div>
+
+          <!-- Liste des magasins -->
+          <div id="magasinsList" style="display: none;">
+            <!-- Sera rempli par JavaScript -->
+          </div>
+
+          <!-- Message d'erreur -->
+          <div id="magasinsError" style="display: none;" class="alert alert-danger mb-0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bouton flottant paramètres en bas à droite -->
   <button id="btnSettingsStock" class="btn btn-lg btn-primary" style="position: fixed; bottom: 30px; right: 30px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99;" data-bs-toggle="modal" data-bs-target="#modalStockSettings" title="Paramètres">
     <i class="fas fa-cog" style="font-size: 1.5rem; animation: spin 2s linear infinite;"></i>
@@ -226,9 +264,268 @@
   <!-- Modal Paramètres Stock -->
    <?php include_once "modal_stock_settings.php"; ?>
  <script>
-// Animation countup automatique (Falcon Admin style)
+// ================================
+// ⚙️ CONFIGURATION API
+// ================================
+const API_BASE = 'https://backend-gestion-de-stock.onrender.com';
+
+// Variables globales pour le stock
+let MAGASIN_ID = null;
+let CURRENT_STOCK_CONFIG = null;
+let CURRENT_USER = null;
+
+// ================================
+// 🔐 AUTHENTIFICATION
+// ================================
+function getAuthHeaders() {
+  const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+// ================================
+// 🏪 GESTION DES MAGASINS
+// ================================
+
+// Charger et afficher les magasins disponibles dans le modal
+async function loadMagasinsModal() {
+  const spinner = document.getElementById('magasinsSpinner');
+  const list = document.getElementById('magasinsList');
+  const error = document.getElementById('magasinsError');
+
+  spinner.style.display = 'block';
+  list.style.display = 'none';
+  error.style.display = 'none';
+
+  try {
+    const response = await fetch(`${API_BASE}/api/protected/magasins`, {
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors du chargement des magasins');
+    }
+
+    const magasins = await response.json();
+
+    // Construire la liste des magasins
+    list.innerHTML = '';
+    magasins.forEach(magasin => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'w-100 list-group-item list-group-item-action p-3 mb-2 rounded-2';
+      if (MAGASIN_ID === magasin._id) {
+        button.classList.add('active', 'bg-primary');
+      }
+      
+      button.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="text-start">
+            <h6 class="mb-1 fw-bold">${magasin.nom_magasin}</h6>
+            <small class="text-muted d-block">${magasin.adresse_magasin || 'Adresse non disponible'}</small>
+            ${magasin.telephone_magasin ? `<small class="text-muted d-block"><i class="fas fa-phone me-1"></i>${magasin.telephone_magasin}</small>` : ''}
+          </div>
+          ${MAGASIN_ID === magasin._id ? `<span class="badge bg-success"><i class="fas fa-check me-1"></i>Actif</span>` : ''}
+        </div>
+      `;
+
+      button.addEventListener('click', () => selectMagasin(magasin._id, magasin.nom_magasin));
+      list.appendChild(button);
+    });
+
+    spinner.style.display = 'none';
+    list.style.display = 'block';
+
+  } catch (err) {
+    console.error('❌ Erreur:', err);
+    spinner.style.display = 'none';
+    error.style.display = 'block';
+    error.textContent = '❌ Erreur: ' + err.message;
+  }
+}
+
+// Sélectionner un magasin
+async function selectMagasin(magasinId, magasinNom) {
+  MAGASIN_ID = magasinId;
+  sessionStorage.setItem('currentMagasinId', magasinId);
+  
+  // Mettre à jour le label du bouton
+  document.getElementById('magasinActuelText').textContent = magasinNom;
+  
+  // Fermer le modal
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelectMagasin'));
+  modal.hide();
+
+  // Charger la config de stock
+  await loadStockConfig();
+
+  console.log('✅ Magasin sélectionné:', magasinNom);
+}
+
+// ================================
+// 📦 CONFIGURATION STOCK
+// ================================
+
+// Charger la configuration de stock au démarrage
+async function loadStockConfig() {
+  try {
+    if (!MAGASIN_ID) {
+      console.warn('⚠️ Aucun magasin sélectionné');
+      return;
+    }
+
+    console.log('📦 Chargement config stock pour magasin:', MAGASIN_ID);
+
+    // Fetch de la config de stock complète
+    const response = await fetch(
+      `${API_BASE}/api/protected/magasins/${MAGASIN_ID}/stock-config`,
+      { headers: getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      console.error('❌ Erreur:', response.status, response.statusText);
+      return;
+    }
+
+    CURRENT_STOCK_CONFIG = await response.json();
+
+    // Populer les rayons et types de produits
+    populateRayons();
+    populateTypesProduits();
+
+    console.log('✅ Configuration stock chargée:', CURRENT_STOCK_CONFIG);
+  } catch (err) {
+    console.error('❌ Erreur chargement config stock:', err);
+  }
+}
+
+// Remplir le select des rayons dans add_prod.php
+function populateRayons() {
+  const rayonSelect = document.getElementById('rayonId');
+  if (!rayonSelect || !CURRENT_STOCK_CONFIG?.rayons) return;
+
+  // Vider les options existantes (sauf le placeholder)
+  rayonSelect.innerHTML = '<option value="">Sélectionner un rayon...</option>';
+
+  CURRENT_STOCK_CONFIG.rayons.forEach(rayon => {
+    if (rayon.status === 1 || rayon.status === true) {
+      const option = document.createElement('option');
+      option.value = rayon._id;
+      option.textContent = `${rayon.nomRayon} (${rayon.codeRayon})`;
+      option.dataset.typeRayon = rayon.typeRayon;
+      option.dataset.typesAutorises = JSON.stringify(rayon.typesProduitsAutorises || []);
+      rayonSelect.appendChild(option);
+    }
+  });
+}
+
+// Remplir le select des types de produits dans add_prod.php
+function populateTypesProduits() {
+  const typeProduitSelect = document.getElementById('typeProduit');
+  if (!typeProduitSelect || !CURRENT_STOCK_CONFIG?.typesProduits) return;
+
+  typeProduitSelect.innerHTML = '<option value="">Sélectionner un type...</option>';
+
+  CURRENT_STOCK_CONFIG.typesProduits.forEach(type => {
+    if (type.status === 1 || type.status === true) {
+      const option = document.createElement('option');
+      option.value = type._id;
+      option.textContent = `${type.nomType}`;
+      option.dataset.unite = type.unitePrincipale;
+      option.dataset.champs = JSON.stringify(type.champsSupplementaires || []);
+      option.dataset.photoRequise = type.photoRequise ? 'true' : 'false';
+      typeProduitSelect.appendChild(option);
+    }
+  });
+}
+
+// Au changement du type de produit, mettre à jour l'unité de mesure et les champs dynamiques
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'typeProduit') {
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    const unite = selectedOption.dataset.unite;
+    const champsData = selectedOption.dataset.champs ? JSON.parse(selectedOption.dataset.champs) : [];
+
+    // Mettre à jour le label d'unité
+    const unitLabel = document.querySelector('label[for="quantite"]');
+    if (unitLabel) {
+      unitLabel.textContent = `Quantité (${unite || 'unités'})`;
+    }
+
+    // Remplir les champs dynamiques
+    const champsDynamiquesContainer = document.getElementById('champsDynamiques');
+    if (champsDynamiquesContainer) {
+      champsDynamiquesContainer.innerHTML = '';
+
+      champsData.forEach(champ => {
+        const group = document.createElement('div');
+        group.className = 'mb-3';
+
+        const label = document.createElement('label');
+        label.className = 'form-label';
+        label.textContent = champ.nomChamp + (champ.obligatoire ? '*' : '');
+
+        let input;
+        if (champ.typeChamp === 'text') {
+          input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'form-control';
+          input.name = champ.nomChamp;
+        } else if (champ.typeChamp === 'select') {
+          input = document.createElement('select');
+          input.className = 'form-control';
+          input.name = champ.nomChamp;
+          
+          input.appendChild(document.createElement('option')); // placeholder vide
+          (champ.optionsChamp || []).forEach(opt => {
+            const optEl = document.createElement('option');
+            optEl.value = opt;
+            optEl.textContent = opt;
+            input.appendChild(optEl);
+          });
+        } else if (champ.typeChamp === 'number') {
+          input = document.createElement('input');
+          input.type = 'number';
+          input.className = 'form-control';
+          input.name = champ.nomChamp;
+          input.step = '0.01';
+        } else if (champ.typeChamp === 'date') {
+          input = document.createElement('input');
+          input.type = 'date';
+          input.className = 'form-control';
+          input.name = champ.nomChamp;
+        }
+
+        if (champ.obligatoire) input.required = true;
+
+        group.appendChild(label);
+        group.appendChild(input);
+        champsDynamiquesContainer.appendChild(group);
+      });
+    }
+  }
+});
+
+// ================================
+// 🚀 INITIALISATION AU DÉMARRAGE
+// ================================
 document.addEventListener('DOMContentLoaded', function() {
-  // Remplacez par vos vraies valeurs
+  // Récupérer le magasinId depuis sessionStorage (défini par magasin.php)
+  MAGASIN_ID = sessionStorage.getItem('currentMagasinId');
+  
+  // Écouter l'ouverture du modal des magasins
+  document.getElementById('modalSelectMagasin').addEventListener('show.bs.modal', function() {
+    loadMagasinsModal();
+  });
+
+  // Si un magasin est sélectionné, charger la config
+  if (MAGASIN_ID) {
+    // Récupérer le nom du magasin depuis sessionStorage aussi (optionnel)
+    const magasinNom = sessionStorage.getItem('currentMagasinNom') || 'Magasin sélectionné';
+    document.getElementById('magasinActuelText').textContent = magasinNom;
+    loadStockConfig();
+  }
+
+  // Animation countup automatique
   const kpis = {
     totalStock: 2450,
     rayonsActifs: 12,

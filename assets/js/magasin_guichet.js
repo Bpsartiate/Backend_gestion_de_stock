@@ -5,7 +5,7 @@
 let CURRENT_MAGASIN_ID = null;
 let MAGASINS_CACHE = {};
 let ventesChart = null;
-let API_BASE = window.API_BASE || '/api';
+let API_BASE = 'https://backend-gestion-de-stock.onrender.com'; // ✅ API hébergée
 
 // SPINNER GLOBAL (utilisé partout)
 function showSpinner(selector = null) {
@@ -416,6 +416,8 @@ async function loadMagasinDetails(id) {
         }, 600);
         
         CURRENT_MAGASIN_ID = id;
+        sessionStorage.setItem('currentMagasinId', id); // ✅ Sauvegarder ID pour les autres pages (comme stock)
+        sessionStorage.setItem('currentMagasinNom', m.nom_magasin); // ✅ Sauvegarder le nom aussi
         updateAddGuichetButtonState(); // 🟢 Active les boutons "Ajouter Guichet"
         showToast(`${m.nom_magasin} chargé`, 'success', 2000);
         
@@ -531,7 +533,7 @@ function renderMagasinAvatars(magasins) {
         const photo = m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.nom_magasin)}&background=667eea&color=fff&size=70`;
         const html = `
             <div class="avatar-mini" data-magasin-id="${m._id}" title="${m.nom_magasin}" style="width: 70px; height: 70px;">
-                <img src="${photo}" alt="${m.nom_magasin}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-store\"></i>';">
+                <img src="${photo}" alt="${m.nom_magasin}" style="  width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-store\"></i>
             </div>
         `;
         grid.append(html);
@@ -562,10 +564,13 @@ function selectMagasinAvatar(magasinId) {
     
     // Load details
     loadMagasinDetails(magasinId).then(() => {
-        // Auto-expand panel if collapsed to show details
-        const dashboard = $('#dashboardMagasins');
-        if (dashboard.hasClass('panels-collapsed')) {
-            togglePanel1(); // Expand to show details
+        // ✅ Auto-expand SEULEMENT sur desktop/tablet (>767px)
+        const isMobile = window.innerWidth <= 767;
+        if (!isMobile) {
+            const dashboard = $('#dashboardMagasins');
+            if (dashboard.hasClass('panels-collapsed')) {
+                togglePanel1(); // Expand to show details
+            }
         }
     }).catch(err => {
         console.error('Erreur selectMagasinAvatar:', err);
@@ -630,13 +635,16 @@ function bindEvents() {
         // Update button state for add guichet
         updateAddGuichetButtonState();
         
-        // Charger les détails et PUIS collapse après chargement
+        // Charger les détails et collapse SAUF sur mobile
         loadMagasinDetails(id).then(() => {
-            // Auto-collapse APRÈS avoir chargé les détails
+            // ✅ Auto-collapse SEULEMENT sur desktop/tablet (>767px)
             setTimeout(() => {
-                const dashboard = $('#dashboardMagasins');
-                if (!dashboard.hasClass('panels-collapsed')) {
-                    togglePanel1();
+                const isMobile = window.innerWidth <= 767;
+                if (!isMobile) {
+                    const dashboard = $('#dashboardMagasins');
+                    if (!dashboard.hasClass('panels-collapsed')) {
+                        togglePanel1();
+                    }
                 }
             }, 700);
         }).catch(err => {
@@ -849,7 +857,7 @@ function renderGuichets(guichets) {
                 </div>
                 
                 <!-- Actions + Status sur la droite -->
-                <div class="d-flex align-items-center gap-2" style="position: absolute; top: 25px; right: 12px;">
+                <div class="d-flex align-items-center gap-2" style="position: absolute; top: 25px; right: 10px;">
                     <!-- Status Badge -->
                     <span class="badge" style="
                         background: ${g.status === 1 ? 'linear-gradient(135deg, #10b98122 0%, #06b6d422 100%)' : 'linear-gradient(135deg, #d1d5db22 0%, #9ca3af22 100%)'};
@@ -865,13 +873,7 @@ function renderGuichets(guichets) {
                     
                   
                     
-                    <!-- Edit Button -->
-                    <button class="btn btn-sm btn-outline-primary" 
-                            onclick="event.stopPropagation(); openGuichetEditModal('${g._id}')"
-                            title="Modifier"
-                            style="padding: 4px 8px; font-size: 12px; transition: all 0.2s;">
-                        <i class="fas fa-edit"></i>
-                    </button>
+                  
                     
                     <!-- Delete Button -->
                     <button class="btn btn-sm btn-outline-danger" 
