@@ -2330,6 +2330,12 @@ router.put('/inventaires/:rapportId/valider', authMiddleware, blockVendeur, asyn
       console.error('activity.save.error', actErr);
     }
 
+    return res.json(rapport);
+  } catch (err) {
+    console.error('inventaires.valider.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
 
 // ==========================================
 // 📦 ROUTES CATÉGORIES / TYPES PRODUITS
