@@ -568,12 +568,216 @@
     }
   });
 
+    // ===== GESTION PHOTO & UPLOAD CLOUDINARY =====
+    let uploadedPhotoUrl = null;
+    let isUploadingPhoto = false;
+
+    // Prévisualisation d'image
+    document.getElementById('photoProduit').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        showNotification('⚠️ Veuillez sélectionner une image', 'warning');
+        return;
+      }
+
+      // Vérifier la taille (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showNotification('⚠️ L\'image doit faire moins de 5MB', 'warning');
+        return;
+      }
+
+      // Afficher prévisualisation
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const preview = `
+          <div class="d-flex flex-column align-items-center gap-2">
+            <img src="${event.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: cover;">
+            <div class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;" id="uploadSpinner">
+              <span class="visually-hidden">Upload...</span>
+            </div>
+            <small id="uploadStatus" class="text-muted">Clic sur Enregistrer pour télécharger</small>
+          </div>
+        `;
+        document.getElementById('photoPreview').innerHTML = preview;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ===== SOUMISSION FORMULAIRE PRODUIT =====
+    document.getElementById('formAddProduit').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      // Validation des champs obligatoires
+      if (!selectedCategorie) {
+        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+        return;
+      }
+
+      const reference = document.getElementById('reference').value.trim();
+      const designation = document.getElementById('designation').value.trim();
+      const quantite = parseFloat(document.getElementById('quantite').value) || 0;
+      const rayonId = document.getElementById('rayonId').value;
+      const categorieId = document.getElementById('categorieId').value;
+      const dateEntree = document.getElementById('dateEntreeLot').value;
+
+      if (!reference || !designation || !rayonId || !dateEntree) {
+        showNotification('⚠️ Veuillez remplir tous les champs obligatoires', 'warning');
+        return;
+      }
+
+      // Upload l'image si sélectionnée
+      const fileInput = document.getElementById('photoProduit');
+      if (fileInput.files.length > 0 && !uploadedPhotoUrl) {
+        const file = fileInput.files[0];
+        showNotification('📤 Upload de l\'image en cours...', 'info');
+
+        // Afficher le spinner
+        const spinner = document.getElementById('uploadSpinner');
+        if (spinner) spinner.style.display = 'inline-block';
+
+        try {
+          // Convertir en base64
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+          });
+
+          // Upload vers Cloudinary via API
+          const uploadResponse = await fetch(`${API_BASE}/upload/produit-image`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${getAuthToken()}`
+            },
+            body: JSON.stringify({ imageData: base64 })
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error('Erreur upload image');
+          }
+
+          const uploadResult = await uploadResponse.json();
+          uploadedPhotoUrl = uploadResult.photoUrl;
+          console.log('✅ Image uploadée:', uploadedPhotoUrl);
+          
+          if (spinner) spinner.style.display = 'none';
+          const status = document.getElementById('uploadStatus');
+          if (status) status.textContent = '✅ Image uploadée';
+        } catch (error) {
+          console.error('❌ Erreur upload:', error);
+          showNotification('❌ Erreur lors de l\'upload de l\'image', 'danger');
+          if (spinner) spinner.style.display = 'none';
+          return;
+        }
+      }
+
+      // Préparer les données du produit
+      const produitData = {
+        reference,
+        designation,
+        typeProduitId: categorieId,
+        rayonId,
+        quantiteEntree: quantite,
+        prixUnitaire: parseFloat(document.getElementById('prixUnitaire').value) || 0,
+        etat: document.getElementById('etat').value,
+        dateEntree,
+        seuilAlerte: parseFloat(document.getElementById('seuilAlerte').value) || 0,
+        photoUrl: uploadedPhotoUrl,
+        notes: `Lot: ${document.getElementById('numeroBatch').value || 'N/A'}`
+      };
+
+      try {
+        currentMagasinId = sessionStorage.getItem('currentMagasinId') || 
+                          window.stockConfig?.magasinId || 
+                          localStorage.getItem('currentMagasinId');
+
+        if (!currentMagasinId) {
+          showNotification('⚠️ Magasin non identifié', 'warning');
+          return;
+        }
+
+        showNotification('💾 Enregistrement du produit...', 'info');
+
+        const response = await fetch(`${API_BASE}/magasins/${currentMagasinId}/produits`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getAuthToken()}`
+          },
+          body: JSON.stringify(produitData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `Erreur API: ${response.status}`);
+        }
+
+        const produit = await response.json();
+        console.log('✅ Produit créé:', produit);
+
+        showNotification(`✅ Produit "${designation}" enregistré avec succès!`, 'success');
+
+        // Réinitialiser le formulaire
+        document.getElementById('formAddProduit').reset();
+        document.getElementById('selectedCategoriesList').innerHTML = '';
+        document.getElementById('categorieId').value = '';
+        document.getElementById('photoPreview').innerHTML = '<i class="fas fa-image fa-3x text-muted"></i><p class="text-muted mt-2 mb-0">Photo optionnelle</p>';
+        uploadedPhotoUrl = null;
+        selectedCategorie = null;
+
+        // Fermer le modal après 1.5s
+        setTimeout(() => {
+          const modal = bootstrap.Modal.getInstance(document.getElementById('modalProduit'));
+          if (modal) modal.hide();
+        }, 1500);
+
+      } catch (error) {
+        console.error('❌ Erreur création produit:', error);
+        showNotification(`❌ Erreur: ${error.message}`, 'danger');
+      }
+    });
+
+    // ===== NOTIFICATION HELPER =====
+    function showNotification(message, type = 'info') {
+      // Utiliser un simple alert ou toast si disponible
+      console.log(`[${type.toUpperCase()}]`, message);
+      
+      // Créer un toast Bootstrap si possible
+      const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'danger' ? 'danger' : type === 'warning' ? 'warning' : 'info'} border-0" role="alert">
+          <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          </div>
+        </div>
+      `;
+      
+      const toastContainer = document.createElement('div');
+      toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+      toastContainer.style.zIndex = '11';
+      toastContainer.innerHTML = toastHtml;
+      document.body.appendChild(toastContainer);
+
+      const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'));
+      toast.show();
+
+      // Supprimer après disparition
+      setTimeout(() => toastContainer.remove(), 5000);
+    }
+
     // Recharger les catégories quand le modal s'ouvre
     const modalElement = document.getElementById('modalProduit');
     if (modalElement) {
       modalElement.addEventListener('show.bs.modal', function() {
         console.log('🎬 Modal ouvert - rechargement des catégories');
         loadCategories();
+        // Réinitialiser les champs
+        uploadedPhotoUrl = null;
+        document.getElementById('formAddProduit').reset();
       });
     }
   })(); // Fin du module

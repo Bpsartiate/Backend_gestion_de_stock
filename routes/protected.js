@@ -1541,6 +1541,40 @@ router.get('/magasins/:magasinId/stock-config', authMiddleware, async (req, res)
 // 📦 ROUTES STOCK - PRODUITS
 // ================================
 
+// POST /api/protected/upload/produit-image - Upload d'image produit vers Cloudinary
+router.post('/upload/produit-image', authMiddleware, async (req, res) => {
+  try {
+    const { imageData } = req.body; // Base64 data URL
+    
+    if (!imageData) {
+      return res.status(400).json({ error: 'Aucune image fournie' });
+    }
+
+    // Upload vers Cloudinary
+    cloudinary.uploader.upload(imageData, 
+      { 
+        folder: 'produits',
+        resource_type: 'auto',
+        quality: 'auto:good'
+      },
+      (error, result) => {
+        if (error) {
+          console.error('❌ Cloudinary upload error:', error);
+          return res.status(500).json({ error: 'Erreur upload image: ' + error.message });
+        }
+        res.json({ 
+          success: true, 
+          photoUrl: result.secure_url,
+          photoCloudinaryId: result.public_id
+        });
+      }
+    );
+  } catch (err) {
+    console.error('❌ Upload error:', err);
+    res.status(500).json({ error: 'Erreur: ' + err.message });
+  }
+});
+
 // GET /api/protected/magasins/:magasinId/produits - Lister les produits
 router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => {
   try {
