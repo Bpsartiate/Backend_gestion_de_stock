@@ -2367,11 +2367,15 @@ router.get('/magasins/:magasinId/categories', authMiddleware, async (req, res) =
 router.post('/magasins/:magasinId/categories', authMiddleware, async (req, res) => {
   try {
     const { magasinId } = req.params;
-    const { nom, code, unite, icone, couleur, seuil, capacite, photoRequired, customFields } = req.body;
+    // ✅ MAPPING: Les noms du frontend vers les noms du modèle
+    const { 
+      nomType, code, unitePrincipale, icone, couleur, 
+      seuilAlerte, capaciteMax, photoRequise, champsSupplementaires 
+    } = req.body;
 
-    // Validation
-    if (!nom || !code || !unite || !icone) {
-      return res.status(400).json({ error: 'Champs obligatoires: nom, code, unite, icone' });
+    // Validation - utiliser les noms du modèle
+    if (!nomType || !code || !unitePrincipale || !icone) {
+      return res.status(400).json({ error: 'Champs obligatoires: nomType, code, unitePrincipale, icone' });
     }
 
     // Vérifier l'unicité du code par magasin
@@ -2381,16 +2385,16 @@ router.post('/magasins/:magasinId/categories', authMiddleware, async (req, res) 
     }
 
     const newCategory = new TypeProduit({
-      nom,
+      magasinId,
+      nomType,
       code: code.toUpperCase(),
-      unite,
+      unitePrincipale,
       icone,
       couleur: couleur || '#3b82f6',
-      seuil: seuil || 5,
-      capacite: capacite || 1000,
-      photoRequired: photoRequired !== false,
-      customFields: customFields || [],
-      magasinId
+      seuilAlerte: seuilAlerte || 5,
+      capaciteMax: capaciteMax || 1000,
+      photoRequise: photoRequise !== false,
+      champsSupplementaires: champsSupplementaires || []
     });
 
     await newCategory.save();
@@ -2424,7 +2428,11 @@ router.get('/categories/:categoryId', authMiddleware, async (req, res) => {
  */
 router.put('/categories/:categoryId', authMiddleware, async (req, res) => {
   try {
-    const { nom, code, unite, icone, couleur, seuil, capacite, photoRequired, customFields } = req.body;
+    // ✅ MAPPING: Les noms du frontend vers les noms du modèle
+    const { 
+      nomType, code, unitePrincipale, icone, couleur, 
+      seuilAlerte, capaciteMax, photoRequise, champsSupplementaires 
+    } = req.body;
 
     const category = await TypeProduit.findById(req.params.categoryId);
     if (!category) {
@@ -2443,16 +2451,16 @@ router.put('/categories/:categoryId', authMiddleware, async (req, res) => {
       }
     }
 
-    // Mise à jour
-    if (nom) category.nom = nom;
+    // Mise à jour - utiliser les noms du modèle
+    if (nomType) category.nomType = nomType;
     if (code) category.code = code.toUpperCase();
-    if (unite) category.unite = unite;
+    if (unitePrincipale) category.unitePrincipale = unitePrincipale;
     if (icone) category.icone = icone;
     if (couleur) category.couleur = couleur;
-    if (seuil !== undefined) category.seuil = seuil;
-    if (capacite !== undefined) category.capacite = capacite;
-    if (photoRequired !== undefined) category.photoRequired = photoRequired;
-    if (customFields) category.customFields = customFields;
+    if (seuilAlerte !== undefined) category.seuilAlerte = seuilAlerte;
+    if (capaciteMax !== undefined) category.capaciteMax = capaciteMax;
+    if (photoRequise !== undefined) category.photoRequise = photoRequise;
+    if (champsSupplementaires) category.champsSupplementaires = champsSupplementaires;
 
     await category.save();
     res.json({ success: true, message: '✅ Catégorie modifiée', category });

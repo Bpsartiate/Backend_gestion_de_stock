@@ -601,17 +601,60 @@
     let currentEditingCategoryId = null;
     let currentMagasinId = null; // À récupérer de la session
     
-    const API_BASE = '/api/protected'; // Adapter selon votre configuration
+    // Utiliser window.API_BASE s'il est défini, sinon utiliser l'URL de production
+    const API_BASE = typeof window.API_BASE !== 'undefined' && window.API_BASE 
+      ? window.API_BASE + '/api/protected'
+      : 'https://backend-gestion-de-stock.onrender.com/api/protected';
+
+    // ✅ Helper pour obtenir le token d'authentification
+    function getAuthToken() {
+      // Chercher le token dans localStorage - PRIORITÉ À 'token' (clé utilisée par login.php)
+      let token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
+      // Fallback: chercher dans sessionStorage
+      if (!token) {
+        token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+      }
+      
+      // Fallback: chercher dans les cookies
+      if (!token) {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'token' || name === 'authToken') {
+            token = decodeURIComponent(value);
+            break;
+          }
+        }
+      }
+
+      if (!token) {
+        console.warn('⚠️ Aucun token d\'authentification trouvé');
+        console.log('localStorage keys:', Object.keys(localStorage));
+      }
+      return token || '';
+    }
 
     // Afficher une notification de chargement
     function showLoading(show = true) {
+      const listContainer = document.getElementById('categoriesList');
       let loader = document.getElementById('categoriesLoader');
-      if (show && !loader) {
+      
+      if (show) {
+        // Vider la liste et afficher le spinner
+        listContainer.innerHTML = '';
         loader = document.createElement('div');
         loader.id = 'categoriesLoader';
-        loader.className = 'text-center py-4';
-        loader.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div>';
-        document.getElementById('categoriesList').appendChild(loader);
+        loader.className = 'text-center py-5';
+        loader.innerHTML = `
+          <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+          <p class="text-muted mt-2">
+            <i class="fas fa-sync-alt fa-spin me-2"></i>Chargement des catégories...
+          </p>
+        `;
+        listContainer.appendChild(loader);
       } else if (!show && loader) {
         loader.remove();
       }
@@ -634,21 +677,30 @@
     async function loadCategories() {
       if (!currentMagasinId) {
         console.warn('⚠️ magasinId non défini');
+        const listContainer = document.getElementById('categoriesList');
+        listContainer.innerHTML = `
+          <div class="alert alert-warning p-3 m-2 mb-0" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Magasin non sélectionné</strong>
+            <p class="mb-0 small mt-1">Veuillez d'abord sélectionner un magasin depuis le menu déroulant</p>
+          </div>
+        `;
         return;
       }
 
       try {
         showLoading(true);
+        const authToken = getAuthToken();
         const response = await fetch(`${API_BASE}/magasins/${currentMagasinId}/categories`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+            'Authorization': `Bearer ${authToken}`
           }
         });
 
         if (!response.ok) {
-          throw new Error(`Erreur API: ${response.status}`);
+          throw new Error(`Erreur API: ${response.status} - ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -658,8 +710,23 @@
         showLoading(false);
       } catch (error) {
         console.error('❌ Erreur chargement catégories:', error);
-        showNotification('❌ Erreur lors du chargement des catégories', 'danger');
         showLoading(false);
+        
+        // Afficher l'erreur dans la liste
+        const listContainer = document.getElementById('categoriesList');
+        listContainer.innerHTML = `
+          <div class="alert alert-danger p-3 m-2 mb-0" role="alert">
+            <i class="fas fa-circle-exclamation me-2"></i>
+            <strong>Erreur de chargement</strong>
+            <p class="mb-0 small mt-1">${error.message}</p>
+            <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadCategories()">
+              <i class="fas fa-redo me-1"></i>Réessayer
+            </button>
+          </div>
+        `;
+        
+        // Toast pour alerter l'utilisateur
+        showNotification('❌ Impossible de charger les catégories', 'danger');
       }
     }
 
@@ -677,13 +744,14 @@
         const item = document.createElement('button');
         item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
         item.type = 'button';
+        // ✅ Utiliser les noms du modèle TypeProduit: nomType, unitePrincipale, seuilAlerte, icone
         item.innerHTML = `
           <div class="text-start">
-            <div class="fw-bold"><span style="font-size:1.2em;">${cat.icone}</span> ${cat.nom}</div>
-            <small class="text-muted">${cat.code} • ${cat.unite}</small>
+            <div class="fw-bold"><span style="font-size:1.2em;">${cat.icone || '📦'}</span> ${cat.nomType || cat.nom}</div>
+            <small class="text-muted">${cat.code} • ${cat.unitePrincipale || cat.unite}</small>
           </div>
           <div>
-            <span class="badge bg-info">${cat.seuil}</span>
+            <span class="badge bg-info">${cat.seuilAlerte || cat.seuil}</span>
           </div>
         `;
         item.addEventListener('click', () => editCategory(idx));
@@ -720,17 +788,18 @@
       currentEditingCategoryId = idx;
       
       document.getElementById('categoryEditId').value = cat._id;
-      document.getElementById('catEditNom').value = cat.nom || '';
+      // ✅ Utiliser les noms du modèle TypeProduit
+      document.getElementById('catEditNom').value = cat.nomType || cat.nom || '';
       document.getElementById('catEditCode').value = cat.code || '';
-      document.getElementById('catEditUnite').value = cat.unite || '';
+      document.getElementById('catEditUnite').value = cat.unitePrincipale || cat.unite || '';
       document.getElementById('catEditIcone').value = cat.icone || '';
       document.getElementById('catEditCouleur').value = cat.couleur || '#3b82f6';
-      document.getElementById('catEditSeuil').value = cat.seuil || 5;
-      document.getElementById('catEditCapacite').value = cat.capacite || 1000;
-      document.getElementById('catEditPhotoRequired').checked = cat.photoRequired !== false;
+      document.getElementById('catEditSeuil').value = cat.seuilAlerte || cat.seuil || 5;
+      document.getElementById('catEditCapacite').value = cat.capaciteMax || cat.capacite || 1000;
+      document.getElementById('catEditPhotoRequired').checked = cat.photoRequise !== false;
       
-      document.getElementById('editCategoryTitle').textContent = `Éditer: ${cat.nom}`;
-      document.getElementById('editCategorySubtitle').textContent = `Code ${cat.code} • ${cat.unite}`;
+      document.getElementById('editCategoryTitle').textContent = `Éditer: ${cat.nomType || cat.nom}`;
+      document.getElementById('editCategorySubtitle').textContent = `Code ${cat.code} • ${cat.unitePrincipale || cat.unite}`;
       document.getElementById('btnDeleteCategory').style.display = 'inline-block';
       document.getElementById('categoryKPI').style.display = 'grid';
 
@@ -767,22 +836,31 @@
       }
 
       // Collecter les champs personnalisés
-      const customFields = [];
+      const champsSupplementaires = [];
       document.querySelectorAll('#customFieldsContainer .row').forEach(row => {
         const fieldName = row.querySelector('input[placeholder*="Nom"]')?.value;
         const fieldType = row.querySelector('select')?.value;
         const fieldOptions = row.querySelector('input[placeholder*="Options"]')?.value;
         if (fieldName) {
-          customFields.push({
-            nom: fieldName,
-            type: fieldType,
-            options: fieldOptions ? fieldOptions.split(',').map(o => o.trim()) : []
+          champsSupplementaires.push({
+            nomChamp: fieldName,
+            typeChamp: fieldType,
+            optionsChamp: fieldOptions ? fieldOptions.split(',').map(o => o.trim()) : []
           });
         }
       });
 
+      // ✅ MAPPER LES NOMS DE CHAMPS POUR CORRESPONDRE AU MODÈLE TypeProduit
       const categoryData = {
-        nom, code, unite, icone, couleur, seuil, capacite, photoRequired, customFields
+        nomType: nom,                              // nom → nomType
+        code: code,
+        unitePrincipale: unite,                    // unite → unitePrincipale
+        icone: icone,
+        couleur: couleur,
+        seuilAlerte: seuil,                        // seuil → seuilAlerte
+        capaciteMax: capacite,                     // capacite → capaciteMax
+        photoRequise: photoRequired,               // photoRequired → photoRequise
+        champsSupplementaires: champsSupplementaires // customFields → champsSupplementaires
       };
 
       try {
@@ -793,17 +871,21 @@
           ? `${API_BASE}/magasins/${currentMagasinId}/categories`
           : `${API_BASE}/categories/${categoryId}`;
 
+        const authToken = getAuthToken();
         const response = await fetch(url, {
           method: method,
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+            'Authorization': `Bearer ${authToken}`
           },
           body: JSON.stringify(categoryData)
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
+          if (response.status === 401) {
+            throw new Error('⚠️ Authentification expirée. Veuillez vous reconnecter.');
+          }
           throw new Error(errorData.error || `Erreur API: ${response.status}`);
         }
 
@@ -828,14 +910,18 @@
       
       if (confirm(`⚠️ Êtes-vous sûr de vouloir supprimer "${nom}" ?`)) {
         try {
+          const authToken = getAuthToken();
           const response = await fetch(`${API_BASE}/categories/${cat._id}`, {
             method: 'DELETE',
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+              'Authorization': `Bearer ${authToken}`
             }
           });
 
           if (!response.ok) {
+            if (response.status === 401) {
+              throw new Error('⚠️ Authentification expirée. Veuillez vous reconnecter.');
+            }
             throw new Error(`Erreur API: ${response.status}`);
           }
 
@@ -868,12 +954,9 @@
 
     // Initialiser au chargement
     document.addEventListener('DOMContentLoaded', function() {
-      // Récupérer le magasinId depuis la page (à adapter selon votre implémentation)
-      const magasinIdElement = document.querySelector('[data-magasin-id]');
-      if (magasinIdElement) {
-        currentMagasinId = magasinIdElement.getAttribute('data-magasin-id');
-      }
-
+      // Récupérer le magasinId depuis sessionStorage (défini lors de la sélection du magasin)
+      currentMagasinId = sessionStorage.getItem('currentMagasinId');
+      
       if (currentMagasinId) {
         loadCategories();
       }
@@ -929,6 +1012,18 @@
             const text = li.textContent.trim().toLowerCase();
             li.style.display = q === '' || text.indexOf(q) !== -1 ? '' : 'none';
           });
+        });
+      }
+
+      // Listener pour mettre à jour magasinId quand le modal est ouvert
+      const modalElement = document.getElementById('modalStockSettings');
+      if (modalElement) {
+        modalElement.addEventListener('show.bs.modal', function() {
+          const newMagasinId = sessionStorage.getItem('currentMagasinId');
+          if (newMagasinId && newMagasinId !== currentMagasinId) {
+            currentMagasinId = newMagasinId;
+            loadCategories();
+          }
         });
       }
     });

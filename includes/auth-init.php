@@ -8,9 +8,6 @@
 
 session_start();
 
-// Check if user has a valid session token in localStorage (client-side check)
-// This is a basic check - the full validation happens on the backend via API
-
 // Calculate BASE_URL (relative path to the root for both PHP and JavaScript)
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
 $currentUrl = $protocol . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']);
@@ -26,4 +23,16 @@ $BASE_URL = preg_replace('/\/(pages|app|admin).*/', '', $currentUrl);
   ?>
   window.BASE_URL = '<?php echo $baseDir; ?>' || '/backend_Stock';
   window.PAGE_BASE_URL = '<?php echo $baseDir; ?>' || '/backend_Stock';
+
+  // ✅ VÉRIFICATION D'AUTHENTIFICATION CLIENT-SIDE
+  // Vérifier si l'utilisateur a un token dans localStorage
+  document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    
+    if (!token) {
+      // Pas de token trouvé - rediriger vers login
+      const loginPath = (window.BASE_URL || '/backend_Stock') + '/login.php';
+      window.location.href = loginPath;
+    }
+  });
 </script>
