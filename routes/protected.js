@@ -2349,8 +2349,9 @@ router.get('/magasins/:magasinId/categories', authMiddleware, async (req, res) =
   try {
     const { magasinId } = req.params;
     
+    // ✅ Utiliser les noms corrects du modèle TypeProduit
     const categories = await TypeProduit.find({ magasinId })
-      .select('_id nom code unite icone couleur seuil capacite photoRequired customFields')
+      .select('_id nomType code unitePrincipale icone couleur seuilAlerte capaciteMax photoRequise champsSupplementaires createdAt')
       .sort({ createdAt: -1 });
 
     res.json({ success: true, categories });
