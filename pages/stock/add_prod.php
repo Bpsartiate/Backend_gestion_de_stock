@@ -568,6 +568,52 @@
     }
   });
 
+    // ===== COMPRESSION D'IMAGE =====
+    // Compresser l'image de façon agressive avant upload (réduire la taille drastiquement)
+    async function compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            // Créer un canvas et redimensionner
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            // Redimensionner agressivement (max 800px de côté)
+            const maxDim = 800;
+            if (width > height) {
+              if (width > maxDim) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              }
+            } else {
+              if (height > maxDim) {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // Dessiner et compresser fortement
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Convertir en blob avec compression maximale (60% de qualité)
+            canvas.toBlob((blob) => {
+              console.log(`📦 Image compressée: ${(file.size / 1024).toFixed(2)}KB → ${(blob.size / 1024).toFixed(2)}KB`);
+              resolve(blob);
+            }, 'image/jpeg', 0.6); // 60% de qualité pour réduire drastiquement
+          };
+        };
+      });
+    }
+
     // ===== GESTION PHOTO & UPLOAD CLOUDINARY =====
     let uploadedPhotoUrl = null;
     let isUploadingPhoto = false;
@@ -639,25 +685,26 @@
         if (spinner) spinner.style.display = 'inline-block';
 
         try {
-          // Convertir en base64
-          const base64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(file);
-          });
+          // Compresser l'image avant upload
+          const compressedFile = await compressImage(file);
+
+          // Créer FormData avec l'image (comme pour les magasins)
+          const formData = new FormData();
+          formData.append('image', compressedFile, 'produit.jpg');
 
           // Upload vers Cloudinary via API
           const uploadResponse = await fetch(`${API_BASE}/upload/produit-image`, {
             method: 'POST',
+            // Note: Ne pas définir Content-Type, le navigateur le fera automatiquement avec multipart/form-data
             headers: {
-              'Content-Type': 'application/json',
               'Authorization': `Bearer ${getAuthToken()}`
             },
-            body: JSON.stringify({ imageData: base64 })
+            body: formData
           });
 
           if (!uploadResponse.ok) {
-            throw new Error('Erreur upload image');
+            const errorText = await uploadResponse.text();
+            throw new Error(`Erreur upload (${uploadResponse.status}): ${errorText.substring(0, 100)}`);
           }
 
           const uploadResult = await uploadResponse.json();
@@ -669,7 +716,8 @@
           if (status) status.textContent = '✅ Image uploadée';
         } catch (error) {
           console.error('❌ Erreur upload:', error);
-          showNotification('❌ Erreur lors de l\'upload de l\'image', 'danger');
+          showNotification('❌ Erreur lors de l\'upload de l\'image: ' + error.message, 'danger');
+          const spinner = document.getElementById('uploadSpinner');
           if (spinner) spinner.style.display = 'none';
           return;
         }

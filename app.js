@@ -11,8 +11,9 @@ require('dotenv').config();
 const app = express();
 
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Augmenter les limites pour les uploads d'images
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve uploaded files (MUST be before routes)
 const uploadsPath = path.join(__dirname, 'public', 'uploads');

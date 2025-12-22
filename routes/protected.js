@@ -1542,33 +1542,40 @@ router.get('/magasins/:magasinId/stock-config', authMiddleware, async (req, res)
 // ================================
 
 // POST /api/protected/upload/produit-image - Upload d'image produit vers Cloudinary
-router.post('/upload/produit-image', authMiddleware, async (req, res) => {
+router.post('/upload/produit-image', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { imageData } = req.body; // Base64 data URL
+    // Exact même pattern que /magasins - reçoit le fichier binaire via multer
+    let photoUrl = null;
     
-    if (!imageData) {
-      return res.status(400).json({ error: 'Aucune image fournie' });
-    }
-
-    // Upload vers Cloudinary
-    cloudinary.uploader.upload(imageData, 
-      { 
-        folder: 'produits',
-        resource_type: 'auto',
-        quality: 'auto:good'
-      },
-      (error, result) => {
-        if (error) {
-          console.error('❌ Cloudinary upload error:', error);
-          return res.status(500).json({ error: 'Erreur upload image: ' + error.message });
-        }
-        res.json({ 
+    if (req.file && req.file.buffer) {
+      try {
+        console.log(`📤 Upload image produit: ${(req.file.buffer.length / 1024).toFixed(2)}KB`);
+        
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'produits', quality: 'auto:good' },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file.buffer);
+        });
+        
+        photoUrl = result.secure_url;
+        console.log('✅ Image uploadée Cloudinary:', result.public_id);
+        return res.json({ 
           success: true, 
-          photoUrl: result.secure_url,
+          photoUrl: photoUrl,
           photoCloudinaryId: result.public_id
         });
+      } catch (upErr) {
+        console.error('❌ Cloudinary upload error (produit):', upErr);
+        return res.status(400).json({ error: 'Erreur lors de l\'upload de la photo: ' + upErr.message });
       }
-    );
+    } else {
+      return res.status(400).json({ error: 'Aucune image fournie' });
+    }
   } catch (err) {
     console.error('❌ Upload error:', err);
     res.status(500).json({ error: 'Erreur: ' + err.message });
