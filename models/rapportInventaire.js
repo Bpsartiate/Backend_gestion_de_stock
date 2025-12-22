@@ -45,8 +45,7 @@ const rapportInventaireSchema = new mongoose.Schema({
   statut: {
     type: String,
     enum: ['EN_COURS', 'COMPLETE', 'VALIDEE', 'REJETEE'],
-    default: 'EN_COURS',
-    index: true
+    default: 'EN_COURS'
   },
 
   // DÉTAILS INVENTAIRE
