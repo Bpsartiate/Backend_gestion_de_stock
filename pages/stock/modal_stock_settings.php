@@ -4,7 +4,7 @@
     <div class="modal-content shadow-xl border-0">
 
       <!-- HEADER + TABS -->
-      <div class="modal-header bg-gradient-primary text-white border-0 position-relative">
+      <div class="modal-header  text-white border-0 position-relative">
         <div class="position-absolute start-0 top-50 translate-middle-y ms-4">
           <i class="fas fa-cubes fa-2x opacity-75"></i>
         </div>
@@ -35,16 +35,17 @@
 
               <!-- PANEL LISTE RAYONS -->
               <div class="col-lg-5">
-                <div class="card h-100 shadow-lg border-0">
-                  <div class="card-header bg-gradient-info text-white p-3 d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-layer-group me-2"></i>
-                      <h5 class="mb-0 panel-title">Mes Rayons</h5>
+                <div class="card h-100 shadow-lg border-0 overflow-hidden">
+                  <div class="card-header overflow-hidden p-3 d-flex justify-content-between align-items-center position-relative">
+                    <div class="bg-holder bg-card" style="background-image:url(../assets/img/icons/spot-illustrations/corner-1.png);"></div>
+                    <div class="d-flex align-items-center position-relative" style="z-index: 1;">
+                      <i class="fas fa-layer-group me-2 text-info"></i>
+                      <h5 class="mb-0 panel-title text-dark fw-bold">Mes Rayons</h5>
                     </div>
-                    <div class="d-flex align-items-center">
-                      <span class="badge bg-white text-info total-badge me-2" id="totalRayons">0</span>
-                      <button class="btn btn-sm btn-light text-info"
-                              data-bs-toggle="modal" data-bs-target="#modalCreateRayon" title="Nouveau rayon">
+                    <div class="d-flex align-items-center position-relative" style="z-index: 1;">
+                      <span class="badge bg-info text-white total-badge me-2" id="totalRayons">0</span>
+                      <button type="button" class="btn btn-sm btn-light text-info"
+                              onclick="newRayon()" title="Nouveau rayon">
                         <i class="fas fa-plus"></i>
                       </button>
                     </div>
@@ -72,10 +73,13 @@
 
               <!-- PANEL CONFIG RAYON -->
               <div class="col-lg-7">
-                <div class="card h-100 shadow-xl border-0">
-                  <div class="card-header bg-gradient-warning text-white p-4">
-                    <h5 class="mb-0" id="rayonNom">Sélectionnez un rayon</h5>
-                    <span class="badge bg-light bg-opacity-20 fs-6" id="rayonStatus"></span>
+                <div class="card h-100 shadow-xl border-0 overflow-hidden">
+                  <div class="card-header overflow-hidden p-4 position-relative">
+                    <div class="bg-holder bg-card" style="background-image:url(../assets/img/icons/spot-illustrations/corner-4.png);"></div>
+                    <div class="position-relative d-flex flex-wrap flex-between-center align-items-center" style="z-index: 1;">
+                      <h5 class="mb-2 text-dark fw-bold" id="rayonNom">Sélectionnez un rayon</h5>
+                      <span class="badge bg-warning text-dark fs-6 fw-semi-bold" id="rayonStatus"></span>
+                    </div>
                   </div>
                   <div class="card-body p-4">
                     <form id="formConfigRayon">
@@ -148,17 +152,43 @@
 
                       <!-- 4. TYPES PRODUITS AUTORISÉS -->
                       <div class="mb-3">
-                        <label class="form-label fw-bold">Types produits autorisés</label>
-                        <div class="row g-2" id="typesProduitsContainer">
-                          <!-- Dynamique -->
+                        <label class="form-label fw-bold d-flex justify-content-between">
+                          <span>Types produits autorisés</span>
+                          <small class="text-muted fw-normal">(Sélectionner les catégories permises)</small>
+                        </label>
+
+                        <!-- Mode SÉLECTION (Création) -->
+                        <div id="selectionMode" class="p-3 bg-light rounded" style="columns: 2; column-gap: 1rem;">
+                          <!-- Rempli dynamiquement par populateTypesProduitsContainer() -->
                         </div>
+
+                        <!-- Mode LISTE (Édition) -->
+                        <div id="listMode" class="p-3 bg-light rounded" style="display:none;">
+                          <div id="selectedTypesList" class="d-flex flex-wrap gap-2">
+                            <!-- Rempli dynamiquement par editRayon() -->
+                          </div>
+                          <button type="button" id="btnModifyTypes" class="btn btn-sm btn-outline-primary mt-3">
+                            <i class="fas fa-edit me-2"></i>Modifier les catégories
+                          </button>
+                        </div>
+
+                        <small class="text-muted d-block mt-2">Aucune sélection = tous les types autorisés</small>
                       </div>
 
                       <!-- 5. DESCRIPTION -->
                       <div class="mb-3">
-                        <label class="form-label">Description</label>
+                        <label class="form-label">Description / Localisation</label>
                         <textarea class="form-control" name="description" rows="2"
-                                  placeholder="Localisation physique, consignes spéciales..."></textarea>
+                                  placeholder="Ex: Coin sud-est du magasin, près des escaliers..."></textarea>
+                      </div>
+
+                      <!-- BOUTONS ACTION (DANS LE FORMULAIRE) -->
+                      <div class="d-flex gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-secondary" id="btnAnnulerRayon">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Sauvegarder</button>
+                        <button type="button" class="btn btn-outline-danger" id="btnDeleteRayon" style="display:none;">
+                          <i class="fas fa-trash me-2"></i>Supprimer
+                        </button>
                       </div>
                     </form>
 
@@ -184,11 +214,7 @@
                   </div>
 
                   <div class="card-footer border-0 bg-transparent">
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-outline-secondary" id="btnAnnulerRayon">Annuler</button>
-                      <button class="btn btn-primary" id="btnSauvegarderRayon">Sauvegarder</button>
-                      <button class="btn btn-success" id="btnDupliquerRayon">Dupliquer</button>
-                    </div>
+                    <!-- Les boutons sont maintenant dans le formulaire -->
                   </div>
                 </div>
               </div>
@@ -202,13 +228,14 @@
 
               <!-- LISTE TYPES PRODUITS GAUCHE -->
               <div class="col-lg-5">
-                <div class="card h-100 shadow-lg border-0">
-                  <div class="card-header bg-gradient-info text-white p-3 d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-layer-group me-2"></i>
-                      <h5 class="mb-0 panel-title">Catégories Produits</h5>
+                <div class="card h-100 shadow-lg border-0 overflow-hidden">
+                  <div class="card-header overflow-hidden p-3 d-flex justify-content-between align-items-center position-relative">
+                    <div class="bg-holder bg-card" style="background-image:url(../assets/img/icons/spot-illustrations/corner-2.png);"></div>
+                    <div class="d-flex align-items-center position-relative" style="z-index: 1;">
+                      <i class="fas fa-layer-group me-2 text-info"></i>
+                      <h5 class="mb-0 panel-title text-dark fw-bold">Catégories Produits</h5>
                     </div>
-                    <span class="badge bg-white text-info total-badge" id="totalCategories">0</span>
+                    <span class="badge bg-info text-white total-badge position-relative" id="totalCategories" style="z-index: 1;">0</span>
                   </div>
 
                   <div class="card-body p-2">
@@ -233,10 +260,13 @@
 
               <!-- PANEL CONFIG CATÉGORIE DROITE -->
               <div class="col-lg-7">
-                <div class="card shadow-lg border-0">
-                  <div class="card-header bg-gradient-primary text-white p-4">
-                    <h5 class="mb-1" id="editCategoryTitle">Créer une nouvelle catégorie</h5>
-                    <small id="editCategorySubtitle">Remplissez les informations ci-dessous</small>
+                <div class="card shadow-lg border-0 overflow-hidden">
+                  <div class="card-header overflow-hidden p-4 position-relative">
+                    <div class="bg-holder bg-card" style="background-image:url(../assets/img/icons/spot-illustrations/corner-3.png);"></div>
+                    <div class="position-relative" style="z-index: 1;">
+                      <h5 class="mb-1 text-dark fw-bold" id="editCategoryTitle">Créer une nouvelle catégorie</h5>
+                      <small class="text-muted" id="editCategorySubtitle">Remplissez les informations ci-dessous</small>
+                    </div>
                   </div>
 
                   <div class="card-body p-4">
@@ -319,28 +349,19 @@
 
                       <!-- CHAMPS PERSONNALISÉS -->
                       <div class="mb-4">
-                        <label class="form-label fw-bold d-flex justify-content-between">
-                          <span><i class="fas fa-sliders-h me-2"></i>Champs Supplémentaires</span>
+                        <label class="form-label fw-bold d-flex justify-content-between align-items-center">
+                          <span>
+                            <i class="fas fa-sliders-h me-2"></i>Champs Supplémentaires
+                            <a href="javascript:void(0)" class="btn btn-link p-0 ms-2" data-bs-toggle="popover" data-bs-trigger="hover" title="💡 Conseil" data-bs-content="Les champs supplémentaires vous permettent d'ajouter des informations spécifiques à chaque catégorie. Exemples: composition, marque, allergènes, etc." style="font-size: 1.2em;">
+                              <i class="fas fa-info-circle" style="animation: bounce 1s infinite; color: #0c63e4;"></i>
+                            </a>
+                          </span>
                           <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddCustomField">
                             <i class="fas fa-plus me-1"></i>Ajouter
                           </button>
                         </label>
 
-                        <!-- TIPS GUIDING SECTION -->
-                        <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
-                          <div class="d-flex align-items-start">
-                            <i class="fas fa-lightbulb dark me-3 mt-1" style="font-size: 1.3em; color: #0c63e4;"></i>
-                            <div class="flex-grow-1">
-                              <strong>Exemples de champs personnalisés:</strong>
-                              <div class="mt-2 small">
-                                <p class="mb-2"><strong>Pour TISSUS:</strong> Composition (Texte) • Motif (Choix: Uni, Rayé, Carreaux) • Largeur cm (Nombre)</p>
-                                <p class="mb-2"><strong>Pour OUTILS:</strong> Marque (Texte) • Type d'énergie (Choix: Électrique, Batterie, Manuel) • Garantie ans (Nombre)</p>
-                                <p class="mb-0"><strong>Pour ALIMENTS:</strong> Allergènes (Texte) • DLC (Date) • Température (Choix: Ambiant, Froid, Congélé)</p>
-                              </div>
-                            </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-                          </div>
-                        </div>
+                       
 
                         <div id="customFieldsContainer" class="space-y-2">
                           <!-- Champs supplémentaires ajoutés dynamiquement -->
@@ -370,23 +391,78 @@
                       </div>
                     </form>
 
-                    <!-- KPI CATÉGORIE -->
-                    <div id="categoryKPI" class="row g-3 mt-4 p-3 bg-light rounded-3" style="display:none;">
-                      <div class="col-3 text-center border-end">
-                        <h5 class="text-success mb-1" id="kpiStock">0</h5>
-                        <small class="text-muted">En Stock</small>
+                    <!-- KPI CATÉGORIE - DESIGN PROFESSIONNEL -->
+                    <div id="categoryKPI" class="row g-2 mt-4" style="display:none;">
+                      <!-- KPI En Stock -->
+                      <div class="col-6 col-md-3">
+                        <div class="kpi-card bg-gradient-success">
+                          <div class="kpi-header">
+                            <i class="fas fa-box-open"></i>
+                          </div>
+                          <div class="kpi-body">
+                            <h3 id="kpiStock" class="kpi-value">0</h3>
+                            <div class="kpi-change">
+                              <span class="badge bg-success bg-opacity-20 text-success" id="kpiStockChange">
+                                <i class="fas fa-arrow-up"></i> +0
+                              </span>
+                            </div>
+                            <small class="kpi-label">En Stock</small>
+                          </div>
+                        </div>
                       </div>
-                      <div class="col-3 text-center border-end">
-                        <h5 class="text-warning mb-1" id="kpiAlertes">0</h5>
-                        <small class="text-muted">Alertes</small>
+
+                      <!-- KPI Alertes -->
+                      <div class="col-6 col-md-3">
+                        <div class="kpi-card bg-gradient-warning">
+                          <div class="kpi-header">
+                            <i class="fas fa-exclamation-circle"></i>
+                          </div>
+                          <div class="kpi-body">
+                            <h3 id="kpiAlertes" class="kpi-value">0</h3>
+                            <div class="kpi-change">
+                              <span class="badge bg-warning bg-opacity-20 text-warning" id="kpiAlertesChange">
+                                <i class="fas fa-arrow-down"></i> 0
+                              </span>
+                            </div>
+                            <small class="kpi-label">Alertes</small>
+                          </div>
+                        </div>
                       </div>
-                      <div class="col-3 text-center border-end">
-                        <h5 class="text-info mb-1" id="kpiArticles">0</h5>
-                        <small class="text-muted">Articles</small>
+
+                      <!-- KPI Articles -->
+                      <div class="col-6 col-md-3">
+                        <div class="kpi-card bg-gradient-info">
+                          <div class="kpi-header">
+                            <i class="fas fa-list"></i>
+                          </div>
+                          <div class="kpi-body">
+                            <h3 id="kpiArticles" class="kpi-value">0</h3>
+                            <div class="kpi-change">
+                              <span class="badge bg-info bg-opacity-20 text-info" id="kpiArticlesChange">
+                                <i class="fas fa-arrow-up"></i> +0
+                              </span>
+                            </div>
+                            <small class="kpi-label">Articles</small>
+                          </div>
+                        </div>
                       </div>
-                      <div class="col-3 text-center">
-                        <h5 class="text-primary mb-1" id="kpiValeur">0€</h5>
-                        <small class="text-muted">Valeur</small>
+
+                      <!-- KPI Valeur -->
+                      <div class="col-6 col-md-3">
+                        <div class="kpi-card bg-gradient-primary">
+                          <div class="kpi-header">
+                            <i class="fas fa-euro-sign"></i>
+                          </div>
+                          <div class="kpi-body">
+                            <h3 id="kpiValeur" class="kpi-value">0€</h3>
+                            <div class="kpi-change">
+                              <span class="badge bg-primary bg-opacity-20 text-primary" id="kpiValeurChange">
+                                <i class="fas fa-arrow-up"></i> +0€
+                              </span>
+                            </div>
+                            <small class="kpi-label">Valeur</small>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -415,6 +491,7 @@
     @keyframes slideInTab { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
     @keyframes slideInItem { from { opacity: 0; transform: translateX(-15px); } to { opacity: 1; transform: translateX(0); } }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
     @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -453,7 +530,7 @@
     #rayonsList .list-group-item.active, 
     #typesList .list-group-item.active {
       background-color: #e8f5ff;
-      border-left: 4px solid #0084ff;
+      border-left: 4px solid #1b3d5d1d;
       padding-left: calc(.6rem - 4px);
       font-weight: 600;
     }
@@ -593,16 +670,128 @@
       border-color: #e5e7eb;
       vertical-align: middle;
     }
+
+    /* ===== KPI CARDS DESIGN ===== */
+    .kpi-card {
+      border-radius: 0.75rem;
+      padding: 1.25rem 1rem;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border: none;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      transform: translate(30%, -30%);
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .kpi-header {
+      font-size: 2rem;
+      opacity: 0.8;
+      margin-bottom: 0.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .kpi-body {
+      position: relative;
+      z-index: 1;
+    }
+
+    .kpi-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0.5rem 0;
+      line-height: 1;
+    }
+
+    .kpi-change {
+      margin: 0.5rem 0;
+      font-size: 0.85rem;
+    }
+
+    .kpi-change .badge {
+      padding: 0.35rem 0.65rem;
+      font-weight: 600;
+      border-radius: 0.5rem;
+    }
+
+    .kpi-change i {
+      margin-right: 0.3rem;
+    }
+
+    .kpi-label {
+      display: block;
+      opacity: 0.9;
+      font-size: 0.8rem;
+      margin-top: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    /* Gradients pour KPI */
+    .bg-gradient-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    }
+
+    .bg-gradient-warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    }
+
+    .bg-gradient-info {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+    }
+
+    .bg-gradient-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+    }
+
+    /* Responsive KPI */
+    @media (max-width: 768px) {
+      .kpi-value {
+        font-size: 1.5rem;
+      }
+      
+      .kpi-header {
+        font-size: 1.5rem;
+      }
+      
+      .kpi-card {
+        padding: 1rem 0.75rem;
+      }
+    }
   </style>
 
   <script>
-    console.log('🎬 Script modal_stock_settings.php chargé et exécuté');
-    
-    // ===== GESTION CATÉGORIES VIA API =====
-    let allCategories = [];
-    let currentEditingCategoryId = null;
-    let currentMagasinId = null; // À récupérer de la session
-    let categoriesLoaded = false; // Flag pour tracker si les catégories ont été chargées
+    // Module IIFE pour éviter les conflits de variables globales
+    (function() {
+      console.log('🎬 Script modal_stock_settings.php chargé et exécuté');
+      
+      // ===== GESTION CATÉGORIES VIA API =====
+      let allCategories = [];
+      let currentEditingCategoryId = null;
+      let currentMagasinId = null; // À récupérer de la session
+      let categoriesLoaded = false; // Flag pour tracker si les catégories ont été chargées
+      
+      // ===== GESTION RAYONS VIA API =====
+      let allRayons = [];
+    let currentEditingRayonId = null;
+    let rayonsLoaded = false; // Flag pour tracker si les rayons ont été chargés
     
     // Utiliser window.API_BASE s'il est défini, sinon utiliser l'URL de production
     const API_BASE = typeof window.API_BASE !== 'undefined' && window.API_BASE 
@@ -717,6 +906,7 @@
         console.log('✅ allCategories mis à jour | Longueur:', allCategories.length);
         renderCategoriesList();
         updateCategoriesCount();
+        populateTypesProduitsContainer(); // 🔄 Mettre à jour les checkboxes des types produits
         showLoading(false);
       } catch (error) {
         console.error('❌ Erreur chargement catégories:', error);
@@ -757,14 +947,20 @@
         const item = document.createElement('button');
         item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
         item.type = 'button';
+        
+        // Générer un code si absent (ex: "asd" → "ASD")
+        const code = cat.code || (cat.nomType || cat.nom || '').toUpperCase().slice(0, 3);
+        const unite = cat.unitePrincipale || cat.unite || 'unités';
+        const seuil = cat.seuilAlerte || cat.seuil || 0;
+        
         // ✅ Utiliser les noms du modèle TypeProduit: nomType, unitePrincipale, seuilAlerte, icone
         item.innerHTML = `
           <div class="text-start">
             <div class="fw-bold"><span style="font-size:1.2em;">${cat.icone || '📦'}</span> ${cat.nomType || cat.nom}</div>
-            <small class="text-muted">${cat.code} • ${cat.unitePrincipale || cat.unite}</small>
+            <small class="text-muted">${code} • ${unite}</small>
           </div>
           <div>
-            <span class="badge bg-info">${cat.seuilAlerte || cat.seuil}</span>
+            <span class="badge bg-info">${seuil}</span>
           </div>
         `;
         item.addEventListener('click', () => editCategory(idx));
@@ -781,7 +977,7 @@
       document.getElementById('catEditSeuil').value = '5';
       document.getElementById('catEditCapacite').value = '1000';
       document.getElementById('catEditPhotoRequired').checked = true;
-      document.getElementById('customFieldsContainer').innerHTML = '';
+      document.getElementById('customFieldsContainer').innerHTML = '';  // ✨ Vider les champs supplémentaires
       document.getElementById('categoryKPI').style.display = 'none';
       document.getElementById('btnDeleteCategory').style.display = 'none';
       document.getElementById('editCategoryTitle').textContent = 'Créer une nouvelle catégorie';
@@ -824,10 +1020,25 @@
       document.getElementById('catEditCapacite').value = cat.capaciteMax || cat.capacite || 1000;
       document.getElementById('catEditPhotoRequired').checked = cat.photoRequise !== false;
       
+      // ✨ AFFICHER LES CHAMPS SUPPLÉMENTAIRES EXISTANTS
+      const customContainer = document.getElementById('customFieldsContainer');
+      customContainer.innerHTML = '';
+      if (cat.champsSupplementaires && Array.isArray(cat.champsSupplementaires)) {
+        console.log('📋 Champs supplémentaires à afficher:', cat.champsSupplementaires);
+        cat.champsSupplementaires.forEach(champ => {
+          console.log('  - Champ:', champ.nomChamp, '|', champ.typeChamp, '|', champ.optionsChamp);
+          customContainer.appendChild(
+            createCustomFieldElement(champ.nomChamp, champ.typeChamp, champ.optionsChamp)
+          );
+        });
+      } else {
+        console.log('📋 Pas de champs supplémentaires pour cette catégorie');
+      }
+      
       document.getElementById('editCategoryTitle').textContent = `Éditer: ${cat.nomType || cat.nom}`;
       document.getElementById('editCategorySubtitle').textContent = `Code ${cat.code} • ${cat.unitePrincipale || cat.unite}`;
       document.getElementById('btnDeleteCategory').style.display = 'inline-block';
-      document.getElementById('categoryKPI').style.display = 'grid';
+      document.getElementById('categoryKPI').style.display = 'flex';
 
       // Afficher les KPI (données depuis la base)
       document.getElementById('kpiStock').textContent = (cat.stock || 0);
@@ -978,9 +1189,455 @@
       document.getElementById('totalCategories').textContent = allCategories.length;
     }
 
+    // ✨ Créer un élément de champ personnalisé réutilisable
+    function createCustomFieldElement(name = '', type = 'text', options = []) {
+      const field = document.createElement('div');
+      field.className = 'row g-2 mb-2 p-2 border rounded bg-white';
+      const optionsStr = Array.isArray(options) ? options.join(', ') : (typeof options === 'string' ? options : '');
+      field.innerHTML = `
+        <div class="col-md-3">
+          <input type="text" class="form-control form-control-sm" placeholder="Nom du champ" value="${name}">
+        </div>
+        <div class="col-md-3">
+          <select class="form-select form-select-sm">
+            <option value="text" ${type === 'text' ? 'selected' : ''}>Texte</option>
+            <option value="number" ${type === 'number' ? 'selected' : ''}>Nombre</option>
+            <option value="date" ${type === 'date' ? 'selected' : ''}>Date</option>
+            <option value="select" ${type === 'select' ? 'selected' : ''}>Choix</option>
+          </select>
+        </div>
+        <div class="col-md-5">
+          <input type="text" class="form-control form-control-sm" placeholder="Options (virgule séparées)" value="${optionsStr}">
+        </div>
+        <div class="col-md-1">
+          <button type="button" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+      field.querySelector('button').addEventListener('click', () => field.remove());
+      return field;
+    }
+
+    // ==================== RAYONS CRUD FUNCTIONS ====================
+
+    // Charger les rayons depuis l'API
+    async function loadRayonsModal() {
+      console.log('🟢🟢🟢 DÉBUT loadRayonsModal() | currentMagasinId:', currentMagasinId);
+      
+      if (!currentMagasinId) {
+        console.warn('⚠️ magasinId non défini');
+        const listContainer = document.getElementById('rayonsList');
+        listContainer.innerHTML = `
+          <div class="alert alert-warning p-3 m-2 mb-0" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Magasin non sélectionné</strong>
+            <p class="mb-0 small mt-1">Veuillez d'abord sélectionner un magasin</p>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        showLoading(true);
+        const authToken = getAuthToken();
+        console.log('🔐 Token obtenu | Token:', authToken ? '✅ Présent' : '❌ Absent');
+        const response = await fetch(`${API_BASE}/magasins/${currentMagasinId}/rayons`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+
+        console.log('📡 Réponse API | Status:', response.status, '| OK:', response.ok);
+        
+        if (!response.ok) {
+          throw new Error(`Erreur API: ${response.status} - ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('📥 Données reçues:', data);
+        allRayons = data || [];
+        console.log('✅ allRayons mis à jour | Longueur:', allRayons.length);
+        renderRayonsList();
+        updateRayonsCount();
+        showLoading(false);
+      } catch (error) {
+        console.error('❌ Erreur chargement rayons:', error);
+        showLoading(false);
+        
+        const listContainer = document.getElementById('rayonsList');
+        listContainer.innerHTML = `
+          <div class="alert alert-danger p-3 m-2 mb-0" role="alert">
+            <i class="fas fa-circle-exclamation me-2"></i>
+            <strong>Erreur de chargement</strong>
+            <p class="mb-0 small mt-1">${error.message}</p>
+            <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadRayonsModal()">
+              <i class="fas fa-redo me-1"></i>Réessayer
+            </button>
+          </div>
+        `;
+        
+        showNotification('❌ Impossible de charger les rayons', 'danger');
+      }
+    }
+
+    // Afficher la liste des rayons
+    function renderRayonsList() {
+      const list = document.getElementById('rayonsList');
+      list.innerHTML = '';
+
+      console.log('📋 renderRayonsList - allRayons:', allRayons);
+
+      if (allRayons.length === 0) {
+        list.innerHTML = '<div class="text-muted text-center py-4"><i class="fas fa-inbox me-2"></i>Aucun rayon</div>';
+        return;
+      }
+
+      allRayons.forEach((rayon, idx) => {
+        console.log(`📦 Rayon ${idx}:`, rayon);
+        const item = document.createElement('button');
+        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+        item.type = 'button';
+        item.innerHTML = `
+          <div class="text-start">
+            <div class="fw-bold"><span style="font-size:1.2em;">${rayon.iconeRayon || '📦'}</span> ${rayon.nomRayon || 'Sans nom'}</div>
+            <small class="text-muted">${rayon.codeRayon} • ${rayon.typeRayon || 'RAYON'}</small>
+          </div>
+          <div>
+            <span class="badge" style="background-color: ${rayon.couleurRayon || '#10b981'}">${rayon.capaciteMax || 1000}</span>
+          </div>
+        `;
+        item.addEventListener('click', () => editRayon(idx));
+        list.appendChild(item);
+      });
+    }
+
+    // Créer un nouveau rayon
+    function newRayon() {
+      currentEditingRayonId = null;
+      document.getElementById('editRayonId').value = '';
+      document.getElementById('formConfigRayon').reset();
+      document.getElementById('formConfigRayon').querySelector('input[name="couleurRayon"]').value = '#10b981';
+      document.getElementById('formConfigRayon').querySelector('input[name="capaciteMax"]').value = '1000';
+      document.getElementById('formConfigRayon').querySelector('select[name="typeRayon"]').value = 'RAYON';
+      document.getElementById('formConfigRayon').querySelector('select[name="status"]').value = '1';
+      document.getElementById('formConfigRayon').querySelector('textarea[name="description"]').value = '';
+      document.getElementById('rayonNom').textContent = 'Créer un nouveau rayon';
+      document.getElementById('rayonStatus').textContent = '✨ Nouveau';
+      document.getElementById('rayonStatus').className = 'badge text-dark fs-1 fw-semi-bold';
+      document.getElementById('btnDeleteRayon').style.display = 'none';
+      
+      // ✅ RÉINITIALISER LES KPI
+      document.getElementById('rayonOccupation').textContent = '0%';
+      document.getElementById('rayonOccupation').className = 'text-success mb-1';
+      document.getElementById('rayonArticles').textContent = '0';
+      document.getElementById('rayonAlertes').textContent = '0/1000';
+      document.getElementById('rayonCapacite').textContent = '0/1000';
+      
+      // Afficher le MODE SÉLECTION (checkboxes)
+      document.getElementById('selectionMode').style.display = '';
+      document.getElementById('listMode').style.display = 'none';
+      
+      // Remplir les checkboxes
+      populateTypesProduitsContainer();
+      
+      // Déselectionner tous les types produits
+      document.querySelectorAll('#selectionMode input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+      });
+      
+      // Déselectionner les items de la liste
+      document.querySelectorAll('#rayonsList .list-group-item').forEach(item => {
+        item.classList.remove('active');
+      });
+    }
+
+    // Éditer un rayon
+    function editRayon(idx) {
+      const rayon = allRayons[idx];
+      console.log('📝 Édition rayon idx:', idx);
+      console.log('📝 Rayon complet:', rayon);
+      currentEditingRayonId = idx;
+      
+      document.getElementById('editRayonId').value = rayon._id;
+      
+      // Remplir le formulaire
+      const form = document.getElementById('formConfigRayon');
+      form.querySelector('input[name="codeRayon"]').value = rayon.codeRayon || '';
+      form.querySelector('input[name="nomRayon"]').value = rayon.nomRayon || '';
+      form.querySelector('input[name="capaciteMax"]').value = rayon.capaciteMax || 1000;
+      form.querySelector('select[name="typeRayon"]').value = rayon.typeRayon || 'RAYON';
+      form.querySelector('select[name="status"]').value = rayon.status ? '1' : '0';
+      form.querySelector('input[name="couleurRayon"]').value = rayon.couleurRayon || '#10b981';
+      form.querySelector('select[name="iconeRayon"]').value = rayon.iconeRayon || '📦';
+      form.querySelector('textarea[name="description"]').value = rayon.description || '';
+      
+      // ✅ REMPLIR LES KPI AVEC LES VRAIES DONNÉES
+      const capaciteMax = rayon.capaciteMax || 1000;
+      const capaciteOccupee = rayon.capaciteOccupee || 0;
+      const occupationPourcent = Math.round((capaciteOccupee / capaciteMax) * 100);
+      const articles = rayon.articles || 0;
+      const alertes = rayon.alertes || 0;
+      
+      document.getElementById('rayonOccupation').textContent = occupationPourcent + '%';
+      document.getElementById('rayonArticles').textContent = articles;
+      document.getElementById('rayonAlertes').textContent = alertes + '/1000';
+      document.getElementById('rayonCapacite').textContent = capaciteOccupee + '/' + capaciteMax;
+      
+      // Changer la couleur de l'occupation en fonction du pourcentage
+      const occupationElement = document.getElementById('rayonOccupation');
+      if (occupationPourcent > 90) {
+        occupationElement.className = 'text-danger mb-1';
+      } else if (occupationPourcent > 75) {
+        occupationElement.className = 'text-warning mb-1';
+      } else {
+        occupationElement.className = 'text-success mb-1';
+      }
+      
+      // ✅ AFFICHER LE MODE LISTE avec les catégories sélectionnées
+      const typesProduitsIds = (rayon.typesProduitsAutorises || []).map(id => String(id));
+      console.log('📋 Types produits autorisés:', typesProduitsIds);
+      
+      // Masquer le mode sélection, afficher le mode liste
+      document.getElementById('selectionMode').style.display = 'none';
+      document.getElementById('listMode').style.display = 'block';
+      
+      // Afficher la liste des catégories sélectionnées
+      displaySelectedTypesList(typesProduitsIds);
+      
+      // Mettre à jour le header
+      document.getElementById('rayonNom').textContent = rayon.nomRayon || 'Sans nom';
+      const statusBadge = document.getElementById('rayonStatus');
+      if (rayon.status) {
+        statusBadge.textContent = '🟢 Actif';
+        statusBadge.className = 'badge bg-success text-white fs-1 fw-semi-bold';
+      } else {
+        statusBadge.textContent = '🔴 Inactif';
+        statusBadge.className = 'badge bg-danger text-white fs-1 fw-semi-bold';
+      }
+      
+      document.getElementById('btnDeleteRayon').style.display = 'inline-block';
+      
+      // Marquer l'item comme actif
+      document.querySelectorAll('#rayonsList .list-group-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      document.querySelectorAll('#rayonsList .list-group-item')[idx]?.classList.add('active');
+    }
+
+    // Sauvegarder ou créer un rayon via API
+    async function saveRayon(e) {
+      e.preventDefault();
+
+      const codeRayon = document.getElementById('formConfigRayon').querySelector('input[name="codeRayon"]').value.trim().toUpperCase();
+      const nomRayon = document.getElementById('formConfigRayon').querySelector('input[name="nomRayon"]').value.trim();
+      const capaciteMax = parseInt(document.getElementById('formConfigRayon').querySelector('input[name="capaciteMax"]').value) || 1000;
+      const typeRayon = document.getElementById('formConfigRayon').querySelector('select[name="typeRayon"]').value;
+      const status = parseInt(document.getElementById('formConfigRayon').querySelector('select[name="status"]').value) || 1;
+      const couleurRayon = document.getElementById('formConfigRayon').querySelector('input[name="couleurRayon"]').value;
+      const iconeRayon = document.getElementById('formConfigRayon').querySelector('select[name="iconeRayon"]').value;
+      const description = document.getElementById('formConfigRayon').querySelector('textarea[name="description"]').value.trim();
+
+      // Validation
+      if (!codeRayon || !nomRayon) {
+        showNotification('⚠️ Code et nom du rayon sont obligatoires', 'warning');
+        return;
+      }
+
+      // Collecter les types produits sélectionnés (depuis le mode sélection OU la liste)
+      const typesProduitsAutorises = [];
+      
+      // Si en mode sélection, récupérer les checkboxes cochées
+      if (document.getElementById('selectionMode').style.display !== 'none') {
+        document.querySelectorAll('#selectionMode input[type="checkbox"]:checked').forEach(cb => {
+          typesProduitsAutorises.push(cb.value);
+        });
+      } else {
+        // Si en mode liste, récupérer les badges
+        document.querySelectorAll('#selectedTypesList .badge button').forEach(btn => {
+          const catId = btn.getAttribute('data-category-id');
+          typesProduitsAutorises.push(catId);
+        });
+      }
+      
+      console.log('📋 Types produits autorisés à envoyer:', typesProduitsAutorises);
+
+      const rayonData = {
+        codeRayon,
+        nomRayon,
+        capaciteMax,
+        typeRayon,
+        status: status === 1,
+        couleurRayon,
+        iconeRayon,
+        description,
+        typesProduitsAutorises
+      };
+
+      try {
+        const isNew = currentEditingRayonId === null;
+        const method = isNew ? 'POST' : 'PUT';
+        const rayonId = isNew ? '' : allRayons[currentEditingRayonId]._id;
+        const url = isNew 
+          ? `${API_BASE}/magasins/${currentMagasinId}/rayons`
+          : `${API_BASE}/rayons/${rayonId}`;
+
+        const authToken = getAuthToken();
+        const response = await fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify(rayonData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          if (response.status === 401) {
+            throw new Error('⚠️ Authentification expirée. Veuillez vous reconnecter.');
+          }
+          throw new Error(errorData.error || `Erreur API: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ Rayon sauvegardé:', result);
+        
+        showNotification(isNew ? `✅ Rayon "${nomRayon}" créé avec succès` : `✅ Rayon "${nomRayon}" mis à jour`, 'success');
+        loadRayonsModal();
+        newRayon();
+      } catch (error) {
+        console.error('❌ Erreur sauvegarde rayon:', error);
+        showNotification(`❌ Erreur: ${error.message}`, 'danger');
+      }
+    }
+
+    // Supprimer un rayon
+    async function deleteRayon() {
+      if (currentEditingRayonId === null) {
+        showNotification('⚠️ Aucun rayon sélectionné', 'warning');
+        return;
+      }
+
+      const rayon = allRayons[currentEditingRayonId];
+      if (!confirm(`❓ Êtes-vous sûr de vouloir supprimer le rayon "${rayon.nomRayon}" ?\n\nCette action est irréversible.`)) {
+        return;
+      }
+
+      try {
+        const authToken = getAuthToken();
+        const response = await fetch(`${API_BASE}/rayons/${rayon._id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erreur API: ${response.status}`);
+        }
+
+        showNotification('✅ Rayon supprimé avec succès', 'success');
+        loadRayonsModal();
+        newRayon();
+      } catch (error) {
+        console.error('❌ Erreur suppression rayon:', error);
+        showNotification(`❌ Erreur: ${error.message}`, 'danger');
+      }
+    }
+
+    // Mettre à jour le compteur de rayons
+    function updateRayonsCount() {
+      document.getElementById('totalRayons').textContent = allRayons.length;
+    }
+
+    // Remplir le conteneur des types produits avec les catégories disponibles (MODE SÉLECTION)
+    function populateTypesProduitsContainer() {
+      const container = document.getElementById('selectionMode');
+      container.innerHTML = '';
+
+      if (!allCategories || allCategories.length === 0) {
+        container.innerHTML = '<p class="text-muted col-12"><small>Aucune categorie disponible. Creez dabord une categorie!</small></p>';
+        return;
+      }
+
+      allCategories.forEach(cat => {
+        const catId = cat._id;
+        const catName = cat.nomType || cat.nom;
+        const catIcon = cat.icone || '📦';
+        
+        const div = document.createElement('div');
+        div.className = 'form-check p-2 mb-2';
+        div.style.cssText = 'border: 1px solid #dee2e6; border-radius: 0.375rem; background: white;';
+        
+        div.innerHTML = `
+          <input class="form-check-input" type="checkbox" id="typeProduit_${catId}" value="${catId}">
+          <label class="form-check-label ms-2" for="typeProduit_${catId}">
+            <span style="font-size: 1.2em; margin-right: 0.5rem;">${catIcon}</span>
+            <strong>${catName}</strong>
+            <small class="text-muted d-block mt-1">Code: ${cat.code}</small>
+          </label>
+        `;
+        container.appendChild(div);
+      });
+      
+      console.log('✅ populateTypesProduitsContainer() | ' + allCategories.length + ' catégories affichées');
+    }
+
+    // Afficher les types produits sélectionnés en MODE LISTE (édition)
+    function displaySelectedTypesList(selectedIds) {
+      const listContainer = document.getElementById('selectedTypesList');
+      listContainer.innerHTML = '';
+
+      if (!selectedIds || selectedIds.length === 0) {
+        listContainer.innerHTML = '<p class="text-muted"><small>Aucune catégorie sélectionnée</small></p>';
+        document.getElementById('btnModifyTypes').style.display = 'none';
+        return;
+      }
+
+      selectedIds.forEach(typeId => {
+        const cat = allCategories.find(c => String(c._id) === String(typeId));
+        if (cat) {
+          const badge = document.createElement('span');
+          badge.className = 'badge bg-success text-white p-2 d-flex align-items-center gap-2';
+          badge.style.fontSize = '0.95rem';
+          badge.innerHTML = `
+            <span style="font-size: 1.2em;">${cat.icone || '📦'}</span>
+            <span>${cat.nomType || cat.nom}</span>
+            <button type="button" class="btn-close btn-close-white" data-category-id="${typeId}" style="font-size: 0.7rem;"></button>
+          `;
+          
+          // Ajouter l'événement pour retirer une catégorie
+          badge.querySelector('button').addEventListener('click', (e) => {
+            e.preventDefault();
+            const categoryId = e.currentTarget.getAttribute('data-category-id');
+            const updatedIds = selectedIds.filter(id => String(id) !== String(categoryId));
+            displaySelectedTypesList(updatedIds);
+            
+            // Mettre à jour les checkboxes en mode sélection
+            const checkbox = document.getElementById(`typeProduit_${categoryId}`);
+            if (checkbox) checkbox.checked = false;
+          });
+          
+          listContainer.appendChild(badge);
+        }
+      });
+
+      document.getElementById('btnModifyTypes').style.display = 'inline-block';
+    }
+
     // Initialiser au chargement
     document.addEventListener('DOMContentLoaded', function() {
       console.log('🚀 DOMContentLoaded déclenché dans modal_stock_settings.php');
+      
+      // ✅ Initialiser les popovers Bootstrap
+      const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+      popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+      });
+      console.log('✅ Popovers initialisés | Nombre:', popoverTriggerList.length);
       
       // Essayer plusieurs façons de récupérer le magasinId
       // 1. D'abord chercher dans sessionStorage
@@ -1002,13 +1659,14 @@
       console.log('📦 currentMagasinId final:', currentMagasinId);
       
       if (currentMagasinId) {
-        console.log('✅ currentMagasinId existe, appel de loadCategoriesModal()');
+        console.log('✅ currentMagasinId existe, appel de loadCategoriesModal() et loadRayonsModal()');
         loadCategoriesModal();
+        loadRayonsModal();
       } else {
-        console.warn('⚠️ currentMagasinId est vide/null - categories ne seront pas chargées');
+        console.warn('⚠️ currentMagasinId est vide/null - données ne seront pas chargées');
       }
 
-      // Événements
+      // ==================== ÉVÉNEMENTS CATÉGORIES ====================
       document.getElementById('btnAddNewCategory').addEventListener('click', newCategory);
       document.getElementById('formEditCategory').addEventListener('submit', saveCategory);
       document.getElementById('btnDeleteCategory').addEventListener('click', deleteCategory);
@@ -1020,32 +1678,53 @@
       // Gestion champs personnalisés
       document.getElementById('btnAddCustomField').addEventListener('click', function() {
         const container = document.getElementById('customFieldsContainer');
-        const field = document.createElement('div');
-        field.className = 'row g-2 mb-2 p-2 border rounded bg-white';
-        field.innerHTML = `
-          <div class="col-md-3">
-            <input type="text" class="form-control form-control-sm" placeholder="Nom du champ">
-          </div>
-          <div class="col-md-3">
-            <select class="form-select form-select-sm">
-              <option value="text">Texte</option>
-              <option value="number">Nombre</option>
-              <option value="date">Date</option>
-              <option value="select">Choix</option>
-            </select>
-          </div>
-          <div class="col-md-5">
-            <input type="text" class="form-control form-control-sm" placeholder="Options (virgule séparées)">
-          </div>
-          <div class="col-md-1">
-            <button type="button" class="btn btn-sm btn-outline-danger">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        `;
-        field.querySelector('button').addEventListener('click', () => field.remove());
-        container.appendChild(field);
+        container.appendChild(createCustomFieldElement());
       });
+
+      // ==================== ÉVÉNEMENTS RAYONS ====================
+      const formRayon = document.getElementById('formConfigRayon');
+      if (formRayon) {
+        formRayon.addEventListener('submit', saveRayon);
+      }
+
+      // Bouton "Modifier les catégories"
+      const btnModifyTypes = document.getElementById('btnModifyTypes');
+      if (btnModifyTypes) {
+        btnModifyTypes.addEventListener('click', function(e) {
+          e.preventDefault();
+          // Afficher le mode sélection et remplir les checkboxes
+          document.getElementById('selectionMode').style.display = '';
+          document.getElementById('listMode').style.display = 'none';
+          
+          // Populate le mode sélection
+          populateTypesProduitsContainer();
+          
+          // Cocher les catégories déjà sélectionnées
+          const selectedList = document.getElementById('selectedTypesList');
+          selectedList.querySelectorAll('.badge').forEach(badge => {
+            const catId = badge.querySelector('button').getAttribute('data-category-id');
+            const checkbox = document.getElementById(`typeProduit_${catId}`);
+            if (checkbox) checkbox.checked = true;
+          });
+          
+          console.log('✅ Mode modification activé - checkboxes affichés');
+        });
+      }
+
+      const btnDeleteRayon = document.getElementById('btnDeleteRayon');
+      if (btnDeleteRayon) {
+        btnDeleteRayon.addEventListener('click', deleteRayon);
+      }
+
+      const btnAnnulerRayon = document.getElementById('btnAnnulerRayon');
+      if (btnAnnulerRayon) {
+        btnAnnulerRayon.addEventListener('click', newRayon);
+      }
+
+      const btnCreateRayonFooter = document.getElementById('btnCreateRayonFooter');
+      if (btnCreateRayonFooter) {
+        btnCreateRayonFooter.addEventListener('click', newRayon);
+      }
 
       // Recherche rayons (existant)
       const searchInput = document.getElementById('searchRayons');
@@ -1079,14 +1758,31 @@
           
           console.log('📦 newMagasinId du modal:', newMagasinId, '| currentMagasinId:', currentMagasinId);
           if (newMagasinId && newMagasinId !== currentMagasinId) {
-            console.log('✅ Changement de magasin détecté, appel de loadCategoriesModal()');
+            console.log('✅ Changement de magasin détecté, appel de loadCategoriesModal() et loadRayonsModal()');
             currentMagasinId = newMagasinId;
-            categoriesLoaded = false; // Reset flag quand on change de magasin
+            categoriesLoaded = false;
+            rayonsLoaded = false;
             loadCategoriesModal();
+            loadRayonsModal();
           } else if (!newMagasinId) {
             console.warn('⚠️ newMagasinId vide - magasin non trouvé');
           } else {
-            console.log('ℹ️ Même magasin, pas de rechargement');
+            console.log('ℹ️ Même magasin, mais on recharge les catégories pour assurer à jour');
+            // ✅ TOUJOURS charger les catégories pour s'assurer que les checkboxes sont disponibles
+            loadCategoriesModal();
+          }
+        });
+      }
+
+      // ✨ IMPORTANT: Charger les rayons quand on clique sur l'onglet "Rayons"
+      const rayonsTab = document.getElementById('rayons-tab');
+      if (rayonsTab) {
+        rayonsTab.addEventListener('click', function() {
+          console.log('📌 Onglet "Rayons" cliqué | rayonsLoaded:', rayonsLoaded, '| currentMagasinId:', currentMagasinId);
+          if (!rayonsLoaded && currentMagasinId) {
+            console.log('🔄 Premier accès à l\'onglet, appel de loadRayonsModal()');
+            loadRayonsModal();
+            rayonsLoaded = true;
           }
         });
       }
@@ -1111,4 +1807,5 @@
         });
       }
     });
+    })(); // Fin du module IIFE
   </script>

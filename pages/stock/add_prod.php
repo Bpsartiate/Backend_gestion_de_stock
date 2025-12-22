@@ -78,16 +78,9 @@
             </div>
           </div>
 
-          <!-- 3. TYPE PRODUIT + UNITÉ -->
+          <!-- 3. QUANTITÉ & UNITÉ -->
           <div class="row g-3 mb-4">
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Type Produit <span class="text-danger">*</span></label>
-              <select name="typeProduit" id="typeProduit" class="form-select" required>
-                <option value="">Choisir type...</option>
-              </select>
-              <div class="invalid-feedback">Type obligatoire</div>
-            </div>
-            <div class="col-md-6">
+            <div class="col-md-12">
               <label class="form-label fw-bold" id="labelQuantite">Stock Initial <span class="text-danger">*</span></label>
               <div class="input-group">
                 <input type="number" name="quantite" id="quantite" class="form-control" min="0" step="0.01" required />
@@ -115,7 +108,7 @@
             </div>
           </div>
 
-          <!-- 4.5. GESTION FIFO/LIFO (Mode de rotation stock) -->
+          <!-- 4.5. GESTION FIFO/LIFO -->
           <div class="card bg-light border-info mb-4">
             <div class="card-header bg-info bg-opacity-10 border-info py-2">
               <h6 class="mb-0 fw-bold"><i class="fas fa-exchange-alt me-2 text-info"></i>Gestion Lot & Rotation Stock</h6>
@@ -319,3 +312,269 @@
     animation: pulse 2s infinite;
   }
 </style>
+
+<!-- ===== SCRIPT GESTION CATÉGORIES ===== -->
+<script>
+  // Module IIFE pour éviter les conflits de variables globales
+  (function() {
+    // Variables globales au module
+    let selectedCategorie = null;
+    let allCategories = [];
+    let currentMagasinId = null;
+
+  // API Base URL
+  const API_BASE = typeof window.API_BASE !== 'undefined' && window.API_BASE 
+    ? window.API_BASE + '/api/protected'
+    : 'https://backend-gestion-de-stock.onrender.com/api/protected';
+
+  // ✅ Helper pour obtenir le token d'authentification
+  function getAuthToken() {
+    let token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+    }
+    if (!token) {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'token' || name === 'authToken') {
+          token = decodeURIComponent(value);
+          break;
+        }
+      }
+    }
+    return token || '';
+  }
+
+  // ✅ Charger les catégories depuis l'API
+  async function loadCategories() {
+    // Récupérer le magasinId
+    currentMagasinId = sessionStorage.getItem('currentMagasinId');
+    if (!currentMagasinId && typeof window.stockConfig !== 'undefined') {
+      currentMagasinId = window.stockConfig.magasinId;
+    }
+    if (!currentMagasinId) {
+      currentMagasinId = localStorage.getItem('currentMagasinId');
+    }
+
+    if (!currentMagasinId) {
+      console.warn('⚠️ Aucun magasinId trouvé');
+      return;
+    }
+
+    try {
+      const authToken = getAuthToken();
+      console.log('🔵 Chargement des catégories pour magasin:', currentMagasinId);
+      
+      const response = await fetch(`${API_BASE}/magasins/${currentMagasinId}/categories`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
+      }
+
+      const data = await response.json();
+      allCategories = data.categories || [];
+      console.log('✅ Catégories chargées:', allCategories);
+      
+      // Remplir le dropdown
+      renderCategoriesList();
+    } catch (error) {
+      console.error('❌ Erreur chargement catégories:', error);
+    }
+  }
+
+  // ✅ Afficher les catégories dans le dropdown
+  function renderCategoriesList() {
+    const list = document.getElementById('categorieList');
+    list.innerHTML = '';
+
+    if (allCategories.length === 0) {
+      list.innerHTML = '<div class="text-muted p-3"><small>Aucune catégorie</small></div>';
+      return;
+    }
+
+    allCategories.forEach(cat => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'list-group-item list-group-item-action';
+      
+      // Générer un code si absent (ex: "asd" → "ASD")
+      const code = cat.code || (cat.nomType || cat.nom || '').toUpperCase().slice(0, 3);
+      const unite = cat.unitePrincipale || cat.unite || 'unités';
+      
+      item.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span style="font-size:1.2em;">${cat.icone || '📦'}</span>
+            <strong>${cat.nomType || cat.nom}</strong>
+            <small class="text-muted d-block">${code} • ${unite}</small>
+          </div>
+          <span class="badge bg-info">${unite}</span>
+        </div>
+      `;
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectCategorie(cat);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  // ✅ Sélectionner une catégorie
+  function selectCategorie(categorie) {
+    selectedCategorie = categorie;
+    console.log('✅ Catégorie sélectionnée:', categorie);
+
+    // Remplir l'ID caché
+    document.getElementById('categorieId').value = categorie._id;
+
+    // Afficher en badge
+    displaySelectedCategoriesList([categorie]);
+
+    // Appliquer les paramètres de la catégorie
+    onCategorieSelected(categorie);
+
+    // Fermer le dropdown
+    document.getElementById('categorieDropdown').style.display = 'none';
+    document.getElementById('categorieSearch').value = '';
+  }
+
+  // ✅ Afficher les catégories sélectionnées en badges
+  function displaySelectedCategoriesList(categories) {
+    const container = document.getElementById('selectedCategoriesList');
+    container.innerHTML = '';
+
+    if (categories.length === 0) {
+      container.innerHTML = '<small class="text-muted">Aucune catégorie sélectionnée</small>';
+      return;
+    }
+
+    categories.forEach(cat => {
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-primary text-white p-2 d-flex align-items-center gap-2';
+      badge.style.fontSize = '0.95rem';
+      badge.innerHTML = `
+        <span>${cat.icone || '📦'}</span>
+        <span>${cat.nomType || cat.nom}</span>
+        <button type="button" class="btn-close btn-close-white" style="font-size: 0.7rem;"></button>
+      `;
+
+      badge.querySelector('button').addEventListener('click', () => {
+        selectedCategorie = null;
+        document.getElementById('categorieId').value = '';
+        displaySelectedCategoriesList([]);
+        onCategorieSelected(null);
+      });
+
+      container.appendChild(badge);
+    });
+  }
+
+  // ✅ Rechercher les catégories
+  function filterCategories(query) {
+    const list = document.getElementById('categorieList');
+    const items = list.querySelectorAll('.list-group-item');
+    const q = query.toLowerCase();
+
+    items.forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(q) ? '' : 'none';
+    });
+  }
+
+  // ✅ Fonction appelée quand une catégorie est sélectionnée
+  function onCategorieSelected(categorie) {
+    if (!categorie) {
+      console.log('🧹 Catégorie désélectionnée');
+      document.getElementById('uniteLabel').textContent = 'unités';
+      document.getElementById('modeGestionText').innerHTML = 'Le mode de rotation sera appliqué selon la catégorie choisie.';
+      return;
+    }
+
+    console.log('✅ Catégorie sélectionnée:', categorie);
+
+    // 1️⃣ Mettre à jour l'unité
+    const unite = categorie.unitePrincipale || categorie.unite || 'unités';
+    document.getElementById('uniteLabel').textContent = unite;
+    console.log('📦 Unité mise à jour:', unite);
+
+    // 2️⃣ Mettre à jour le mode FIFO/LIFO
+    const modeGestion = categorie.modeGestion || 'FIFO';
+    const modeText = modeGestion === 'FIFO' 
+      ? `📋 Mode <strong>FIFO</strong> (Premier Entré - Premier Sorti) appliqué pour "${categorie.nomType || categorie.nom}"`
+      : `📋 Mode <strong>LIFO</strong> (Dernier Entré - Premier Sorti) appliqué pour "${categorie.nomType || categorie.nom}"`;
+    document.getElementById('modeGestionText').innerHTML = modeText;
+    console.log('🔄 Mode FIFO/LIFO:', modeGestion);
+
+    // 3️⃣ Afficher les champs supplémentaires si présents
+    if (categorie.champsSupplementaires && categorie.champsSupplementaires.length > 0) {
+      console.log('📋 Champs supplémentaires:', categorie.champsSupplementaires);
+      displaySupplementaryFields(categorie.champsSupplementaires);
+    } else {
+      clearSupplementaryFields();
+    }
+  }
+
+  // Afficher les champs supplémentaires
+  function displaySupplementaryFields(champs) {
+    console.log('🎯 Afficher champs supplémentaires:', champs);
+  }
+
+  // Effacer les champs supplémentaires
+  function clearSupplementaryFields() {
+    console.log('🧹 Champs supplémentaires effacés');
+  }
+
+  // ===== ÉVÉNEMENTS =====
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOMContentLoaded - add_prod.php');
+
+    // Charger les catégories
+    loadCategories();
+
+    // Dropdown search input
+    const categorieSearch = document.getElementById('categorieSearch');
+    if (categorieSearch) {
+      categorieSearch.addEventListener('input', (e) => {
+        document.getElementById('categorieDropdown').style.display = 'block';
+        filterCategories(e.target.value);
+      });
+
+      categorieSearch.addEventListener('focus', () => {
+        document.getElementById('categorieDropdown').style.display = 'block';
+      });
+    }
+
+    // Fermer le dropdown quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('[id^="categorie"]') && !e.target.closest('#categorieSearch')) {
+        document.getElementById('categorieDropdown').style.display = 'none';
+      }
+    });
+
+    // Bouton créer catégorie
+    const btnNewCategorie = document.getElementById('btnNewCategorie');
+    if (btnNewCategorie) {
+      btnNewCategorie.addEventListener('click', () => {
+        console.log('➕ Créer nouvelle catégorie - à implémenter');
+        // TODO: Ouvrir modal de création de catégorie
+      });
+    }
+  });
+
+    // Recharger les catégories quand le modal s'ouvre
+    const modalElement = document.getElementById('modalProduit');
+    if (modalElement) {
+      modalElement.addEventListener('show.bs.modal', function() {
+        console.log('🎬 Modal ouvert - rechargement des catégories');
+        loadCategories();
+      });
+    }
+  })(); // Fin du module
+</script>

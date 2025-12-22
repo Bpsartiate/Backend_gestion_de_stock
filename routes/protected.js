@@ -1353,7 +1353,7 @@ router.post('/magasins/:magasinId/types-produits', authMiddleware, blockVendeur,
   try {
     const { magasinId } = req.params;
     const requester = req.user;
-    const { nomType, unitePrincipale, champsSupplementaires, seuilAlerte, capaciteMax, photoRequise } = req.body;
+    const { nomType, code, unitePrincipale, champsSupplementaires, seuilAlerte, capaciteMax, photoRequise } = req.body;
 
     const magasin = await Magasin.findById(magasinId);
     if (!magasin) {
@@ -1370,9 +1370,13 @@ router.post('/magasins/:magasinId/types-produits', authMiddleware, blockVendeur,
       return res.status(400).json({ message: 'Type de produit déjà existant' });
     }
 
+    // Générer le code si non fourni (3 premières lettres du nomType en majuscules)
+    const generatedCode = code || nomType.substring(0, 3).toUpperCase();
+
     const typeProduit = new TypeProduit({
       magasinId,
       nomType,
+      code: generatedCode,
       unitePrincipale,
       champsSupplementaires,
       seuilAlerte,
@@ -1408,7 +1412,7 @@ router.put('/types-produits/:typeProduitId', authMiddleware, blockVendeur, async
   try {
     const { typeProduitId } = req.params;
     const requester = req.user;
-    const { nomType, unitePrincipale, champsSupplementaires, seuilAlerte, capaciteMax, photoRequise } = req.body;
+    const { nomType, code, unitePrincipale, champsSupplementaires, seuilAlerte, capaciteMax, photoRequise } = req.body;
 
     const typeProduit = await TypeProduit.findById(typeProduitId);
     if (!typeProduit) {
@@ -1421,6 +1425,7 @@ router.put('/types-produits/:typeProduitId', authMiddleware, blockVendeur, async
     }
 
     typeProduit.nomType = nomType || typeProduit.nomType;
+    typeProduit.code = code || typeProduit.code;
     typeProduit.unitePrincipale = unitePrincipale || typeProduit.unitePrincipale;
     typeProduit.champsSupplementaires = champsSupplementaires || typeProduit.champsSupplementaires;
     typeProduit.seuilAlerte = seuilAlerte !== undefined ? seuilAlerte : typeProduit.seuilAlerte;
