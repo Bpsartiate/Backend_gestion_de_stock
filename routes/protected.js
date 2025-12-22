@@ -2330,10 +2330,146 @@ router.put('/inventaires/:rapportId/valider', authMiddleware, blockVendeur, asyn
       console.error('activity.save.error', actErr);
     }
 
-    return res.json(rapport);
-  } catch (err) {
-    console.error('inventaires.valider.error', err);
-    return res.status(500).json({ message: 'Erreur: ' + err.message });
+
+// ==========================================
+// 📦 ROUTES CATÉGORIES / TYPES PRODUITS
+// ==========================================
+
+/**
+ * GET /api/protected/magasins/:magasinId/categories
+ * Récupérer toutes les catégories d'un magasin
+ */
+router.get('/magasins/:magasinId/categories', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    
+    const categories = await TypeProduit.find({ magasinId })
+      .select('_id nom code unite icone couleur seuil capacite photoRequired customFields')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, categories });
+  } catch (error) {
+    console.error('❌ GET categories error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/protected/magasins/:magasinId/categories
+ * Créer une nouvelle catégorie
+ */
+router.post('/magasins/:magasinId/categories', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const { nom, code, unite, icone, couleur, seuil, capacite, photoRequired, customFields } = req.body;
+
+    // Validation
+    if (!nom || !code || !unite || !icone) {
+      return res.status(400).json({ error: 'Champs obligatoires: nom, code, unite, icone' });
+    }
+
+    // Vérifier l'unicité du code par magasin
+    const exists = await TypeProduit.findOne({ magasinId, code: code.toUpperCase() });
+    if (exists) {
+      return res.status(400).json({ error: `Code "${code}" existe déjà pour ce magasin` });
+    }
+
+    const newCategory = new TypeProduit({
+      nom,
+      code: code.toUpperCase(),
+      unite,
+      icone,
+      couleur: couleur || '#3b82f6',
+      seuil: seuil || 5,
+      capacite: capacite || 1000,
+      photoRequired: photoRequired !== false,
+      customFields: customFields || [],
+      magasinId
+    });
+
+    await newCategory.save();
+    res.status(201).json({ success: true, message: '✅ Catégorie créée', category: newCategory });
+  } catch (error) {
+    console.error('❌ POST category error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/protected/categories/:categoryId
+ * Détails d'une catégorie
+ */
+router.get('/categories/:categoryId', authMiddleware, async (req, res) => {
+  try {
+    const category = await TypeProduit.findById(req.params.categoryId);
+    if (!category) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+    res.json({ success: true, category });
+  } catch (error) {
+    console.error('❌ GET category error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/protected/categories/:categoryId
+ * Modifier une catégorie
+ */
+router.put('/categories/:categoryId', authMiddleware, async (req, res) => {
+  try {
+    const { nom, code, unite, icone, couleur, seuil, capacite, photoRequired, customFields } = req.body;
+
+    const category = await TypeProduit.findById(req.params.categoryId);
+    if (!category) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+
+    // Vérifier l'unicité du code si changé
+    if (code && code.toUpperCase() !== category.code) {
+      const exists = await TypeProduit.findOne({
+        magasinId: category.magasinId,
+        code: code.toUpperCase(),
+        _id: { $ne: category._id }
+      });
+      if (exists) {
+        return res.status(400).json({ error: `Code "${code}" existe déjà` });
+      }
+    }
+
+    // Mise à jour
+    if (nom) category.nom = nom;
+    if (code) category.code = code.toUpperCase();
+    if (unite) category.unite = unite;
+    if (icone) category.icone = icone;
+    if (couleur) category.couleur = couleur;
+    if (seuil !== undefined) category.seuil = seuil;
+    if (capacite !== undefined) category.capacite = capacite;
+    if (photoRequired !== undefined) category.photoRequired = photoRequired;
+    if (customFields) category.customFields = customFields;
+
+    await category.save();
+    res.json({ success: true, message: '✅ Catégorie modifiée', category });
+  } catch (error) {
+    console.error('❌ PUT category error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/protected/categories/:categoryId
+ * Supprimer une catégorie
+ */
+router.delete('/categories/:categoryId', authMiddleware, async (req, res) => {
+  try {
+    const category = await TypeProduit.findByIdAndDelete(req.params.categoryId);
+    if (!category) {
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
+    }
+    res.json({ success: true, message: '✅ Catégorie supprimée' });
+  } catch (error) {
+    console.error('❌ DELETE category error:', error);
+    res.status(400).json({ error: error.message });
   }
 });
 

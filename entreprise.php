@@ -59,9 +59,8 @@
   <body>
 
     <!-- ===============================================-->
-    <!--    Page Protection & Auth Init-->
+    <!--    Main Container-->
     <!-- ===============================================-->
-    <?php include_once 'includes/auth-init.php'; ?>
     <main class="main" id="top">
       <div class="container" data-layout="container">
         <script>

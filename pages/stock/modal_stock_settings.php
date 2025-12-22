@@ -200,117 +200,195 @@
           <div class="tab-pane fade" id="produits" role="tabpanel" aria-labelledby="produits-tab">
             <div class="row gy-3 gx-3">
 
-              <!-- LISTE TYPES PRODUITS -->
+              <!-- LISTE TYPES PRODUITS GAUCHE -->
               <div class="col-lg-5">
                 <div class="card h-100 shadow-lg border-0">
                   <div class="card-header bg-gradient-info text-white p-3 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
                       <i class="fas fa-layer-group me-2"></i>
-                      <h5 class="mb-0 panel-title">Types de Produits</h5>
+                      <h5 class="mb-0 panel-title">Catégories Produits</h5>
                     </div>
-                    <div class="d-flex align-items-center">
-                      <span class="badge bg-white text-info total-badge me-2" id="totalTypes">0</span>
-                      <button class="btn btn-sm btn-light text-info" data-bs-toggle="modal"
-                              data-bs-target="#modalCreateType" title="Nouveau type">
-                        <i class="fas fa-plus"></i>
-                      </button>
-                    </div>
+                    <span class="badge bg-white text-info total-badge" id="totalCategories">0</span>
                   </div>
+
                   <div class="card-body p-2">
-                    <div class="list-group list-group-flush" id="typesList"
-                         style="max-height: 50vh; overflow: auto; padding: .25rem;">
-                      <!-- Dynamique -->
+                    <div class="input-group input-group-sm mb-2">
+                      <span class="input-group-text"><i class="fas fa-search"></i></span>
+                      <input type="search" id="searchCategories" class="form-control form-control-sm"
+                             placeholder="Rechercher une catégorie...">
+                    </div>
+                    <div class="list-group list-group-flush" id="categoriesList"
+                         style="max-height: 55vh; overflow: auto; padding: .25rem;">
+                      <!-- Dynamique: Catégories chargées depuis localStorage -->
                     </div>
                   </div>
+
                   <div class="card-footer bg-light border-0 py-2">
-                    <button class="btn btn-outline-primary btn-sm w-100" id="btnCreateTypeFooter">
-                      <i class="fas fa-plus me-2"></i>Nouveau Type Produit
+                    <button class="btn btn-outline-primary btn-sm w-100" id="btnAddNewCategory">
+                      <i class="fas fa-plus me-2"></i>Ajouter Catégorie
                     </button>
                   </div>
                 </div>
               </div>
 
-              <!-- CONFIG TYPE PRODUIT -->
+              <!-- PANEL CONFIG CATÉGORIE DROITE -->
               <div class="col-lg-7">
                 <div class="card shadow-lg border-0">
                   <div class="card-header bg-gradient-primary text-white p-4">
-                    <h4><i class="fas fa-cogs me-2"></i>Configuration Type Produit</h4>
-                    <small>Adaptez le système à votre activité (Tissus, Pharmacie, etc.).</small>
+                    <h5 class="mb-1" id="editCategoryTitle">Créer une nouvelle catégorie</h5>
+                    <small id="editCategorySubtitle">Remplissez les informations ci-dessous</small>
                   </div>
+
                   <div class="card-body p-4">
-                    <form id="configTypeForm">
-                      <div class="row mb-4">
+                    <form id="formEditCategory">
+                      <input type="hidden" id="categoryEditId" value="">
+
+                      <!-- INFOS PRINCIPALES -->
+                      <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                          <label class="form-label fw-bold">Nom du type</label>
-                          <input type="text" class="form-control" name="nomType"
-                                 placeholder="Ex: TISSUS, PHARMACIE, AUTO" required>
+                          <label class="form-label fw-bold">Nom Catégorie <span class="text-danger">*</span></label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-primary text-white">📦</span>
+                            <input type="text" class="form-control fw-semibold" id="catEditNom" 
+                                   placeholder="TISSUS, OUTILS, etc." required>
+                          </div>
                         </div>
                         <div class="col-md-6">
-                          <label class="form-label fw-bold">Unité principale</label>
-                          <select class="form-select" name="unitePrincipale" required>
+                          <label class="form-label fw-bold">Code <span class="text-danger">*</span></label>
+                          <div class="input-group">
+                            <span class="input-group-text bg-info text-white">#</span>
+                            <input type="text" class="form-control text-uppercase fw-semibold" id="catEditCode" 
+                                   placeholder="TISS" maxlength="4" required>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- UNITÉ & ICÔNE & COULEUR -->
+                      <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                          <label class="form-label fw-bold">Unité <span class="text-danger">*</span></label>
+                          <select class="form-select fw-semibold" id="catEditUnite" required>
+                            <option value="">Choisir...</option>
                             <option value="metres">Mètres (m)</option>
                             <option value="kg">Kilogrammes (kg)</option>
                             <option value="boites">Boîtes</option>
                             <option value="pieces">Pièces</option>
                             <option value="litres">Litres (L)</option>
-                            <option value="litres">Litres (L)</option>
-
+                            <option value="grammes">Grammes (g)</option>
+                            <option value="ml">Millilitres (ml)</option>
                           </select>
                         </div>
+                        <div class="col-md-4">
+                          <label class="form-label fw-bold">Icône <span class="text-danger">*</span></label>
+                          <select class="form-select fs-3" id="catEditIcone" required>
+                            <option value="">Choisir...</option>
+                            <option value="📦">📦 Paquet</option>
+                            <option value="👕">👕 Vêtement</option>
+                            <option value="🔧">🔧 Outil</option>
+                            <option value="💊">💊 Santé</option>
+                            <option value="🍞">🍞 Aliment</option>
+                            <option value="🔌">🔌 Électrique</option>
+                            <option value="📚">📚 Document</option>
+                            <option value="🛠️">🛠️ Construction</option>
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label fw-bold">Couleur</label>
+                          <input type="color" class="form-control form-control-color" id="catEditCouleur" 
+                                 value="#3b82f6" title="Sélectionner couleur">
+                        </div>
                       </div>
 
+                      <!-- SEUILS & CAPACITÉ -->
+                      <div class="row g-3 mb-4 p-3 bg-light border-start border-4 border-warning rounded">
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold text-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Seuil Alerte (min)
+                          </label>
+                          <input type="number" class="form-control" id="catEditSeuil" value="5" min="0">
+                          <small class="text-muted">Alerte si stock ≤ cette valeur</small>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold text-info">
+                            <i class="fas fa-box me-2"></i>Capacité Max
+                          </label>
+                          <input type="number" class="form-control" id="catEditCapacite" value="1000" min="1">
+                          <small class="text-muted">Stock maximum permis</small>
+                        </div>
+                      </div>
+
+                      <!-- CHAMPS PERSONNALISÉS -->
                       <div class="mb-4">
-                        <label class="form-label fw-bold">Champs supplémentaires</label>
-                        <div id="champsContainer">
-                          <div class="champ-row row g-2 mb-3 p-3 border rounded-3 bg-light">
-                            <div class="col-md-3">
-                              <input class="form-control champ-nom" placeholder="couleur">
+                        <label class="form-label fw-bold d-flex justify-content-between">
+                          <span><i class="fas fa-sliders-h me-2"></i>Champs Supplémentaires</span>
+                          <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddCustomField">
+                            <i class="fas fa-plus me-1"></i>Ajouter
+                          </button>
+                        </label>
+
+                        <!-- TIPS GUIDING SECTION -->
+                        <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+                          <div class="d-flex align-items-start">
+                            <i class="fas fa-lightbulb dark me-3 mt-1" style="font-size: 1.3em; color: #0c63e4;"></i>
+                            <div class="flex-grow-1">
+                              <strong>Exemples de champs personnalisés:</strong>
+                              <div class="mt-2 small">
+                                <p class="mb-2"><strong>Pour TISSUS:</strong> Composition (Texte) • Motif (Choix: Uni, Rayé, Carreaux) • Largeur cm (Nombre)</p>
+                                <p class="mb-2"><strong>Pour OUTILS:</strong> Marque (Texte) • Type d'énergie (Choix: Électrique, Batterie, Manuel) • Garantie ans (Nombre)</p>
+                                <p class="mb-0"><strong>Pour ALIMENTS:</strong> Allergènes (Texte) • DLC (Date) • Température (Choix: Ambiant, Froid, Congélé)</p>
+                              </div>
                             </div>
-                            <div class="col-md-3">
-                              <select class="form-select champ-type">
-                                <option value="text">Texte</option>
-                                <option value="select">Choix</option>
-                                <option value="number">Nombre</option>
-                                <option value="date">Date</option>
-                              </select>
-                            </div>
-                            <div class="col-md-4">
-                              <input class="form-control champ-options" placeholder="Rouge,Bleu,Vert">
-                            </div>
-                            <div class="col-md-2">
-                              <button type="button" class="btn btn-outline-danger btn-sm remove-champ">
-                                <i class="fas fa-trash"></i>
-                              </button>
-                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
                           </div>
                         </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addChamp">
-                          <i class="fas fa-plus me-1"></i>Champ
+
+                        <div id="customFieldsContainer" class="space-y-2">
+                          <!-- Champs supplémentaires ajoutés dynamiquement -->
+                        </div>
+                      </div>
+
+                      <!-- CONFIGURATIONS -->
+                      <div class="form-check mb-4 p-3 bg-warning bg-opacity-10 rounded border border-warning">
+                        <input class="form-check-input" type="checkbox" id="catEditPhotoRequired" checked>
+                        <label class="form-check-label fw-semibold" for="catEditPhotoRequired">
+                          <i class="fas fa-camera me-2 text-warning"></i>Photo OBLIGATOIRE à chaque entrée stock
+                        </label>
+                        <small class="text-muted d-block mt-1 ms-4">Chaque ajout de stock pour cette catégorie devra avoir une photo</small>
+                      </div>
+
+                      <!-- BOUTONS ACTION -->
+                      <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" id="btnCancelEditCategory">
+                          <i class="fas fa-times me-2"></i>Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                          <i class="fas fa-save me-2"></i>Sauvegarder Catégorie
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" id="btnDeleteCategory" style="display:none;">
+                          <i class="fas fa-trash me-2"></i>Supprimer
                         </button>
                       </div>
-
-                      <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" id="imageRequired" name="imageRequired" checked>
-                        <label class="form-check-label fw-semibold" for="imageRequired">
-                          <i class="fas fa-camera me-1 text-warning"></i>Photo OBLIGATOIRE à chaque entrée stock
-                        </label>
-                      </div>
-
-                      <div class="row mb-4">
-                        <div class="col-md-6">
-                          <label>Seuil alerte (min)</label>
-                          <input type="number" class="form-control" name="seuilMin" value="5">
-                        </div>
-                        <div class="col-md-6">
-                          <label>Capacité max emplacement</label>
-                          <input type="number" class="form-control" name="capaciteMax" value="1000">
-                        </div>
-                      </div>
-
-                      <button type="submit" class="btn btn-primary btn-lg px-5">
-                        <i class="fas fa-save me-2"></i>Sauvegarder Configuration
-                      </button>
                     </form>
+
+                    <!-- KPI CATÉGORIE -->
+                    <div id="categoryKPI" class="row g-3 mt-4 p-3 bg-light rounded-3" style="display:none;">
+                      <div class="col-3 text-center border-end">
+                        <h5 class="text-success mb-1" id="kpiStock">0</h5>
+                        <small class="text-muted">En Stock</small>
+                      </div>
+                      <div class="col-3 text-center border-end">
+                        <h5 class="text-warning mb-1" id="kpiAlertes">0</h5>
+                        <small class="text-muted">Alertes</small>
+                      </div>
+                      <div class="col-3 text-center border-end">
+                        <h5 class="text-info mb-1" id="kpiArticles">0</h5>
+                        <small class="text-muted">Articles</small>
+                      </div>
+                      <div class="col-3 text-center">
+                        <h5 class="text-primary mb-1" id="kpiValeur">0€</h5>
+                        <small class="text-muted">Valeur</small>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -332,80 +410,526 @@
 
 
   <style>
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
+    /* ===== ANIMATIONS FLUIDES ===== */
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes slideInTab { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes slideInItem { from { opacity: 0; transform: translateX(-15px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ===== GÉNÉRAL ===== */
+    #btnSettingsStock { transition: all 0.3s ease; }
+    #btnSettingsStock:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+
+    /* ===== PANELS & CARDS ===== */
+    .panel-title { font-weight: 700; font-size: 1rem; margin: 0; }
+    .total-badge { 
+      font-weight: 700; 
+      padding: .35rem .55rem; 
+      border-radius: .6rem; 
+      animation: pulse 2s infinite;
+    }
+    .card { animation: slideDown 0.3s ease-out; }
+
+    /* ===== LIST ITEMS AVEC ANIMATIONS ===== */
+    #rayonsList .list-group-item, 
+    #typesList .list-group-item {
+      padding: .45rem .6rem; 
+      border: 0; 
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      animation: slideInItem 0.3s ease-out;
+    }
+    
+    #rayonsList .list-group-item:hover, 
+    #typesList .list-group-item:hover {
+      background-color: rgba(0,0,0,0.05);
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
-    #btnSettingsStock:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-      transition: all 0.3s ease;
+    #rayonsList .list-group-item.active, 
+    #typesList .list-group-item.active {
+      background-color: #e8f5ff;
+      border-left: 4px solid #0084ff;
+      padding-left: calc(.6rem - 4px);
+      font-weight: 600;
     }
 
-    #btnSettingsStock {
-      transition: all 0.3s ease;
+    /* ===== SEARCH INPUTS ===== */
+    #searchRayons { 
+      height: 34px; 
+      transition: all 0.2s ease;
     }
-        /* Styles spécifiques panneau Rayons */
-        .panel-title { font-weight: 700; font-size: 1rem; margin: 0; }
-        .total-badge { font-weight: 700; padding: .35rem .55rem; border-radius: .6rem; }
-        #rayonsList .list-group-item, #typesList .list-group-item { padding: .45rem .6rem; border: 0; border-bottom: 1px solid rgba(0,0,0,0.04); }
-        #searchRayons { height: 34px; }
-        /* Réduction des espaces verticaux entre les panneaux du modal */
-        .modal-body { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
-        .modal-body .tab-pane { padding-top: 0 !important; padding-bottom: 0 !important; }
-        .modal-header { padding-bottom: .5rem; }
-        .nav-tabs-custom { margin-bottom: .5rem; }
-        .card-footer { margin-top: 0 !important; padding-top: .65rem; padding-bottom: .65rem; }
+    #searchRayons:focus { 
+      box-shadow: 0 0 0 3px rgba(0,84,255,0.1);
+    }
+
+    /* ===== TABS ANIMATION FLUIDE ===== */
+    .nav-tabs-custom .nav-link {
+      position: relative;
+      transition: all 0.3s ease;
+      border: none;
+      color: #6b7280;
+    }
+    
+    .nav-tabs-custom .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      transform: scaleX(0);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 3px;
+      transform-origin: center;
+    }
+    
+    .nav-tabs-custom .nav-link:hover {
+      color: #1f2937;
+    }
+    
+    .nav-tabs-custom .nav-link.active {
+      color: #1f2937;
+      background-color: transparent;
+    }
+    
+    .nav-tabs-custom .nav-link.active::after {
+      transform: scaleX(1);
+    }
+
+    /* ===== TAB PANE ANIMATION ===== */
+    .tab-pane {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    /* ===== FORM INPUTS ANIMATION ===== */
+    .form-control, .form-select {
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* ===== COLOR PICKER ===== */
+    .form-control-color {
+      cursor: pointer;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.375rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-control-color:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* ===== BUTTONS ANIMATION ===== */
+    .btn {
+      transition: all 0.2s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    /* ===== MODAL SPACING ===== */
+    .modal-body { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+    .modal-body .tab-pane { padding-top: 0 !important; padding-bottom: 0 !important; }
+    .modal-header { padding-bottom: .5rem; }
+    .nav-tabs-custom { margin-bottom: .5rem; }
+    .card-footer { margin-top: 0 !important; padding-top: .65rem; padding-bottom: .65rem; }
+
+    /* ===== TABLEAU CATÉGORIES ===== */
+    #categoriesTableBody tr {
+      animation: slideInItem 0.3s ease-out;
+      transition: all 0.2s ease;
+    }
+
+    #categoriesTableBody tr:hover {
+      background-color: rgba(59, 130, 246, 0.05);
+      transform: scale(1.01);
+    }
+
+    #categoriesTableBody input[type="text"],
+    #categoriesTableBody input[type="number"],
+    #categoriesTableBody input[type="color"],
+    #categoriesTableBody select {
+      height: 32px;
+      font-size: 0.85rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    #categoriesTableBody input[type="color"] {
+      cursor: pointer;
+      border: 1px solid #d1d5db;
+    }
+
+    #categoriesTableBody .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .table-responsive {
+      border-radius: 0.375rem;
+      border: 1px solid #e5e7eb;
+    }
+
+    .table th {
+      background-color: #f9fafb;
+      color: #374151;
+      font-weight: 600;
+      border-color: #d1d5db;
+    }
+
+    .table td {
+      padding: 0.5rem;
+      border-color: #e5e7eb;
+      vertical-align: middle;
+    }
   </style>
 
   <script>
-    // Sauvegarder les paramètres
-    document.getElementById('btnSaveSettings').addEventListener('click', function() {
-      const settings = {
-        seuilAlerte: document.getElementById('seuilAlerte').value,
-        uniteDefaut: document.getElementById('uniteDefaut').value,
-        afficherPrix: document.getElementById('afficherPrix').checked,
-        afficherEmplacement: document.getElementById('afficherEmplacement').checked,
-        afficherDates: document.getElementById('afficherDates').checked,
-        delaiRetention: document.getElementById('delaiRetention').value,
-        lignesParPage: document.getElementById('lignesParPage').value
-      };
-      localStorage.setItem('stockSettings', JSON.stringify(settings));
-      alert('Paramètres enregistrés avec succès !');
-      bootstrap.Modal.getInstance(document.getElementById('modalStockSettings')).hide();
-    });
+    // ===== GESTION CATÉGORIES VIA API =====
+    let allCategories = [];
+    let currentEditingCategoryId = null;
+    let currentMagasinId = null; // À récupérer de la session
+    
+    const API_BASE = '/api/protected'; // Adapter selon votre configuration
 
-    // Charger les paramètres au chargement de la page
-    window.addEventListener('DOMContentLoaded', function() {
-      const savedSettings = localStorage.getItem('stockSettings');
-      if(savedSettings) {
-        const settings = JSON.parse(savedSettings);
-        document.getElementById('seuilAlerte').value = settings.seuilAlerte || 10;
-        document.getElementById('uniteDefaut').value = settings.uniteDefaut || 'pcs';
-        document.getElementById('afficherPrix').checked = settings.afficherPrix !== false;
-        document.getElementById('afficherEmplacement').checked = settings.afficherEmplacement !== false;
-        document.getElementById('afficherDates').checked = settings.afficherDates !== false;
-        document.getElementById('delaiRetention').value = settings.delaiRetention || 365;
-        document.getElementById('lignesParPage').value = settings.lignesParPage || 10;
+    // Afficher une notification de chargement
+    function showLoading(show = true) {
+      let loader = document.getElementById('categoriesLoader');
+      if (show && !loader) {
+        loader = document.createElement('div');
+        loader.id = 'categoriesLoader';
+        loader.className = 'text-center py-4';
+        loader.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div>';
+        document.getElementById('categoriesList').appendChild(loader);
+      } else if (!show && loader) {
+        loader.remove();
       }
-            // Filtrage client pour la recherche de rayons
-            const searchInput = document.getElementById('searchRayons');
-            if(searchInput) {
-                searchInput.addEventListener('input', function(e) {
-                    const q = (e.target.value || '').trim().toLowerCase();
-                    const list = document.getElementById('rayonsList');
-                    if(!list) return;
-                    const items = list.querySelectorAll('.list-group-item');
-                    items.forEach(li => {
-                        const text = li.textContent.trim().toLowerCase();
-                        li.style.display = q === '' || text.indexOf(q) !== -1 ? '' : 'none';
-                    });
-                });
+    }
+
+    // Afficher les notifications Toast
+    function showNotification(message, type = 'info') {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+      alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+      alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      document.body.appendChild(alertDiv);
+      setTimeout(() => alertDiv.remove(), 4000);
+    }
+
+    // Charger les catégories depuis l'API
+    async function loadCategories() {
+      if (!currentMagasinId) {
+        console.warn('⚠️ magasinId non défini');
+        return;
+      }
+
+      try {
+        showLoading(true);
+        const response = await fetch(`${API_BASE}/magasins/${currentMagasinId}/categories`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erreur API: ${response.status}`);
+        }
+
+        const data = await response.json();
+        allCategories = data.categories || [];
+        renderCategoriesList();
+        updateCategoriesCount();
+        showLoading(false);
+      } catch (error) {
+        console.error('❌ Erreur chargement catégories:', error);
+        showNotification('❌ Erreur lors du chargement des catégories', 'danger');
+        showLoading(false);
+      }
+    }
+
+    // Afficher la liste des catégories
+    function renderCategoriesList() {
+      const list = document.getElementById('categoriesList');
+      list.innerHTML = '';
+
+      if (allCategories.length === 0) {
+        list.innerHTML = '<div class="text-muted text-center py-4"><i class="fas fa-inbox me-2"></i>Aucune catégorie</div>';
+        return;
+      }
+
+      allCategories.forEach((cat, idx) => {
+        const item = document.createElement('button');
+        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+        item.type = 'button';
+        item.innerHTML = `
+          <div class="text-start">
+            <div class="fw-bold"><span style="font-size:1.2em;">${cat.icone}</span> ${cat.nom}</div>
+            <small class="text-muted">${cat.code} • ${cat.unite}</small>
+          </div>
+          <div>
+            <span class="badge bg-info">${cat.seuil}</span>
+          </div>
+        `;
+        item.addEventListener('click', () => editCategory(idx));
+        list.appendChild(item);
+      });
+    }
+
+    // Créer une nouvelle catégorie
+    function newCategory() {
+      currentEditingCategoryId = null;
+      document.getElementById('categoryEditId').value = '';
+      document.getElementById('formEditCategory').reset();
+      document.getElementById('catEditCouleur').value = '#3b82f6';
+      document.getElementById('catEditSeuil').value = '5';
+      document.getElementById('catEditCapacite').value = '1000';
+      document.getElementById('catEditPhotoRequired').checked = true;
+      document.getElementById('customFieldsContainer').innerHTML = '';
+      document.getElementById('categoryKPI').style.display = 'none';
+      document.getElementById('btnDeleteCategory').style.display = 'none';
+      document.getElementById('editCategoryTitle').textContent = 'Créer une nouvelle catégorie';
+      document.getElementById('editCategorySubtitle').textContent = 'Remplissez les informations ci-dessous';
+      
+      // Déselectionner les items
+      document.querySelectorAll('#categoriesList .list-group-item').forEach(item => {
+        item.classList.remove('active');
+      });
+
+      document.getElementById('catEditNom').focus();
+    }
+
+    // Éditer une catégorie existante
+    function editCategory(idx) {
+      const cat = allCategories[idx];
+      currentEditingCategoryId = idx;
+      
+      document.getElementById('categoryEditId').value = cat._id;
+      document.getElementById('catEditNom').value = cat.nom || '';
+      document.getElementById('catEditCode').value = cat.code || '';
+      document.getElementById('catEditUnite').value = cat.unite || '';
+      document.getElementById('catEditIcone').value = cat.icone || '';
+      document.getElementById('catEditCouleur').value = cat.couleur || '#3b82f6';
+      document.getElementById('catEditSeuil').value = cat.seuil || 5;
+      document.getElementById('catEditCapacite').value = cat.capacite || 1000;
+      document.getElementById('catEditPhotoRequired').checked = cat.photoRequired !== false;
+      
+      document.getElementById('editCategoryTitle').textContent = `Éditer: ${cat.nom}`;
+      document.getElementById('editCategorySubtitle').textContent = `Code ${cat.code} • ${cat.unite}`;
+      document.getElementById('btnDeleteCategory').style.display = 'inline-block';
+      document.getElementById('categoryKPI').style.display = 'grid';
+
+      // Afficher les KPI (données depuis la base)
+      document.getElementById('kpiStock').textContent = (cat.stock || 0);
+      document.getElementById('kpiAlertes').textContent = (cat.alertes || 0);
+      document.getElementById('kpiArticles').textContent = (cat.articles || 0);
+      document.getElementById('kpiValeur').textContent = (cat.valeur || 0) + '€';
+
+      // Marquer l'item comme actif
+      document.querySelectorAll('#categoriesList .list-group-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      document.querySelectorAll('#categoriesList .list-group-item')[idx]?.classList.add('active');
+    }
+
+    // Sauvegarder ou créer une catégorie via API
+    async function saveCategory(e) {
+      e.preventDefault();
+
+      const nom = document.getElementById('catEditNom').value.trim();
+      const code = document.getElementById('catEditCode').value.trim().toUpperCase();
+      const unite = document.getElementById('catEditUnite').value;
+      const icone = document.getElementById('catEditIcone').value;
+      const couleur = document.getElementById('catEditCouleur').value;
+      const seuil = parseInt(document.getElementById('catEditSeuil').value) || 5;
+      const capacite = parseInt(document.getElementById('catEditCapacite').value) || 1000;
+      const photoRequired = document.getElementById('catEditPhotoRequired').checked;
+
+      // Validation
+      if (!nom || !code || !unite || !icone) {
+        showNotification('⚠️ Veuillez remplir tous les champs obligatoires', 'warning');
+        return;
+      }
+
+      // Collecter les champs personnalisés
+      const customFields = [];
+      document.querySelectorAll('#customFieldsContainer .row').forEach(row => {
+        const fieldName = row.querySelector('input[placeholder*="Nom"]')?.value;
+        const fieldType = row.querySelector('select')?.value;
+        const fieldOptions = row.querySelector('input[placeholder*="Options"]')?.value;
+        if (fieldName) {
+          customFields.push({
+            nom: fieldName,
+            type: fieldType,
+            options: fieldOptions ? fieldOptions.split(',').map(o => o.trim()) : []
+          });
+        }
+      });
+
+      const categoryData = {
+        nom, code, unite, icone, couleur, seuil, capacite, photoRequired, customFields
+      };
+
+      try {
+        const isNew = currentEditingCategoryId === null;
+        const method = isNew ? 'POST' : 'PUT';
+        const categoryId = isNew ? '' : allCategories[currentEditingCategoryId]._id;
+        const url = isNew 
+          ? `${API_BASE}/magasins/${currentMagasinId}/categories`
+          : `${API_BASE}/categories/${categoryId}`;
+
+        const response = await fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+          },
+          body: JSON.stringify(categoryData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Erreur API: ${response.status}`);
+        }
+
+        const result = await response.json();
+        showNotification(`✅ Catégorie "${nom}" ${isNew ? 'créée' : 'modifiée'} avec succès!`, 'success');
+        
+        // Recharger la liste
+        await loadCategories();
+        newCategory();
+      } catch (error) {
+        console.error('❌ Erreur sauvegarde:', error);
+        showNotification(`❌ Erreur: ${error.message}`, 'danger');
+      }
+    }
+
+    // Supprimer une catégorie via API
+    async function deleteCategory() {
+      if (currentEditingCategoryId === null) return;
+
+      const cat = allCategories[currentEditingCategoryId];
+      const nom = cat.nom;
+      
+      if (confirm(`⚠️ Êtes-vous sûr de vouloir supprimer "${nom}" ?`)) {
+        try {
+          const response = await fetch(`${API_BASE}/categories/${cat._id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
             }
+          });
+
+          if (!response.ok) {
+            throw new Error(`Erreur API: ${response.status}`);
+          }
+
+          showNotification(`✅ Catégorie "${nom}" supprimée!`, 'success');
+          await loadCategories();
+          newCategory();
+        } catch (error) {
+          console.error('❌ Erreur suppression:', error);
+          showNotification(`❌ Erreur: ${error.message}`, 'danger');
+        }
+      }
+    }
+
+    // Filtrer la liste
+    function filterCategories(query) {
+      const list = document.getElementById('categoriesList');
+      const items = list.querySelectorAll('.list-group-item:not(#categoriesLoader)');
+      const q = query.toLowerCase();
+
+      items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+
+    // Mettre à jour le compteur
+    function updateCategoriesCount() {
+      document.getElementById('totalCategories').textContent = allCategories.length;
+    }
+
+    // Initialiser au chargement
+    document.addEventListener('DOMContentLoaded', function() {
+      // Récupérer le magasinId depuis la page (à adapter selon votre implémentation)
+      const magasinIdElement = document.querySelector('[data-magasin-id]');
+      if (magasinIdElement) {
+        currentMagasinId = magasinIdElement.getAttribute('data-magasin-id');
+      }
+
+      if (currentMagasinId) {
+        loadCategories();
+      }
+
+      // Événements
+      document.getElementById('btnAddNewCategory').addEventListener('click', newCategory);
+      document.getElementById('formEditCategory').addEventListener('submit', saveCategory);
+      document.getElementById('btnDeleteCategory').addEventListener('click', deleteCategory);
+      document.getElementById('btnCancelEditCategory').addEventListener('click', newCategory);
+      document.getElementById('searchCategories').addEventListener('input', (e) => {
+        filterCategories(e.target.value);
+      });
+
+      // Gestion champs personnalisés
+      document.getElementById('btnAddCustomField').addEventListener('click', function() {
+        const container = document.getElementById('customFieldsContainer');
+        const field = document.createElement('div');
+        field.className = 'row g-2 mb-2 p-2 border rounded bg-white';
+        field.innerHTML = `
+          <div class="col-md-3">
+            <input type="text" class="form-control form-control-sm" placeholder="Nom du champ">
+          </div>
+          <div class="col-md-3">
+            <select class="form-select form-select-sm">
+              <option value="text">Texte</option>
+              <option value="number">Nombre</option>
+              <option value="date">Date</option>
+              <option value="select">Choix</option>
+            </select>
+          </div>
+          <div class="col-md-5">
+            <input type="text" class="form-control form-control-sm" placeholder="Options (virgule séparées)">
+          </div>
+          <div class="col-md-1">
+            <button type="button" class="btn btn-sm btn-outline-danger">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `;
+        field.querySelector('button').addEventListener('click', () => field.remove());
+        container.appendChild(field);
+      });
+
+      // Recherche rayons (existant)
+      const searchInput = document.getElementById('searchRayons');
+      if(searchInput) {
+        searchInput.addEventListener('input', function(e) {
+          const q = (e.target.value || '').trim().toLowerCase();
+          const list = document.getElementById('rayonsList');
+          if(!list) return;
+          const items = list.querySelectorAll('.list-group-item');
+          items.forEach(li => {
+            const text = li.textContent.trim().toLowerCase();
+            li.style.display = q === '' || text.indexOf(q) !== -1 ? '' : 'none';
+          });
+        });
+      }
     });
   </script>

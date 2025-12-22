@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<?php include_once "../includes/auth-init.php"; ?>
 <html lang="en-US" dir="ltr">
  <head>
     <meta charset="utf-8">
@@ -100,13 +101,15 @@
     <script src="../vendors/fontawesome/all.min.js"></script>
     <script src="../vendors/lodash/lodash.min.js"></script>
     <!-- <script src="https://polyfill.io/v3/polyfill.min.js?features=window.scroll"></script> -->
-   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="../vendors/list.js/list.min.js"></script>
     <script src="../vendors/bootstrap/bootstrap.min.js"></script>
-    <!-- ✅ Configuration API centralisée -->
-    <script src="../assets/js/api-config.js"></script>
-    <script src="../pages/stock/add.js"></script>
-    <script src="../pages/stock/reception.js"></script>
+    <!-- ✅ Configuration API centralisée - MAINTENANT DANS stock.js -->
+    <!-- <script src="../assets/js/api-config.js"></script> -->
+    <!-- <script src="../pages/stock/add.js"></script>
+    <script src="../pages/stock/reception.js"></script> -->
+    <!-- 📦 Stock Management System - CHARGÉ VIA stock_et_entrepo.php INCLUSION -->
+    <!-- <script src="../assets/js/stock.js"></script> -->
     <!-- toast -->
     <div aria-live="polite" aria-atomic="true" class="position-fixed p-3 top-0 start-50 translate-middle-x" style="z-index: 1080;">
   <div id="mainToast" class="toast align-items-center text-bg-primary border-0" role="status" aria-live="assertive" aria-atomic="true">

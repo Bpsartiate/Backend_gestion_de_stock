@@ -53,7 +53,6 @@
     </script>
   </head>
   <body>
-    <?php include_once 'includes/auth-init.php'; ?>
     <main class="main" id="top">
       <div class="container" data-layout="container">
         <?php include_once 'sidebar.php'; ?>

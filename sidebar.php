@@ -5,6 +5,30 @@
             if (navbarStyle && navbarStyle !== 'transparent') {
               document.querySelector('.navbar-vertical').classList.add(`navbar-${navbarStyle}`);
             }
+            
+            // Fix navigation links to use BASE_URL
+            document.addEventListener('DOMContentLoaded', function() {
+              const baseUrl = (typeof window.BASE_URL !== 'undefined' && window.BASE_URL) ? window.BASE_URL.replace(/\/$/, '') : '/backend_Stock';
+              
+              // Links that need BASE_URL prefix
+              const linksToFix = {
+                'href="entreprise.php"': baseUrl + '/entreprise.php',
+                'href="magasin.php"': baseUrl + '/magasin.php',
+                'href="guichet.php"': baseUrl + '/guichet.php',
+                'href="setting.php"': baseUrl + '/setting.php',
+                'href="pages/stocks_et_entreposage.php"': baseUrl + '/pages/stocks_et_entreposage.php'
+              };
+              
+              // Update all navigation links
+              document.querySelectorAll('.navbar-vertical a[href]').forEach(link => {
+                const href = link.getAttribute('href');
+                Object.entries(linksToFix).forEach(([pattern, replacement]) => {
+                  if (href && href.includes(pattern.replace('href="', '').replace('"', ''))) {
+                    link.href = replacement;
+                  }
+                });
+              });
+            });
           </script>
             <div class="d-flex align-items-center">
             <div class="toggle-icon-wrapper">
@@ -12,7 +36,9 @@
               <button class="btn navbar-toggler-humburger-icon navbar-vertical-toggle" data-bs-toggle="tooltip" data-bs-placement="left" title="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
 
             </div><a class="navbar-brand" href="pages/e-commerce.php">
-              <div class="d-flex align-items-center py-3"><img class="me-2" src="assets/img/gallery/gestion-de-la-chaine-logistique.png" alt="" width="40" /><span class="font-sans-serif">Aurora</span>
+              <div class="d-flex align-items-center py-3">
+                <span class="me-2" style="display: inline-block; width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">A</span>
+                <span class="font-sans-serif">Aurora</span>
               </div>
             </a>
           </div>
@@ -67,24 +93,14 @@
                       </a>
                       more inner pages
                     </li> -->
-                    <li class="nav-item"><a class="nav-link" href="pages/Réception_et_inspection.php">
-                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Réception et inspection</span>
-                        </div>
-                      </a>
-                      <!-- more inner pages-->
-                    </li>
+                  
                     <li class="nav-item"><a class="nav-link" href="pages/stocks_et_entreposage.php">
                         <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Stocks et entreposage</span>
                         </div>
                       </a>
                       <!-- more inner pages-->
                     </li>
-                    <li class="nav-item"><a class="nav-link" href="app/events/event-list.php">
-                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Gestion des biens</span>
-                        </div>
-                      </a>
-                      <!-- more inner pages-->
-                    </li>
+                   
                   </ul>
                   <!-- parent pages--><a class="nav-link dropdown-indicator" href="#e-commerce" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="e-commerce">
                     <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-coins"></span></span><span class="nav-link-text ps-1">Finances</span>
