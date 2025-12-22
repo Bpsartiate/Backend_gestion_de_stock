@@ -269,10 +269,10 @@
                           <label class="form-label fw-bold">Unité <span class="text-danger">*</span></label>
                           <select class="form-select fw-semibold" id="catEditUnite" required>
                             <option value="">Choisir...</option>
-                            <option value="metres">Mètres (m)</option>
+                            <option value="mètres">Mètres (m)</option>
                             <option value="kg">Kilogrammes (kg)</option>
-                            <option value="boites">Boîtes</option>
-                            <option value="pieces">Pièces</option>
+                            <option value="boîtes">Boîtes</option>
+                            <option value="pièces">Pièces</option>
                             <option value="litres">Litres (L)</option>
                             <option value="grammes">Grammes (g)</option>
                             <option value="ml">Millilitres (ml)</option>
@@ -596,10 +596,13 @@
   </style>
 
   <script>
+    console.log('🎬 Script modal_stock_settings.php chargé et exécuté');
+    
     // ===== GESTION CATÉGORIES VIA API =====
     let allCategories = [];
     let currentEditingCategoryId = null;
     let currentMagasinId = null; // À récupérer de la session
+    let categoriesLoaded = false; // Flag pour tracker si les catégories ont été chargées
     
     // Utiliser window.API_BASE s'il est défini, sinon utiliser l'URL de production
     const API_BASE = typeof window.API_BASE !== 'undefined' && window.API_BASE 
@@ -674,7 +677,9 @@
     }
 
     // Charger les catégories depuis l'API
-    async function loadCategories() {
+    async function loadCategoriesModal() {
+      console.log('🔵🔵🔵 DÉBUT loadCategoriesModal() | currentMagasinId:', currentMagasinId);
+      
       if (!currentMagasinId) {
         console.warn('⚠️ magasinId non défini');
         const listContainer = document.getElementById('categoriesList');
@@ -691,6 +696,7 @@
       try {
         showLoading(true);
         const authToken = getAuthToken();
+        console.log('🔐 Token obtenu | Token:', authToken ? '✅ Présent' : '❌ Absent');
         const response = await fetch(`${API_BASE}/magasins/${currentMagasinId}/categories`, {
           method: 'GET',
           headers: {
@@ -699,12 +705,16 @@
           }
         });
 
+        console.log('📡 Réponse API | Status:', response.status, '| OK:', response.ok);
+        
         if (!response.ok) {
           throw new Error(`Erreur API: ${response.status} - ${response.statusText}`);
         }
 
         const data = await response.json();
+        console.log('📥 Données reçues:', data);
         allCategories = data.categories || [];
+        console.log('✅ allCategories mis à jour | Longueur:', allCategories.length);
         renderCategoriesList();
         updateCategoriesCount();
         showLoading(false);
@@ -719,7 +729,7 @@
             <i class="fas fa-circle-exclamation me-2"></i>
             <strong>Erreur de chargement</strong>
             <p class="mb-0 small mt-1">${error.message}</p>
-            <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadCategories()">
+            <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadCategoriesModal()">
               <i class="fas fa-redo me-1"></i>Réessayer
             </button>
           </div>
@@ -735,12 +745,15 @@
       const list = document.getElementById('categoriesList');
       list.innerHTML = '';
 
+      console.log('📋 renderCategoriesList - allCategories:', allCategories);
+
       if (allCategories.length === 0) {
         list.innerHTML = '<div class="text-muted text-center py-4"><i class="fas fa-inbox me-2"></i>Aucune catégorie</div>';
         return;
       }
 
       allCategories.forEach((cat, idx) => {
+        console.log(`📦 Catégorie ${idx}:`, cat);
         const item = document.createElement('button');
         item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
         item.type = 'button';
@@ -785,9 +798,22 @@
     // Éditer une catégorie existante
     function editCategory(idx) {
       const cat = allCategories[idx];
+      console.log('📝 Édition catégorie idx:', idx);
+      console.log('📝 Catégorie complète:', cat);
       currentEditingCategoryId = idx;
       
       document.getElementById('categoryEditId').value = cat._id;
+      console.log('📝 Remplissage formulaire...');
+      console.log('  - _id:', cat._id);
+      console.log('  - nomType/nom:', cat.nomType, cat.nom);
+      console.log('  - code:', cat.code);
+      console.log('  - unitePrincipale/unite:', cat.unitePrincipale, cat.unite);
+      console.log('  - icone:', cat.icone);
+      console.log('  - couleur:', cat.couleur);
+      console.log('  - seuilAlerte/seuil:', cat.seuilAlerte, cat.seuil);
+      console.log('  - capaciteMax/capacite:', cat.capaciteMax, cat.capacite);
+      console.log('  - photoRequise:', cat.photoRequise);
+      
       // ✅ Utiliser les noms du modèle TypeProduit
       document.getElementById('catEditNom').value = cat.nomType || cat.nom || '';
       document.getElementById('catEditCode').value = cat.code || '';
@@ -893,7 +919,7 @@
         showNotification(`✅ Catégorie "${nom}" ${isNew ? 'créée' : 'modifiée'} avec succès!`, 'success');
         
         // Recharger la liste
-        await loadCategories();
+        await loadCategoriesModal();
         newCategory();
       } catch (error) {
         console.error('❌ Erreur sauvegarde:', error);
@@ -906,7 +932,7 @@
       if (currentEditingCategoryId === null) return;
 
       const cat = allCategories[currentEditingCategoryId];
-      const nom = cat.nom;
+      const nom = cat.nomType || cat.nom;  // ✅ Utiliser nomType
       
       if (confirm(`⚠️ Êtes-vous sûr de vouloir supprimer "${nom}" ?`)) {
         try {
@@ -926,7 +952,7 @@
           }
 
           showNotification(`✅ Catégorie "${nom}" supprimée!`, 'success');
-          await loadCategories();
+          await loadCategoriesModal();
           newCategory();
         } catch (error) {
           console.error('❌ Erreur suppression:', error);
@@ -954,11 +980,32 @@
 
     // Initialiser au chargement
     document.addEventListener('DOMContentLoaded', function() {
-      // Récupérer le magasinId depuis sessionStorage (défini lors de la sélection du magasin)
+      console.log('🚀 DOMContentLoaded déclenché dans modal_stock_settings.php');
+      
+      // Essayer plusieurs façons de récupérer le magasinId
+      // 1. D'abord chercher dans sessionStorage
       currentMagasinId = sessionStorage.getItem('currentMagasinId');
+      console.log('📦 sessionStorage.getItem("currentMagasinId"):', currentMagasinId);
+      
+      // 2. Si vide, chercher dans la configuration globale stockConfig
+      if (!currentMagasinId && typeof window.stockConfig !== 'undefined') {
+        currentMagasinId = window.stockConfig.magasinId;
+        console.log('📦 window.stockConfig.magasinId:', currentMagasinId);
+      }
+      
+      // 3. Si toujours vide, chercher dans localStorage
+      if (!currentMagasinId) {
+        currentMagasinId = localStorage.getItem('currentMagasinId');
+        console.log('📦 localStorage.getItem("currentMagasinId"):', currentMagasinId);
+      }
+      
+      console.log('📦 currentMagasinId final:', currentMagasinId);
       
       if (currentMagasinId) {
-        loadCategories();
+        console.log('✅ currentMagasinId existe, appel de loadCategoriesModal()');
+        loadCategoriesModal();
+      } else {
+        console.warn('⚠️ currentMagasinId est vide/null - categories ne seront pas chargées');
       }
 
       // Événements
@@ -1019,10 +1066,47 @@
       const modalElement = document.getElementById('modalStockSettings');
       if (modalElement) {
         modalElement.addEventListener('show.bs.modal', function() {
-          const newMagasinId = sessionStorage.getItem('currentMagasinId');
+          console.log('🎬 Modal show.bs.modal déclenché');
+          
+          // Essayer plusieurs sources pour le magasinId
+          let newMagasinId = sessionStorage.getItem('currentMagasinId');
+          if (!newMagasinId && typeof window.stockConfig !== 'undefined') {
+            newMagasinId = window.stockConfig.magasinId;
+          }
+          if (!newMagasinId) {
+            newMagasinId = localStorage.getItem('currentMagasinId');
+          }
+          
+          console.log('📦 newMagasinId du modal:', newMagasinId, '| currentMagasinId:', currentMagasinId);
           if (newMagasinId && newMagasinId !== currentMagasinId) {
+            console.log('✅ Changement de magasin détecté, appel de loadCategoriesModal()');
             currentMagasinId = newMagasinId;
-            loadCategories();
+            categoriesLoaded = false; // Reset flag quand on change de magasin
+            loadCategoriesModal();
+          } else if (!newMagasinId) {
+            console.warn('⚠️ newMagasinId vide - magasin non trouvé');
+          } else {
+            console.log('ℹ️ Même magasin, pas de rechargement');
+          }
+        });
+      }
+
+      // ✨ IMPORTANT: Charger les catégories quand on clique sur l'onglet "Types Produits"
+      const produitsTab = document.getElementById('produits-tab');
+      if (produitsTab) {
+        produitsTab.addEventListener('click', function() {
+          console.log('📌 Onglet "Types Produits" cliqué | categoriesLoaded:', categoriesLoaded, '| currentMagasinId:', currentMagasinId);
+          if (!categoriesLoaded && currentMagasinId) {
+            console.log('🔄 Premier accès à l\'onglet, appel de loadCategoriesModal()');
+            console.log('🔍 Type de loadCategoriesModal:', typeof loadCategoriesModal);
+            console.log('🔍 Fonction loadCategoriesModal:', loadCategoriesModal);
+            try {
+              const result = loadCategoriesModal();
+              console.log('🔍 Résultat de loadCategoriesModal():', result);
+            } catch (e) {
+              console.error('❌ ERREUR lors de l\'appel de loadCategoriesModal():', e);
+            }
+            categoriesLoaded = true;
           }
         });
       }

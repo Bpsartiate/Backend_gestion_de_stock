@@ -21,6 +21,32 @@ const typeProduitSchema = new mongoose.Schema({
     enum: ['mètres', 'kg', 'boîtes', 'pièces', 'litres', 'grammes', 'ml'],
     default: 'pièces'
   },
+
+  // CODE ET IDENTIFICATION
+  code: {
+    type: String,
+    required: true,
+    maxlength: 10,
+    uppercase: true
+  },
+
+  // ICÔNE VISUELLE
+  icone: {
+    type: String,
+    default: '📦'
+  },
+
+  // COULEUR
+  couleur: {
+    type: String,
+    default: '#3b82f6',
+    validate: {
+      validator: function(v) {
+        return /^#[0-9A-Fa-f]{6}$/.test(v);
+      },
+      message: 'La couleur doit être au format hex (#RRGGBB)'
+    }
+  },
   
   // CHAMPS DYNAMIQUES SUPPLÉMENTAIRES
   champsSupplementaires: [{
