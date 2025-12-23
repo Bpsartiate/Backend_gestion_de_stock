@@ -194,8 +194,7 @@
                     <thead>
                         <tr>
                         <th style="display:none;">ID</th>
-                        <th class="sort" data-sort="reference">Référence</th>
-                        <th class="sort" data-sort="designation">Désignation</th>
+                        <th class="sort" data-sort="reference">Référence et Désignation</th>
                         <th class="sort" data-sort="quantite">Quantité</th>
                         <th class="sort" data-sort="emplacement">Emplacement</th>
                         <th class="sort" data-sort="etat">État</th>
@@ -229,6 +228,9 @@
     </div>
     
   </div>
+
+  <!-- 📦 MODAL DÉTAIL PRODUIT -->
+  <?php include_once "modal_product_detail.php"; ?>
 
   <!-- 🏪 MODAL SÉLECTION MAGASIN -->
   <div class="modal fade" id="modalSelectMagasin" tabindex="-1" aria-labelledby="modalSelectMagasinLabel" aria-hidden="true">

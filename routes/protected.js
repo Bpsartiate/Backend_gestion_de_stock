@@ -1725,7 +1725,7 @@ router.put('/produits/:produitId', authMiddleware, async (req, res) => {
   try {
     const { produitId } = req.params;
     const requester = req.user;
-    const { designation, prixUnitaire, etat, seuilAlerte, notes } = req.body;
+    const { designation, prixUnitaire, etat, seuilAlerte, notes, photoUrl, reference } = req.body;
 
     const produit = await Produit.findById(produitId);
     if (!produit) {
@@ -1742,6 +1742,8 @@ router.put('/produits/:produitId', authMiddleware, async (req, res) => {
     produit.etat = etat || produit.etat;
     produit.seuilAlerte = seuilAlerte !== undefined ? seuilAlerte : produit.seuilAlerte;
     produit.notes = notes !== undefined ? notes : produit.notes;
+    produit.photoUrl = photoUrl || produit.photoUrl;
+    produit.reference = reference || produit.reference;
 
     await produit.save();
 

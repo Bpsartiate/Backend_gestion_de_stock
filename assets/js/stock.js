@@ -110,7 +110,26 @@ let MAGASIN_NOM = null;
 let CURRENT_STOCK_CONFIG = null;
 let CURRENT_USER = null;
 
-async function loadMagasinsModal() {
+// ⚡ CACHE MAGASINS
+let CACHE_MAGASINS = null;
+let CACHE_MAGASINS_TIMESTAMP = 0;
+const CACHE_MAGASINS_DURATION = 120000; // 2 minutes
+
+function getMagasinsCached() {
+  const now = Date.now();
+  if (CACHE_MAGASINS && (now - CACHE_MAGASINS_TIMESTAMP) < CACHE_MAGASINS_DURATION) {
+    console.log('🏪 Cache magasins utilisé');
+    return CACHE_MAGASINS;
+  }
+  return null;
+}
+
+function setMagasinsCached(magasins) {
+  CACHE_MAGASINS = magasins;
+  CACHE_MAGASINS_TIMESTAMP = Date.now();
+}
+
+async function loadMagasinsModal(forceRefresh = false) {
   const spinner = document.getElementById('magasinsSpinner');
   const list = document.getElementById('magasinsList');
   const error = document.getElementById('magasinsError');
@@ -120,39 +139,100 @@ async function loadMagasinsModal() {
     list.style.display = 'none';
     error.style.display = 'none';
 
-    const magasins = await API.get(API_CONFIG.ENDPOINTS.MAGASINS);
+    // ⚡ Utiliser le cache si disponible et pas de force refresh
+    let magasins = forceRefresh ? null : getMagasinsCached();
+    
+    if (!magasins) {
+      // ⚡ Charger avec timeout de 10 secondes
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      try {
+        magasins = await API.get(API_CONFIG.ENDPOINTS.MAGASINS);
+        clearTimeout(timeoutId);
+        setMagasinsCached(magasins);
+        console.log('📥 Magasins chargés depuis l\'API');
+      } catch (timeoutErr) {
+        clearTimeout(timeoutId);
+        throw timeoutErr;
+      }
+    }
 
     list.innerHTML = '';
+    
+    // ⚡ Gérer le cas où il n'y a pas de magasins
+    if (!magasins || magasins.length === 0) {
+      list.innerHTML = `
+        <div class="alert alert-warning mb-0" role="alert">
+          <i class="fas fa-inbox me-2"></i>
+          <strong>Aucun magasin disponible</strong><br>
+          <small>Veuillez créer un magasin dans la configuration.</small>
+        </div>
+      `;
+      spinner.style.display = 'none';
+      list.style.display = 'block';
+      return;
+    }
+
+    // ⚡ Utiliser documentFragment pour performance
+    const fragment = document.createDocumentFragment();
+    
     magasins.forEach(magasin => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'w-100 list-group-item list-group-item-action p-3 mb-2 rounded-2';
+      button.className = 'w-100 list-group-item list-group-item-action p-3 mb-2 rounded-2 text-start transition';
       
       const isActive = MAGASIN_ID === magasin._id;
-      if (isActive) button.classList.add('active', 'bg-primary');
+      if (isActive) {
+        button.classList.add('active', 'bg-primary', 'text-white');
+      }
       
       button.innerHTML = `
         <div class="d-flex justify-content-between align-items-start">
-          <div class="text-start">
-            <h6 class="mb-1 fw-bold">${magasin.nom_magasin}</h6>
-            <small class="text-muted d-block">${magasin.adresse_magasin || 'N/A'}</small>
-            ${magasin.telephone_magasin ? `<small class="text-muted d-block"><i class="fas fa-phone me-1"></i>${magasin.telephone_magasin}</small>` : ''}
+          <div class="flex-grow-1">
+            <h6 class="mb-1 fw-bold">
+              <i class="fas fa-warehouse me-2"></i>${magasin.nom_magasin}
+            </h6>
+            ${magasin.adresse ? `<small class="d-block ${isActive ? 'text-white-50' : 'text-muted'}"><i class="fas fa-map-marker-alt me-1"></i>${magasin.adresse}</small>` : ''}
+            ${magasin.telephone_magasin ? `<small class="d-block ${isActive ? 'text-white-50' : 'text-muted'}"><i class="fas fa-phone me-1"></i>${magasin.telephone_magasin}</small>` : ''}
           </div>
-          ${isActive ? `<span class="badge bg-success"><i class="fas fa-check me-1"></i>Actif</span>` : ''}
+          ${isActive ? `<span class="badge bg-success ms-2"><i class="fas fa-check me-1"></i>Actif</span>` : '<span class="badge bg-light text-dark ms-2">Cliquez</span>'}
         </div>
       `;
 
       button.addEventListener('click', () => selectMagasin(magasin._id, magasin.nom_magasin));
-      list.appendChild(button);
+      fragment.appendChild(button);
     });
 
+    list.appendChild(fragment);
     spinner.style.display = 'none';
     list.style.display = 'block';
 
   } catch (err) {
     spinner.style.display = 'none';
     error.style.display = 'block';
-    error.textContent = `❌ Erreur: ${err.message}`;
+    
+    // ⚡ Messages d'erreur plus informatifs
+    let errorMessage = '❌ Erreur: ';
+    
+    if (err.name === 'AbortError') {
+      errorMessage = '⏱️ <strong>Timeout</strong>: Le serveur met trop de temps à répondre';
+    } else if (err.message.includes('Failed to fetch')) {
+      errorMessage = '🌐 <strong>Erreur réseau</strong>: Vérifiez votre connexion internet';
+    } else {
+      errorMessage += err.message;
+    }
+    
+    error.innerHTML = `
+      <div class="alert alert-danger mb-0" role="alert">
+        <div>${errorMessage}</div>
+        <small class="d-block mt-2">
+          <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="loadMagasinsModal(true)">
+            <i class="fas fa-redo me-1"></i>Réessayer
+          </button>
+        </small>
+      </div>
+    `;
   }
 }
 
@@ -168,8 +248,42 @@ async function selectMagasin(magasinId, magasinNom) {
   const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelectMagasin'));
   modal.hide();
 
+  // ⚡ Réinitialiser les spinners KPI
+  initKPISpinners();
+  
+  // ⚡ Charger la config du nouveau magasin
   await loadStockConfig();
-  console.log('✅ Magasin sélectionné:', magasinNom);
+  
+  // ⚡ Charger les produits et alertes EN PARALLÈLE
+  const [produits, alertes] = await Promise.all([
+    (async () => {
+      const p = await API.get(
+        API_CONFIG.ENDPOINTS.PRODUITS,
+        { magasinId: MAGASIN_ID }
+      );
+      setProduitsCached(p);
+      afficherTableProduits(p);
+      return p;
+    })(),
+    API.get(
+      API_CONFIG.ENDPOINTS.ALERTES,
+      { magasinId: MAGASIN_ID }
+    )
+  ]);
+
+  // ⚡ Mettre à jour les alertes
+  const alerteCount = alertes.filter(a => a.statut === 'ACTIVE').length;
+  const elemAlertes = document.getElementById('alertesStock');
+  if (elemAlertes) {
+    elemAlertes.classList.remove('loading');
+    elemAlertes.innerHTML = alerteCount;
+  }
+  
+  // ⚡ Mettre à jour les KPIs avec les produits déjà chargés
+  await updateDashboardKPIs(produits);
+
+  showToast(`✅ Magasin "${magasinNom}" chargé!`, 'success');
+  console.log('✅ Magasin sélectionné et données rechargées:', magasinNom);
 }
 
 // ================================
@@ -468,7 +582,7 @@ function attachCategorieHandlers() {
 }
 
 // ================================
-// 🎨 ANIMATIONS CSS
+// 🎨 ANIMATIONS CSS & SPINNERS
 // ================================
 
 const style = document.createElement('style');
@@ -495,6 +609,24 @@ style.innerHTML = `
     }
   }
 
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
   .categorie-item {
     transition: all 0.2s ease;
     padding: 0.75rem 1rem !important;
@@ -513,6 +645,62 @@ style.innerHTML = `
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     font-weight: 500;
+  }
+
+  /* KPI Spinner */
+  .kpi-spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .kpi-value {
+    transition: opacity 0.3s ease;
+  }
+
+  .kpi-value.loading {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Table Loading */
+  .table-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+
+  .table-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(102, 126, 234, 0.2);
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+
+  .table-loading-text {
+    color: #667eea;
+    font-weight: 500;
+    font-size: 16px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .table-loading-sub {
+    color: #999;
+    font-size: 13px;
+    margin-top: 8px;
   }
 `;
 document.head.appendChild(style);
@@ -585,6 +773,44 @@ document.addEventListener('change', function(e) {
     }
   }
 });
+
+// ================================
+// 💾 CACHE DONNÉES
+// ================================
+
+let CACHE_PRODUITS = null;
+let CACHE_TIMESTAMP = 0;
+const CACHE_DURATION = 30000; // 30 secondes
+
+function getProduitsCached() {
+  const now = Date.now();
+  if (CACHE_PRODUITS && (now - CACHE_TIMESTAMP) < CACHE_DURATION) {
+    console.log('📦 Cache produits utilisé');
+    return CACHE_PRODUITS;  // ✅ Retourner la data directement, pas une Promise!
+  }
+  return null;
+}
+
+function setProduitsCached(produits) {
+  CACHE_PRODUITS = produits;
+  CACHE_TIMESTAMP = Date.now();
+}
+
+// ================================
+// 📊 INITIALISER LES SPINNERS KPI
+// ================================
+
+function initKPISpinners() {
+  const kpiElements = ['totalStock', 'rayonsActifs', 'alertesStock', 'rayonsPleins'];
+  
+  kpiElements.forEach(id => {
+    const elem = document.getElementById(id);
+    if (elem) {
+      elem.classList.add('loading');
+      elem.innerHTML = '<div class="kpi-spinner"></div>';
+    }
+  });
+}
 
 // ================================
 // ➕ AJOUTER PRODUIT
@@ -698,9 +924,27 @@ async function addProduct() {
 // 📦 LISTER PRODUITS
 // ================================
 
-async function loadProduits() {
+async function loadProduits(showLoader = true) {
   try {
     if (!MAGASIN_ID) return;
+
+    // Montrer le loader
+    if (showLoader) {
+      const tbody = document.querySelector('#tableReceptions tbody');
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7">
+              <div class="table-loading">
+                <div class="table-spinner"></div>
+                <div class="table-loading-text">Chargement des produits...</div>
+                <div class="table-loading-sub">Veuillez patienter</div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+    }
 
     const produits = await API.get(
       API_CONFIG.ENDPOINTS.PRODUITS,
@@ -708,18 +952,36 @@ async function loadProduits() {
     );
 
     console.log('📦 Produits chargés:', produits);
+    setProduitsCached(produits);
     afficherTableProduits(produits);
 
   } catch (err) {
     console.error('❌ Erreur chargement produits:', err);
+    showToast('❌ Erreur chargement produits: ' + err.message, 'danger');
   }
 }
+
+// Instance List.js globale pour éviter de la recréer
+let LIST_INSTANCE = null;
 
 function afficherTableProduits(produits) {
   const tbody = document.querySelector('#tableReceptions tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = '';
+  // 🔧 SÉCURITÉ: Si ce n'est pas un array, extraire le array
+  if (!Array.isArray(produits)) {
+    if (produits?.produits && Array.isArray(produits.produits)) {
+      produits = produits.produits;
+    } else if (produits?.data && Array.isArray(produits.data)) {
+      produits = produits.data;
+    } else {
+      console.error('❌ Données produits invalides:', produits);
+      return;
+    }
+  }
+
+  // ⚡ Utiliser documentFragment pour performance
+  const fragment = document.createDocumentFragment();
 
   produits.forEach(produit => {
     const row = document.createElement('tr');
@@ -732,10 +994,22 @@ function afficherTableProduits(produits) {
       etatBadge = '<span class="badge bg-warning">Stock faible</span>';
     }
 
+    // ⚡ Gérer l'image avec fallback
+    const photoHTML = produit.photoUrl 
+      ? `<img src="${produit.photoUrl}" alt="${produit.designation}" class="img-thumbnail" style="max-width: 80px; max-height: 80px; object-fit: cover; border-radius: 4px;">`
+      : '<span class="badge bg-secondary"><i class="fas fa-image me-1"></i>Pas d\'image</span>';
+
     row.innerHTML = `
       <td style="display:none;" class="id">${produit._id}</td>
-      <td class="reference"><code>${produit.reference}</code></td>
-      <td class="designation">${produit.designation}</td>
+      <td class="designation" style="display: flex; align-items: center; gap: 12px;">
+        <div style="flex-shrink: 0;">
+          ${photoHTML}
+        </div>
+        <div>
+          <strong>${produit.designation}</strong><br>
+          <small class="text-muted">${produit.reference}</small>
+        </div>
+      </td>
       <td class="quantite">
         <strong>${produit.quantiteActuelle}</strong> 
         <small class="text-muted">(seuil: ${produit.seuilAlerte || 10})</small>
@@ -749,7 +1023,7 @@ function afficherTableProduits(produits) {
             <i class="fas fa-edit"></i>
           </button>
           <button class="btn btn-warning" onclick="registerMovement('${produit._id}', '${produit.designation}')" title="Mouvement">
-            <i class="fas fa-arrow-right-arrow-left"></i>
+            <i class="fas fa-exchange-alt"></i>
           </button>
           <button class="btn btn-danger" onclick="deleteProduct('${produit._id}')" title="Supprimer">
             <i class="fas fa-trash"></i>
@@ -758,19 +1032,26 @@ function afficherTableProduits(produits) {
       </td>
     `;
     
-    tbody.appendChild(row);
+    fragment.appendChild(row);
   });
 
-  // Réinitialiser List.js si disponible ET qu'il y a des produits
+  tbody.innerHTML = '';
+  tbody.appendChild(fragment);
+
+  // ⚡ Mettre à jour List.js uniquement si nécessaire
   if (typeof List !== 'undefined' && produits.length > 0) {
     try {
-      // Recréer la liste
-      const options = {
-        valueNames: ["id", "reference", "designation", "quantite", "emplacement", "etat", "dateEntree", "actions"],
-        page: 5,
-        pagination: true
-      };
-      new List('tableReceptions', options);
+      // Si List existe déjà, ne pas le recréer
+      if (LIST_INSTANCE) {
+        LIST_INSTANCE.update();
+      } else {
+        const options = {
+          valueNames: ["id", "designation", "quantite", "emplacement", "etat", "dateEntree", "actions"],
+          page: 5,
+          pagination: true
+        };
+        LIST_INSTANCE = new List('tableReceptions', options);
+      }
     } catch (err) {
       console.warn('⚠️ List.js error:', err.message);
     }
@@ -780,55 +1061,27 @@ function afficherTableProduits(produits) {
 }
 
 // ================================
+// ✏️ ÉDITER PRODUIT
+// ================================
+
+function editProduct(produitId) {
+  openProductDetailModal(produitId);
+}
+
+// ================================
 // 📤 MOUVEMENTS DE STOCK
 // ================================
 
-async function registerMovement(produitId, designation) {
-  const quantite = prompt(`Quantité pour "${designation}":`, '');
-  if (!quantite || isNaN(quantite) || quantite <= 0) return;
-
-  const type = confirm('SORTIE? (Annuler = RECEPTION)') ? 'SORTIE' : 'RECEPTION';
-
-  try {
-    const movement = await API.post(
-      API_CONFIG.ENDPOINTS.STOCK_MOVEMENTS,
-      {
-        produitId,
-        type,
-        quantite: parseInt(quantite),
-        numeroDocument: '',
-        observations: `Mouvement manuel: ${type}`
-      },
-      { magasinId: MAGASIN_ID }
-    );
-
-    showToast(`✅ Mouvement ${type} enregistré!`, 'success');
-    await loadProduits();
-
-  } catch (err) {
-    showToast('❌ Erreur: ' + err.message, 'danger');
-  }
+function registerMovement(produitId, designation) {
+  openProductDetailModal(produitId);
 }
 
 // ================================
 // 🗑️ SUPPRIMER PRODUIT
 // ================================
 
-async function deleteProduct(produitId) {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit?')) return;
-
-  try {
-    await API.delete(
-      API_CONFIG.ENDPOINTS.PRODUIT,
-      { produitId }
-    );
-
-    showToast('✅ Produit supprimé!', 'success');
-    await loadProduits();
-
-  } catch (err) {
-    showToast('❌ Erreur: ' + err.message, 'danger');
-  }
+function deleteProduct(produitId) {
+  openProductDetailModal(produitId);
 }
 
 // ================================
@@ -860,25 +1113,49 @@ async function loadAlertes() {
 // 📊 CHARGER KPIs (VRAIES DONNÉES)
 // ================================
 
-async function updateDashboardKPIs() {
+async function updateDashboardKPIs(produits = null) {
   try {
     if (!MAGASIN_ID) return;
 
-    // 1. Stock total
-    const produits = await API.get(
-      API_CONFIG.ENDPOINTS.PRODUITS,
-      { magasinId: MAGASIN_ID }
-    );
+    // ⚡ Réutiliser les produits si fournis, sinon utiliser le cache
+    let donneesProduits = produits || getProduitsCached();
     
-    const totalStock = produits.reduce((sum, p) => sum + (p.quantiteActuelle || 0), 0);
+    if (!donneesProduits) {
+      donneesProduits = await API.get(
+        API_CONFIG.ENDPOINTS.PRODUITS,
+        { magasinId: MAGASIN_ID }
+      );
+      setProduitsCached(donneesProduits);
+    }
+    
+    // 🔧 SÉCURITÉ: Si ce n'est pas un array, extraire le array
+    if (!Array.isArray(donneesProduits)) {
+      if (donneesProduits?.produits && Array.isArray(donneesProduits.produits)) {
+        donneesProduits = donneesProduits.produits;
+      } else if (donneesProduits?.data && Array.isArray(donneesProduits.data)) {
+        donneesProduits = donneesProduits.data;
+      } else {
+        console.error('❌ Données produits invalides:', donneesProduits);
+        return;
+      }
+    }
+    
+    // 1. Stock total
+    const totalStock = donneesProduits.reduce((sum, p) => sum + (p.quantiteActuelle || 0), 0);
     const elem = document.getElementById('totalStock');
-    if (elem) elem.textContent = totalStock.toLocaleString();
+    if (elem) {
+      elem.classList.remove('loading');
+      elem.innerHTML = totalStock.toLocaleString();
+    }
 
     // 2. Rayons actifs
     if (CURRENT_STOCK_CONFIG?.rayons) {
       const rayonsActifs = CURRENT_STOCK_CONFIG.rayons.filter(r => r.status === 1).length;
       const elemRayons = document.getElementById('rayonsActifs');
-      if (elemRayons) elemRayons.textContent = rayonsActifs;
+      if (elemRayons) {
+        elemRayons.classList.remove('loading');
+        elemRayons.innerHTML = rayonsActifs;
+      }
     }
 
     // 3. Alertes stock (active count)
@@ -888,14 +1165,20 @@ async function updateDashboardKPIs() {
     );
     const alertesActive = alertes.filter(a => a.statut === 'ACTIVE').length;
     const elemAlertes = document.getElementById('alertesStock');
-    if (elemAlertes) elemAlertes.textContent = alertesActive;
+    if (elemAlertes) {
+      elemAlertes.classList.remove('loading');
+      elemAlertes.innerHTML = alertesActive;
+    }
 
     // 4. Rayons pleins (quantité > 80% capacité max)
-    const rayonsPleins = produits.filter(p => {
+    const rayonsPleins = donneesProduits.filter(p => {
       return p.quantiteActuelle > 0 && (p.quantiteActuelle >= (p.capaciteMax || 1000));
     }).length;
     const elemPleins = document.getElementById('rayonsPleins');
-    if (elemPleins) elemPleins.textContent = rayonsPleins;
+    if (elemPleins) {
+      elemPleins.classList.remove('loading');
+      elemPleins.innerHTML = rayonsPleins;
+    }
 
     console.log('✅ KPIs mis à jour:', { totalStock, rayonsActifs: CURRENT_STOCK_CONFIG?.rayons?.length, alertesActive });
 
@@ -1045,15 +1328,48 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   if (MAGASIN_ID) {
     document.getElementById('magasinActuelText').textContent = MAGASIN_NOM;
+    
+    // ⚡ Initialiser les spinners KPI
+    initKPISpinners();
+    
+    // ⚡ Charger config ET produits EN PARALLÈLE
     await loadStockConfig();
-    await loadProduits();
-    await loadAlertes();
-    await updateDashboardKPIs();  // ← Charger les VRAIES données
+    
+    const [produits, alertes] = await Promise.all([
+      (async () => {
+        const p = await API.get(
+          API_CONFIG.ENDPOINTS.PRODUITS,
+          { magasinId: MAGASIN_ID }
+        );
+        setProduitsCached(p);
+        afficherTableProduits(p);
+        return p;
+      })(),
+      API.get(
+        API_CONFIG.ENDPOINTS.ALERTES,
+        { magasinId: MAGASIN_ID }
+      )
+    ]);
+
+    // Mettre à jour les alertes
+    const alerteCount = alertes.filter(a => a.statut === 'ACTIVE').length;
+    const elemAlertes = document.getElementById('alertesStock');
+    if (elemAlertes) {
+      elemAlertes.classList.remove('loading');
+      elemAlertes.innerHTML = alerteCount;
+    }
+    
+    // Mettre à jour les KPIs avec les produits déjà chargés
+    await updateDashboardKPIs(produits);
+    
   } else {
     // Afficher 0 si pas de magasin sélectionné
     ['totalStock', 'rayonsActifs', 'alertesStock', 'rayonsPleins'].forEach(id => {
       const elem = document.getElementById(id);
-      if (elem) elem.textContent = '0';
+      if (elem) {
+        elem.classList.remove('loading');
+        elem.textContent = '0';
+      }
     });
   }
 
@@ -1069,8 +1385,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     btnAdd.addEventListener('click', addProduct);
   }
 
-  // Rafraîchir les KPIs toutes les 30 secondes
-  setInterval(updateDashboardKPIs, 30000);
+  // ⚡ Rafraîchir les KPIs toutes les 60 secondes (au lieu de 30) avec cache
+  setInterval(() => {
+    const cached = getProduitsCached();
+    updateDashboardKPIs(cached);
+  }, 60000);
 
   console.log('✅ Stock Management System initialized');
 });

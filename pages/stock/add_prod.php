@@ -183,9 +183,10 @@
             <div class="col-md-6">
               <label class="form-label fw-bold">État</label>
               <select name="etat" id="etat" class="form-select">
-                <option value="nouveau">Neuf</option>
-                <option value="bon">Bon état</option>
-                <option value="usage">Usagé</option>
+                <option value="Neuf">Neuf</option>
+                <option value="Bon état">Bon état</option>
+                <option value="Usagé">Usagé</option>
+                <option value="Endommagé">Endommagé</option>
               </select>
             </div>
           </div>
@@ -320,6 +321,7 @@
     // Variables globales au module
     let selectedCategorie = null;
     let allCategories = [];
+    let allRayons = [];
     let currentMagasinId = null;
 
   // API Base URL
@@ -384,8 +386,103 @@
       
       // Remplir le dropdown
       renderCategoriesList();
+      
+      // Charger aussi les rayons
+      loadRayons();
     } catch (error) {
       console.error('❌ Erreur chargement catégories:', error);
+    }
+  }
+
+  // ✅ Charger les rayons depuis l'API
+  async function loadRayons() {
+    try {
+      const authToken = getAuthToken();
+      console.log('🔵 Chargement des rayons pour magasin:', currentMagasinId);
+      
+      const response = await fetch(`${API_BASE}/magasins/${currentMagasinId}/rayons`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
+      }
+
+      const data = await response.json();
+      allRayons = data || [];
+      console.log('✅ Rayons chargés:', allRayons);
+      
+      // Afficher tous les rayons
+      renderRayonsList(allRayons);
+    } catch (error) {
+      console.error('❌ Erreur chargement rayons:', error);
+    }
+  }
+
+  // ✅ Afficher les rayons dans le select
+  function renderRayonsList(rayons) {
+    const select = document.getElementById('rayonId');
+    // Garder l'option par défaut
+    select.innerHTML = '<option value="">Choisir rayon...</option>';
+
+    if (rayons.length === 0) {
+      const option = document.createElement('option');
+      option.textContent = 'Aucun rayon disponible';
+      option.disabled = true;
+      select.appendChild(option);
+      return;
+    }
+
+    rayons.forEach(rayon => {
+      const option = document.createElement('option');
+      option.value = rayon._id;
+      option.textContent = `${rayon.codeRayon} - ${rayon.nomRayon}`;
+      select.appendChild(option);
+    });
+  }
+
+  // ✅ Filtrer les rayons selon la catégorie sélectionnée
+  function filterRayonsByCategorie(categorie) {
+    if (!categorie || !allRayons.length) {
+      renderRayonsList(allRayons);
+      return;
+    }
+
+    // Filtrer les rayons qui acceptent ce type de produit
+    const rayonsFilters = allRayons.filter(rayon => {
+      // Si le rayon n'a pas de restrictions, il accepte tous les types
+      if (!rayon.typesProduitsAutorises || rayon.typesProduitsAutorises.length === 0) {
+        return true;
+      }
+      // Sinon, vérifier si notre catégorie est dans la liste
+      return rayon.typesProduitsAutorises.some(typeId => typeId.toString() === categorie._id);
+    });
+
+    console.log(`🔍 Rayons filtrés pour "${categorie.nomType}":`, rayonsFilters.length, 'sur', allRayons.length);
+
+    // Afficher un avertissement s'il n'y a pas de rayons
+    const rayonSelect = document.getElementById('rayonId');
+    const warningMsg = document.createElement('div');
+    warningMsg.id = 'rayonWarning';
+    
+    // Supprimer l'ancien message s'il existe
+    const oldWarning = document.getElementById('rayonWarning');
+    if (oldWarning) oldWarning.remove();
+
+    if (rayonsFilters.length === 0) {
+      warningMsg.className = 'alert alert-warning mt-2 mb-0 py-2';
+      warningMsg.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <small>⚠️ Aucun rayon n'accepte le type "<strong>${categorie.nomType}</strong>"</small>
+      `;
+      rayonSelect.parentElement.insertAdjacentElement('afterend', warningMsg);
+      renderRayonsList([]);
+    } else {
+      renderRayonsList(rayonsFilters);
     }
   }
 
@@ -439,6 +536,9 @@
 
     // Appliquer les paramètres de la catégorie
     onCategorieSelected(categorie);
+    
+    // 🎯 FILTRER LES RAYONS selon cette catégorie
+    filterRayonsByCategorie(categorie);
 
     // Fermer le dropdown
     document.getElementById('categorieDropdown').style.display = 'none';
@@ -777,6 +877,12 @@
         uploadedPhotoUrl = null;
         selectedCategorie = null;
 
+        // 🔄 Recharger le tableau des produits (appel window.loadProduits si disponible)
+        if (typeof window.loadProduits === 'function') {
+          console.log('🔄 Rechargement du tableau des produits...');
+          window.loadProduits();
+        }
+
         // Fermer le modal après 1.5s
         setTimeout(() => {
           const modal = bootstrap.Modal.getInstance(document.getElementById('modalProduit'));
@@ -806,7 +912,7 @@
       
       const toastContainer = document.createElement('div');
       toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
-      toastContainer.style.zIndex = '11';
+      toastContainer.style.zIndex = '2000'; // Au-dessus du modal Bootstrap (z-index: 1060)
       toastContainer.innerHTML = toastHtml;
       document.body.appendChild(toastContainer);
 
