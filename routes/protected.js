@@ -2646,7 +2646,7 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       produitId,
       magasinId,
       rayonId,
-      type: 'RÉCEPTION',
+      type: 'RECEPTION',  // 👈 RECEPTION en majuscules sans accent (comme défini dans l'enum)
       quantite,
       quantiteEntree: quantite,
       quantiteSortie: 0,
