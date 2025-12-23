@@ -29,6 +29,193 @@
 .bg-soft-warning { background-color: rgba(245, 158, 11, 0.08); }
 .bg-soft-danger  { background-color: rgba(239, 68, 68, 0.08); }
 
+/* ================================ */
+/* 💃 ANIMATION ÉLÉGANTE DES KPIs */
+/* ================================ */
+
+@keyframes pulseScale {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+@keyframes swing {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Classe pour icône en alerte - Pulse Scale */
+.kpi-icon.alert {
+  animation: pulseScale 1.5s ease-in-out infinite;
+}
+
+/* Classe pour icône en swing - Oscillation élégante */
+.kpi-icon.swing {
+  transform-origin: top center;
+  animation: swing 1s ease-in-out infinite;
+}
+
+/* Classe pour icône en bounce - Saut léger */
+.kpi-icon.bounce {
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+/* ================================ */
+/* 📱 TABLEAU RESPONSIVE */
+/* ================================ */
+
+.table-responsive-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Table base */
+.table {
+  min-width: 800px;
+  margin-bottom: 0;
+}
+
+/* Colonnes moins importantes masquées sur mobile */
+@media (max-width: 768px) {
+  .table th:nth-child(4),
+  .table td:nth-child(4) {
+    display: none; /* Masquer Emplacement */
+  }
+  
+  .table th:nth-child(5),
+  .table td:nth-child(5) {
+    display: none; /* Masquer État */
+  }
+
+  .table th:nth-child(6),
+  .table td:nth-child(6) {
+    display: none; /* Masquer Date entrée */
+  }
+
+  .table {
+    font-size: 0.875rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .btn-group {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .btn-group .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-group .btn i {
+    margin-right: 0 !important;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 576px) {
+  .table {
+    font-size: 0.75rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.4rem 0.2rem;
+  }
+
+  .btn-group .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+
+  /* Affichage en colonnes pour très petit écran */
+  .table thead {
+    display: none;
+  }
+
+  .table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .table tbody td {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    align-items: start;
+    padding: 0.5rem 0 !important;
+    border: none;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .table tbody td:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6c757d;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  .table tbody td.actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+
+  .table tbody td.actions:before {
+    display: none;
+  }
+}
+
 </style>
   <!-- tittre -->
   <div class="row">
@@ -119,7 +306,7 @@
         </div>
         <div class="ms-3">
           <div class="avatar avatar-l bg-soft-warning text-warning rounded-circle d-flex align-items-center justify-content-center">
-            <span class="fas fs-4 fa-exclamation-triangle"></span>
+            <span class="fas fs-4 fa-exclamation-triangle kpi-icon" id="iconAlertes"></span>
           </div>
         </div>
       </div>
@@ -139,7 +326,7 @@
         </div>
         <div class="ms-3">
           <div class="avatar avatar-l bg-soft-danger text-danger rounded-circle d-flex align-items-center justify-content-center">
-            <span class="fas fa-fire fs-4"></span>
+            <span class="fas fa-fire fs-4 kpi-icon" id="iconRayonsPleins"></span>
           </div>
         </div>
       </div>
@@ -187,39 +374,55 @@
                         <input class="search form-control mb-3" placeholder="Recherche globale..." />
                     </div>
                 </div>
-                <!-- tableau -->
-               <div id="tableReceptions">
-                <div data-list='{"valueNames":["id", "reference", "designation", "categorie", "quantite", "emplacement", "etat", "dateEntree", "actions"],"page":5,"pagination":true}'>
-                    <table class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                        <th style="display:none;">ID</th>
-                        <th class="sort" data-sort="reference">Référence et Désignation</th>
-                        <th class="sort" data-sort="quantite">Quantité</th>
-                        <th class="sort" data-sort="emplacement">Emplacement</th>
-                        <th class="sort" data-sort="etat">État</th>
-                        <th class="sort" data-sort="dateEntree">Date entrée</th>
-                        <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="list">
-                        <tr>
-                        <td style="display:none;" class="id"></td>
-                        <td class="reference"></td>
-                        <td class="designation"></td>
-                        <td class="quantite"></td>
-                        <td class="emplacement"></td>
-                        <td class="etat"></td>
-                        <td class="dateEntree"></td>
-                        <td class="actions"></td>
-                        </tr>
-                    </tbody>
-                    </table>
-                    <div class="d-flex justify-content-center mt-3">
-                    <button class="btn btn-sm btn-secondary me-1" type="button" data-list-pagination="prev"><i class="fas fa-chevron-left"></i></button>
-                    <ul class="pagination mb-0"></ul>
-                    <button class="btn btn-sm btn-secondary ms-1" type="button" data-list-pagination="next"><i class="fas fa-chevron-right"></i></button>
-                    </div>
+                <!-- Spinner de filtrage -->
+                <div id="filterSpinner" class="text-center" style="display: none !important; padding: 40px 0; min-height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                  <div class="spinner-border text-primary mb-3" role="status" style="width: 50px; height: 50px;">
+                    <span class="visually-hidden">Filtrage en cours...</span>
+                  </div>
+                  <p class="text-muted">Filtrage des données...</p>
+                </div>
+                <!-- Message Aucun résultat -->
+                <div id="noResultsMessage" class="text-center" style="display: none; padding: 60px 20px;">
+                  <div style="font-size: 4rem; color: #0dcaf0; margin-bottom: 20px;">
+                    <i class="fas fa-search"></i>
+                  </div>
+                  <h5 style="margin-bottom: 10px; font-weight: 600;">Aucun résultat trouvé</h5>
+                  <p class="text-muted" style="margin: 0; font-size: 0.95rem;">Essayez de modifier vos critères de recherche</p>
+                </div>
+                <!-- tableau avec wrapper responsive -->
+               <div id="tableReceptions" style="display: block;">
+                <div class="table-responsive-wrapper">
+                  <div data-list='{"valueNames":["id", "reference", "designation", "categorie", "quantite", "emplacement", "etat", "dateEntree", "actions"],"page":5,"pagination":true}'>
+                      <table class="table responsive table-bordered table-striped">
+                      <thead>
+                          <tr>
+                          <th style="display:none;">ID</th>
+                          <th class="sort" data-sort="reference">Référence et Désignation</th>
+                          <th class="sort" data-sort="quantite">Quantité</th>
+                          <th class="sort" data-sort="emplacement">Emplacement</th>
+                          <th class="sort" data-sort="etat">État</th>
+                          <th class="sort" data-sort="dateEntree">Date entrée</th>
+                          <th>Actions</th>
+                          </tr>
+                      </thead>
+                      <tbody class="list">
+                          <tr>
+                          <td style="display:none;" class="id"></td>
+                          <td class="reference" data-label="Référence et Désignation"></td>
+                          <td class="quantite" data-label="Quantité"></td>
+                          <td class="emplacement" data-label="Emplacement"></td>
+                          <td class="etat" data-label="État"></td>
+                          <td class="dateEntree" data-label="Date entrée"></td>
+                          <td class="actions" data-label="Actions"></td>
+                          </tr>
+                      </tbody>
+                      </table>
+                      <div class="d-flex justify-content-center mt-3">
+                      <button class="btn btn-sm btn-secondary me-1" type="button" data-list-pagination="prev"><i class="fas fa-chevron-left"></i></button>
+                      <ul class="pagination mb-0"></ul>
+                      <button class="btn btn-sm btn-secondary ms-1" type="button" data-list-pagination="next"><i class="fas fa-chevron-right"></i></button>
+                      </div>
+                  </div>
                 </div>
             </div>
         </div>
@@ -273,3 +476,7 @@
 
 <!-- 📦 Stock Management System Script -->
 <script src="<?php echo BASE_URL; ?>assets/js/stock.js"></script>
+<!-- 📥 RÉCEPTION SYSTEM SCRIPT -->
+<script src="<?php echo BASE_URL; ?>assets/js/reception.js"></script>
+<!-- 📊 RÉCEPTION HISTORY SYSTEM SCRIPT -->
+<script src="<?php echo BASE_URL; ?>assets/js/reception-history.js"></script>

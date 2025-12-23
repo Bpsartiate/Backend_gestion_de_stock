@@ -21,6 +21,7 @@ const StockMovement = require('../models/stockMovement');
 const Lot = require('../models/lot');
 const AlerteStock = require('../models/alerteStock');
 const RapportInventaire = require('../models/rapportInventaire');
+const Reception = require('../models/reception');
 
 // Profil et membres protégés
 router.get('/members', authMiddleware, utilisateurController.listerMembres);
@@ -2533,6 +2534,273 @@ router.delete('/categories/:categoryId', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('❌ DELETE category error:', error);
     res.status(400).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// ENDPOINT: POST /api/protected/receptions
+// Description: Create a new reception record with automatic stock movement
+// ============================================================================
+
+router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) => {
+  try {
+    const {
+      produitId,
+      magasinId,
+      rayonId,
+      quantite,
+      prixAchat,
+      photoUrl,
+      fournisseur,
+      lotNumber,
+      dateReception,
+      datePeremption,
+      dateFabrication,
+      statut,
+      priorite,
+      numeroBatch,
+      certificat,
+      numeroSerie,
+      codeBarres,
+      etatColis,
+      garantie
+    } = req.body;
+
+    // Validation des champs requis
+    if (!produitId || !magasinId || !rayonId || !quantite || !prixAchat) {
+      return res.status(400).json({
+        error: 'Champs requis manquants: produitId, magasinId, rayonId, quantite, prixAchat'
+      });
+    }
+
+    // Vérifier que la quantité est valide
+    if (quantite <= 0) {
+      return res.status(400).json({ error: 'Quantité doit être > 0' });
+    }
+
+    // Vérifier que le produit existe et qu'il n'est pas supprimé
+    const produit = await Produit.findById(produitId);
+    if (!produit || produit.estSupprime) {
+      return res.status(404).json({ error: 'Produit non trouvé' });
+    }
+
+    // Vérifier que le magasin existe
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin || magasin.estSupprime) {
+      return res.status(404).json({ error: 'Magasin non trouvé' });
+    }
+
+    // Vérifier que le rayon existe
+    const rayon = await Rayon.findById(rayonId);
+    if (!rayon || rayon.estSupprime) {
+      return res.status(404).json({ error: 'Rayon non trouvé' });
+    }
+
+    // Calculer le prix total
+    const prixTotal = quantite * prixAchat;
+
+    // 1. Créer l'enregistrement Reception
+    const reception = new Reception({
+      produitId,
+      magasinId,
+      rayonId,
+      quantite,
+      prixAchat,
+      prixTotal,
+      photoUrl,
+      fournisseur: fournisseur || 'Non spécifié',
+      lotNumber: lotNumber || `LOT-${Date.now()}`,
+      dateReception: dateReception || new Date(),
+      datePeremption,
+      dateFabrication,
+      statut: statut || 'controle',
+      priorite: priorite || 'normale',
+      utilisateurId: req.user.id,
+      // Champs dynamiques
+      numeroBatch,
+      certificat,
+      numeroSerie,
+      codeBarres,
+      etatColis,
+      garantie
+    });
+
+    // Sauvegarder la réception
+    await reception.save();
+    console.log(`✅ Réception créée: ${reception._id}`);
+
+    // 2. Créer automatiquement un mouvement de stock (RÉCEPTION)
+    const stockMovement = new StockMovement({
+      produitId,
+      magasinId,
+      rayonId,
+      type: 'RÉCEPTION',
+      quantite,
+      quantiteEntree: quantite,
+      quantiteSortie: 0,
+      reference: reception._id,
+      description: `Réception - Fournisseur: ${fournisseur || 'Non spécifié'}, Lot: ${lotNumber}`,
+      utilisateurId: req.user.id,
+      dateCreation: new Date()
+    });
+
+    await stockMovement.save();
+    console.log(`✅ Mouvement de stock créé: ${stockMovement._id}`);
+
+    // 3. Mettre à jour la quantité actuelle du produit
+    produit.quantiteActuelle = (produit.quantiteActuelle || 0) + quantite;
+    produit.quantiteEntree = (produit.quantiteEntree || 0) + quantite;
+
+    // Mettre à jour la date de dernière réception
+    produit.dateLastMovement = new Date();
+
+    // Mettre en à jour le rayon du produit si différent
+    if (!produit.rayonIds.includes(rayonId)) {
+      produit.rayonIds.push(rayonId);
+    }
+
+    await produit.save();
+    console.log(`✅ Produit mis à jour: quantité ${produit.quantiteActuelle}`);
+
+    // 4. Lier le mouvement à la réception
+    reception.mouvementStockId = stockMovement._id;
+    await reception.save();
+
+    // 5. Retourner la réception avec tous les détails
+    const populatedReception = await Reception.findById(reception._id)
+      .populate('produitId', 'designation reference image quantiteActuelle')
+      .populate('magasinId', 'nom')
+      .populate('rayonId', 'nom')
+      .populate('mouvementStockId');
+
+    res.status(201).json({
+      success: true,
+      message: '✅ Réception enregistrée avec succès',
+      reception: populatedReception,
+      mouvement: stockMovement,
+      produitUpdated: {
+        id: produit._id,
+        quantiteActuelle: produit.quantiteActuelle,
+        quantiteEntree: produit.quantiteEntree
+      }
+    });
+  } catch (error) {
+    console.error('❌ POST /receptions error:', error);
+    res.status(500).json({
+      error: 'Erreur lors de l\'enregistrement de la réception',
+      details: error.message
+    });
+  }
+});
+
+// ============================================================================
+// ENDPOINT: GET /api/protected/receptions
+// Description: Get all receptions for a magasin with filters
+// ============================================================================
+
+router.get('/receptions', authMiddleware, checkMagasinAccess, async (req, res) => {
+  try {
+    const { magasinId, statut, produitId, dateDebut, dateFin, limit = 50, page = 1 } = req.query;
+
+    // Construire le filtre
+    const filter = {
+      magasinId: magasinId || req.user.magasinId
+    };
+
+    if (statut) {
+      filter.statut = statut;
+    }
+
+    if (produitId) {
+      filter.produitId = produitId;
+    }
+
+    // Filtre de date
+    if (dateDebut || dateFin) {
+      filter.dateReception = {};
+      if (dateDebut) {
+        filter.dateReception.$gte = new Date(dateDebut);
+      }
+      if (dateFin) {
+        const endDate = new Date(dateFin);
+        endDate.setHours(23, 59, 59, 999);
+        filter.dateReception.$lte = endDate;
+      }
+    }
+
+    // Calculer la pagination
+    const skip = (page - 1) * limit;
+
+    // Récupérer les réceptions
+    const receptions = await Reception.find(filter)
+      .populate('produitId', 'designation reference image quantiteActuelle prixUnitaire')
+      .populate('magasinId', 'nom')
+      .populate('rayonId', 'nom')
+      .populate('mouvementStockId')
+      .populate('utilisateurId', 'nom prenom email')
+      .sort({ dateReception: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Compter total
+    const total = await Reception.countDocuments(filter);
+
+    // Calculer les stats
+    const stats = await Reception.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: '$statut',
+          count: { $sum: 1 },
+          totalQuantite: { $sum: '$quantite' },
+          totalPrix: { $sum: '$prixTotal' }
+        }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(total / limit),
+      receptions,
+      stats: stats.reduce((acc, s) => {
+        acc[s._id] = { count: s.count, totalQuantite: s.totalQuantite, totalPrix: s.totalPrix };
+        return acc;
+      }, {})
+    });
+  } catch (error) {
+    console.error('❌ GET /receptions error:', error);
+    res.status(500).json({
+      error: 'Erreur lors de la récupération des réceptions',
+      details: error.message
+    });
+  }
+});
+
+// ============================================================================
+// ENDPOINT: GET /api/protected/receptions/:receptionId
+// Description: Get a specific reception detail
+// ============================================================================
+
+router.get('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async (req, res) => {
+  try {
+    const reception = await Reception.findById(req.params.receptionId)
+      .populate('produitId')
+      .populate('magasinId')
+      .populate('rayonId')
+      .populate('mouvementStockId')
+      .populate('utilisateurId', 'nom prenom email');
+
+    if (!reception) {
+      return res.status(404).json({ error: 'Réception non trouvée' });
+    }
+
+    res.json({ success: true, reception });
+  } catch (error) {
+    console.error('❌ GET /receptions/:id error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

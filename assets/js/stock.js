@@ -954,6 +954,9 @@ async function loadProduits(showLoader = true) {
     console.log('📦 Produits chargés:', produits);
     setProduitsCached(produits);
     afficherTableProduits(produits);
+    
+    // 🔄 IMPORTANT: Mettre à jour aussi les KPIs!
+    await updateDashboardKPIs(produits);
 
   } catch (err) {
     console.error('❌ Erreur chargement produits:', err);
@@ -966,7 +969,10 @@ let LIST_INSTANCE = null;
 
 function afficherTableProduits(produits) {
   const tbody = document.querySelector('#tableReceptions tbody');
-  if (!tbody) return;
+  if (!tbody) {
+    console.error('❌ tbody non trouvé');
+    return;
+  }
 
   // 🔧 SÉCURITÉ: Si ce n'est pas un array, extraire le array
   if (!Array.isArray(produits)) {
@@ -979,6 +985,8 @@ function afficherTableProduits(produits) {
       return;
     }
   }
+
+  console.log('📋 afficherTableProduits appelé avec', produits.length, 'produits');
 
   // ⚡ Utiliser documentFragment pour performance
   const fragment = document.createDocumentFragment();
@@ -1038,20 +1046,29 @@ function afficherTableProduits(produits) {
   tbody.innerHTML = '';
   tbody.appendChild(fragment);
 
-  // ⚡ Mettre à jour List.js uniquement si nécessaire
+  console.log('✅ Table mise à jour avec fragment');
+
+  // ⚡ Détruire et recréer List.js pour forcer le refresh
+  if (LIST_INSTANCE) {
+    try {
+      LIST_INSTANCE.destroy();
+      console.log('🔄 List.js détruit');
+    } catch (e) {
+      console.warn('⚠️ Erreur destruction List.js:', e.message);
+    }
+    LIST_INSTANCE = null;
+  }
+
+  // Recréer List.js frais
   if (typeof List !== 'undefined' && produits.length > 0) {
     try {
-      // Si List existe déjà, ne pas le recréer
-      if (LIST_INSTANCE) {
-        LIST_INSTANCE.update();
-      } else {
-        const options = {
-          valueNames: ["id", "designation", "quantite", "emplacement", "etat", "dateEntree", "actions"],
-          page: 5,
-          pagination: true
-        };
-        LIST_INSTANCE = new List('tableReceptions', options);
-      }
+      const options = {
+        valueNames: ["id", "designation", "quantite", "emplacement", "etat", "dateEntree", "actions"],
+        page: 5,
+        pagination: true
+      };
+      LIST_INSTANCE = new List('tableReceptions', options);
+      console.log('✅ List.js réinitialisé');
     } catch (err) {
       console.warn('⚠️ List.js error:', err.message);
     }
@@ -1165,9 +1182,17 @@ async function updateDashboardKPIs(produits = null) {
     );
     const alertesActive = alertes.filter(a => a.statut === 'ACTIVE').length;
     const elemAlertes = document.getElementById('alertesStock');
+    const iconAlertes = document.getElementById('iconAlertes');
     if (elemAlertes) {
       elemAlertes.classList.remove('loading');
       elemAlertes.innerHTML = alertesActive;
+    }
+    // 💃 Ajouter animation si alertes > 0
+    if (iconAlertes) {
+      iconAlertes.classList.remove('alert', 'swing', 'bounce');
+      if (alertesActive > 0) {
+        iconAlertes.classList.add('bounce'); // Animation bounce pour les alertes
+      }
     }
 
     // 4. Rayons pleins (quantité > 80% capacité max)
@@ -1175,12 +1200,20 @@ async function updateDashboardKPIs(produits = null) {
       return p.quantiteActuelle > 0 && (p.quantiteActuelle >= (p.capaciteMax || 1000));
     }).length;
     const elemPleins = document.getElementById('rayonsPleins');
+    const iconRayonsPleins = document.getElementById('iconRayonsPleins');
     if (elemPleins) {
       elemPleins.classList.remove('loading');
       elemPleins.innerHTML = rayonsPleins;
     }
+    // 💃 Ajouter animation si rayons pleins > 0
+    if (iconRayonsPleins) {
+      iconRayonsPleins.classList.remove('alert', 'swing', 'bounce');
+      if (rayonsPleins > 0) {
+        iconRayonsPleins.classList.add('swing'); // Animation swing pour les rayons pleins
+      }
+    }
 
-    console.log('✅ KPIs mis à jour:', { totalStock, rayonsActifs: CURRENT_STOCK_CONFIG?.rayons?.length, alertesActive });
+    console.log('✅ KPIs mis à jour:', { totalStock, rayonsActifs: CURRENT_STOCK_CONFIG?.rayons?.length, alertesActive, rayonsPleins });
 
   } catch (err) {
     console.error('❌ Erreur KPIs:', err);
@@ -1383,6 +1416,156 @@ document.addEventListener('DOMContentLoaded', async function() {
   const btnAdd = document.getElementById('btnAddProduit');
   if (btnAdd) {
     btnAdd.addEventListener('click', addProduct);
+  }
+
+  // ================================
+  // 🔍 RECHERCHE AVANCÉE & FILTRES
+  // ================================
+
+  // État du filtre
+  let filtresActifs = {
+    produit: '',
+    categorie: '',
+    etatStock: ''
+  };
+
+  // Fonction de filtre personnalisée
+  function appliquerFiltres() {
+    if (!LIST_INSTANCE) return;
+
+    // Montrer le spinner seulement dans la zone du filtre
+    const spinner = document.getElementById('filterSpinner');
+    const noResults = document.getElementById('noResultsMessage');
+    const table = document.querySelector('#tableReceptions > div');
+    
+    // Afficher le spinner
+    if (spinner) {
+      spinner.style.display = 'flex';
+    }
+    if (noResults) noResults.style.display = 'none';
+    if (table) table.style.display = 'none';
+
+    // Simuler un petit délai pour montrer le spinner
+    setTimeout(() => {
+      const filtreProduit = document.getElementById('filtreProduit')?.value?.toLowerCase() || '';
+      const filtreCategorie = document.getElementById('filtreCategorie')?.value?.toLowerCase() || '';
+      const filtreEtatStock = document.getElementById('filtreEtatStock')?.value || '';
+
+      filtresActifs = { filtreProduit, filtreCategorie, filtreEtatStock };
+
+      // Récupérer tous les éléments du tableau
+      const rows = document.querySelectorAll('#tableReceptions tbody tr');
+      let resultatsTrouves = 0;
+      
+      rows.forEach(row => {
+        let afficher = true;
+
+        // Filtre Produit (cherche dans designation + reference)
+        if (filtreProduit) {
+          const designation = row.querySelector('.designation')?.textContent?.toLowerCase() || '';
+          const reference = row.querySelector('td:first-child')?.textContent?.toLowerCase() || '';
+          if (!designation.includes(filtreProduit) && !reference.includes(filtreProduit)) {
+            afficher = false;
+          }
+        }
+
+        // Filtre Catégorie (cherche dans emplacement/rayon)
+        if (afficher && filtreCategorie) {
+          const rayon = row.querySelector('.emplacement')?.textContent?.toLowerCase() || '';
+          if (!rayon.includes(filtreCategorie)) {
+            afficher = false;
+          }
+        }
+
+        // Filtre État du stock
+        if (afficher && filtreEtatStock) {
+          const etatBadge = row.querySelector('.etat')?.textContent?.trim() || '';
+          if (etatBadge !== filtreEtatStock) {
+            afficher = false;
+          }
+        }
+
+        // Appliquer la visibilité
+        row.style.display = afficher ? '' : 'none';
+        
+        if (afficher) resultatsTrouves++;
+      });
+
+      // Masquer le spinner
+      if (spinner) spinner.style.display = 'none';
+
+      // Afficher le tableau ou le message "Aucun résultat"
+      if (resultatsTrouves === 0) {
+        if (noResults) noResults.style.display = 'block';
+        if (table) table.style.display = 'none';
+        console.log('📭 Aucun résultat avec les filtres:', filtresActifs);
+      } else {
+        if (noResults) noResults.style.display = 'none';
+        if (table) table.style.display = 'block';
+        console.log('🔍 Filtres appliqués - ' + resultatsTrouves + ' résultat(s):', filtresActifs);
+      }
+    }, 300); // Délai minimal pour montrer le spinner
+  }
+
+  // Écouter les changements dans les filtres
+  const filtreProduit = document.getElementById('filtreProduit');
+  const filtreCategorie = document.getElementById('filtreCategorie');
+  const filtreEtatStock = document.getElementById('filtreEtatStock');
+  const btnFiltrer = document.getElementById('btnFiltrerStock');
+  const btnReinitialiser = document.getElementById('btnReinitialiserStock');
+
+  if (filtreProduit) {
+    filtreProduit.addEventListener('input', appliquerFiltres);
+  }
+
+  if (filtreCategorie) {
+    filtreCategorie.addEventListener('input', appliquerFiltres);
+  }
+
+  if (filtreEtatStock) {
+    filtreEtatStock.addEventListener('change', appliquerFiltres);
+  }
+
+  if (btnFiltrer) {
+    btnFiltrer.addEventListener('click', appliquerFiltres);
+  }
+
+  if (btnReinitialiser) {
+    btnReinitialiser.addEventListener('click', async () => {
+      console.log('🔄 Début réinitialisation des filtres...');
+      
+      // Montrer le spinner
+      const spinner = document.getElementById('filterSpinner');
+      const noResults = document.getElementById('noResultsMessage');
+      const table = document.querySelector('#tableReceptions > div');
+      
+      if (spinner) spinner.style.display = 'flex';
+      if (noResults) noResults.style.display = 'none';
+      if (table) table.style.display = 'none';
+      
+      // Réinitialiser tous les champs
+      if (filtreProduit) filtreProduit.value = '';
+      if (filtreCategorie) filtreCategorie.value = '';
+      if (filtreEtatStock) filtreEtatStock.value = '';
+
+      filtresActifs = { produit: '', categorie: '', etatStock: '' };
+      
+      // Recharger complètement les produits
+      try {
+        await loadProduits(false);
+        
+        // Afficher le tableau
+        if (spinner) spinner.style.display = 'none';
+        if (table) table.style.display = 'block';
+        
+        showToast('✅ Filtres réinitialisés', 'success');
+        console.log('🔄 Filtres réinitialisés et tableau rechargé');
+      } catch (err) {
+        console.error('❌ Erreur réinitialisation:', err);
+        if (spinner) spinner.style.display = 'none';
+        showToast('❌ Erreur lors de la réinitialisation', 'danger');
+      }
+    });
   }
 
   // ⚡ Rafraîchir les KPIs toutes les 60 secondes (au lieu de 30) avec cache

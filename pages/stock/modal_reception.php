@@ -1,63 +1,82 @@
-<!-- Modal Nouvelle Réception -->
+<!-- Modal Nouvelle Réception & Historique -->
 <div class="modal fade" id="modalReception" tabindex="-1" aria-labelledby="modalReceptionLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
     <div class="modal-content shadow-xl border-0">
       <div class="modal-header bg-gradient-success text-white">
         <h5 class="modal-title">
-          <i class="fas fa-truck-loading me-2"></i>Nouvelle Réception
+          <i class="fas fa-truck-loading me-2"></i>Gestion des Réceptions
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <form id="formReception" novalidate>
-        <div class="modal-body">
-          <div class="row g-3 mb-4">
-            <!-- 1. PRODUIT SELECTION -->
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Produit <span class="text-danger">*</span></label>
-              <select id="produitReception" class="form-select" required>
-                <option value="">Choisir produit...</option>
-              </select>
-              <div class="invalid-feedback">Produit obligatoire</div>
-            </div>
-            <!-- 2. FOURNISSEUR -->
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Fournisseur</label>
-              <input type="text" id="fournisseurReception" class="form-control" />
-            </div>
-          </div>
 
-          <!-- 3. QUANTITÉ + UNITÉ (Dynamique selon produit) -->
-          <div class="row g-3 mb-4">
-            <div class="col-md-4">
-              <label class="form-label fw-bold">Quantité Reçue <span class="text-danger">*</span></label>
-              <div class="input-group">
-                <input type="number" id="quantiteReception" class="form-control" min="0.01" step="0.01" required />
-                <span class="input-group-text fw-bold" id="uniteReceptionLabel">unités</span>
-              </div>
-              <div class="invalid-feedback">Quantité obligatoire</div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-bold">Rayon Destination <span class="text-danger">*</span></label>
-              <select id="rayonReception" class="form-select" required>
-                <option value="">Choisir rayon...</option>
-              </select>
-              <div class="invalid-feedback">Rayon obligatoire</div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Prix Achat Unitaire</label>
-              <div class="input-group">
-                <span class="input-group-text">CDF</span>
-                <input type="number" id="prixAchat" class="form-control" step="0.01" />
-              </div>
-            </div>
-          </div>
+      <!-- TABS NAVIGATION -->
+      <ul class="nav nav-tabs" role="tablist" style="border-bottom: 2px solid #e9ecef;">
+        <li class="nav-item" role="presentation">
+          <a class="nav-link active fw-bold text-success" id="tabNouvelleReception" href="#nouvelleReception" role="tab" data-bs-toggle="tab">
+            <i class="fas fa-plus-circle me-2"></i>Nouvelle Réception
+          </a>
+        </li>
+        <li class="nav-item" role="presentation">
+          <a class="nav-link fw-bold" id="tabHistoriqueReceptions" href="#historiqueReceptions" role="tab" data-bs-toggle="tab">
+            <i class="fas fa-history me-2"></i>Historique des Réceptions
+          </a>
+        </li>
+      </ul>
 
-          <!-- 4. CHAMPS DYNAMIQUES (selon type produit sélectionné) -->
-          <div id="champsDynamiquesReception" class="mb-4 p-3 border rounded-3 bg-light">
-            <div class="text-center text-muted py-4">
-              <i class="fas fa-info-circle fa-2x mb-2"></i>
-              <p>Sélectionnez un produit pour voir les champs spécifiques</p>
-            </div>
+      <!-- TAB CONTENT -->
+      <div class="tab-content">
+        <!-- TAB 1: NOUVELLE RÉCEPTION -->
+        <div class="tab-pane fade show active" id="nouvelleReception" role="tabpanel">
+          <form id="formReception" novalidate>
+            <div class="modal-body">
+              <div class="row g-3 mb-4">
+                <!-- 1. PRODUIT SELECTION -->
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Produit <span class="text-danger">*</span></label>
+                  <select id="produitReception" class="form-select" required>
+                    <option value="">Choisir produit...</option>
+                  </select>
+                  <div class="invalid-feedback">Produit obligatoire</div>
+                </div>
+                <!-- 2. FOURNISSEUR -->
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Fournisseur</label>
+                  <input type="text" id="fournisseurReception" class="form-control" />
+                </div>
+              </div>
+
+              <!-- 3. QUANTITÉ + UNITÉ (Dynamique selon produit) -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Quantité Reçue <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <input type="number" id="quantiteReception" class="form-control" min="0.01" step="0.01" required />
+                    <span class="input-group-text fw-bold" id="uniteReceptionLabel">unités</span>
+                  </div>
+                  <div class="invalid-feedback">Quantité obligatoire</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Rayon Destination <span class="text-danger">*</span></label>
+                  <select id="rayonReception" class="form-select" required>
+                    <option value="">Choisir rayon...</option>
+                  </select>
+                  <div class="invalid-feedback">Rayon obligatoire</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Prix Achat Unitaire</label>
+                  <div class="input-group">
+                    <span class="input-group-text">CDF</span>
+                    <input type="number" id="prixAchat" class="form-control" step="0.01" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. CHAMPS DYNAMIQUES (selon type produit sélectionné) -->
+              <div id="champsDynamiquesReception" class="mb-4 p-3 border rounded-3 bg-light">
+                <div class="text-center text-muted py-4">
+                  <i class="fas fa-info-circle fa-2x mb-2"></i>
+                  <p>Sélectionnez un produit pour voir les champs spécifiques</p>
+                </div>
           </div>
 
           <!-- 5. PHOTO OBLIGATOIRE (NOUVEAU !) -->
@@ -102,32 +121,102 @@
             </div>
           </div>
 
-          <!-- RÉCAPITULATIF (temps réel) -->
-          <div class="mt-4 p-3 bg-light rounded-3">
-            <h6><i class="fas fa-receipt me-2"></i>Récapitulatif</h6>
-            <div class="row text-center">
-              <div class="col-md-3">
-                <strong id="recapProduit">-</strong><br><small>Produit</small>
+              <!-- RÉCAPITULATIF (temps réel) -->
+              <div class="mt-4 p-3 bg-light rounded-3">
+                <h6><i class="fas fa-receipt me-2"></i>Récapitulatif</h6>
+                <div class="row text-center">
+                  <div class="col-md-3">
+                    <strong id="recapProduit">-</strong><br><small>Produit</small>
+                  </div>
+                  <div class="col-md-3">
+                    <strong id="recapQuantite">-</strong><br><small>Quantité</small>
+                  </div>
+                  <div class="col-md-3">
+                    <strong id="recapRayon">-</strong><br><small>Rayon</small>
+                  </div>
+                  <div class="col-md-3">
+                    <strong id="recapTotal">0 CDF</strong><br><small>Valeur totale</small>
+                  </div>
+                </div>
               </div>
-              <div class="col-md-3">
-                <strong id="recapQuantite">-</strong><br><small>Quantité</small>
+            </div>
+            <div class="modal-footer bg-light">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-success px-4">
+                <i class="fas fa-check me-2"></i>Enregistrer Réception
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- TAB 2: HISTORIQUE DES RÉCEPTIONS -->
+        <div class="tab-pane fade" id="historiqueReceptions" role="tabpanel">
+          <div class="modal-body">
+            <!-- STATS RÉCEPTIONS -->
+            <div class="mb-4" id="statsReceptions">
+              <div class="d-flex justify-content-center">
+                <div class="spinner-border text-success" role="status">
+                  <span class="visually-hidden">Chargement...</span>
+                </div>
               </div>
-              <div class="col-md-3">
-                <strong id="recapRayon">-</strong><br><small>Rayon</small>
+            </div>
+
+            <!-- FILTRES -->
+            <div class="card border-light mb-3">
+              <div class="card-body">
+                <h6 class="card-title">🔍 Filtres</h6>
+                <div class="row g-2">
+                  <div class="col-md-3">
+                    <select id="filterStatutReception" class="form-select form-select-sm">
+                      <option value="">Tous les statuts</option>
+                      <option value="controle">En contrôle</option>
+                      <option value="stocke">Stocké</option>
+                      <option value="rejete">Rejeté</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <input type="text" id="filterFournisseur" class="form-control form-control-sm" placeholder="Fournisseur...">
+                  </div>
+                  <div class="col-md-2">
+                    <input type="date" id="filterDateDebut" class="form-control form-control-sm">
+                  </div>
+                  <div class="col-md-2">
+                    <input type="date" id="filterDateFin" class="form-control form-control-sm">
+                  </div>
+                  <div class="col-md-2">
+                    <button class="btn btn-sm btn-success w-100" onclick="filtrerReceptions()"><i class="fas fa-search"></i> Filtrer</button>
+                  </div>
+                </div>
+                <div class="row g-2 mt-2">
+                  <div class="col-12">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="reinitialiserFiltres()"><i class="fas fa-redo"></i> Réinitialiser</button>
+                  </div>
+                </div>
               </div>
-              <div class="col-md-3">
-                <strong id="recapTotal">0 CDF</strong><br><small>Valeur totale</small>
+            </div>
+
+            <!-- SPINNER CHARGEMENT -->
+            <div id="spinnerHistoriqueReceptions" class="d-flex justify-content-center align-items-center" style="min-height: 300px; display: none;">
+              <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Chargement...</span>
               </div>
+            </div>
+
+            <!-- TABLEAU RÉCEPTIONS -->
+            <div id="historiqueReceptionsTable" class="table-responsive">
+              <div class="alert alert-info text-center">
+                <i class="fas fa-inbox"></i> Cliquez sur "Filtrer" pour afficher l'historique
+              </div>
+            </div>
+
+            <!-- PAGINATION -->
+            <div class="mt-3 d-flex gap-2 justify-content-between align-items-center flex-wrap" id="paginationReceptions">
             </div>
           </div>
         </div>
-        <div class="modal-footer bg-light">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-          <button type="submit" class="btn btn-success px-4">
-            <i class="fas fa-check me-2"></i>Enregistrer Réception
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   </div>
 </div>
+
+<div id="detailReceptionContainer"></div>
