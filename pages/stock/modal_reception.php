@@ -81,16 +81,27 @@
 
           <!-- 5. PHOTO OBLIGATOIRE (NOUVEAU !) -->
           <div class="row g-3 mb-4">
-            <div class="col-md-8">
+            <div class="col-md-6">
               <label class="form-label fw-bold text-danger">
                 <i class="fas fa-camera me-1"></i>Photo Réception <span class="text-danger">*</span>
               </label>
               <input type="file" id="photoReception" class="form-control" accept="image/*" required />
               <div class="invalid-feedback">Photo obligatoire pour traçabilité</div>
+              <small class="text-muted d-block mt-1">📸 Prévisualisation en temps réel ci-dessous</small>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label class="form-label">Numéro Lot</label>
               <input type="text" id="lotReception" class="form-control" />
+            </div>
+          </div>
+
+          <!-- PRÉVISUALISATION PHOTO EN TEMPS RÉEL -->
+          <div class="mb-4">
+            <div id="photoPreviewReception" class="text-center">
+              <div class="bg-light p-4 rounded-3 border-2 border-dashed">
+                <i class="fas fa-image fa-3x text-muted mb-2 d-block"></i>
+                <p class="text-muted small">La photo apparaîtra ici</p>
+              </div>
             </div>
           </div>
 
@@ -105,6 +116,10 @@
               <input type="date" id="datePeremption" class="form-control" />
             </div>
             <div class="col-md-3">
+              <label class="form-label">Date Fabrication</label>
+              <input type="date" id="dateFabrication" class="form-control" />
+            </div>
+            <div class="col-md-3">
               <label class="form-label">Statut</label>
               <select id="statutReception" class="form-select">
                 <option value="controle">À contrôler</option>
@@ -112,7 +127,10 @@
                 <option value="rejete">Rejeté</option>
               </select>
             </div>
-            <div class="col-md-3">
+          </div>
+
+          <div class="row g-3 mt-2">
+            <div class="col-md-12">
               <label class="form-label">Priorité</label>
               <select id="prioriteReception" class="form-select">
                 <option value="normale">Normale</option>

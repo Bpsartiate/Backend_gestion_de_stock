@@ -5,9 +5,31 @@
 let PRODUITS_RECEPTION = [];
 let RAYONS_RECEPTION = [];
 
+// Fonction pour attendre que MAGASIN_ID soit défini
+async function waitForMagasinId(maxWait = 10000) {
+  const startTime = Date.now();
+  while (typeof MAGASIN_ID === 'undefined') {
+    if (Date.now() - startTime > maxWait) {
+      console.warn('⚠️ MAGASIN_ID non défini après 10 secondes');
+      return false;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  return true;
+}
+
 // Initialiser la modal réception au chargement
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Initialisation système réception');
+  
+  // Attendre que MAGASIN_ID soit défini
+  const ready = await waitForMagasinId();
+  if (!ready) {
+    console.error('❌ MAGASIN_ID non disponible');
+    return;
+  }
+  
+  console.log(`✅ MAGASIN_ID disponible: ${MAGASIN_ID}`);
   
   // Charger les produits et rayons
   await chargerProduitsReception();
@@ -109,7 +131,9 @@ function setupReceptionListeners() {
   const produitSelect = document.getElementById('produitReception');
   const quantiteInput = document.getElementById('quantiteReception');
   const prixInput = document.getElementById('prixAchat');
+  const rayonSelect = document.getElementById('rayonReception');
   const dateReception = document.getElementById('dateReception');
+  const photoInput = document.getElementById('photoReception');
 
   // Définir date d'aujourd'hui par défaut
   if (dateReception) {
@@ -130,6 +154,16 @@ function setupReceptionListeners() {
     prixInput.addEventListener('input', updateRecapitulatif);
   }
 
+  // Recalculer le récapitulatif quand rayon change
+  if (rayonSelect) {
+    rayonSelect.addEventListener('change', updateRecapitulatif);
+  }
+
+  // 📸 PRÉVISUALISATION PHOTO EN TEMPS RÉEL
+  if (photoInput) {
+    photoInput.addEventListener('change', onPhotoSelected);
+  }
+
   // Soumettre le formulaire
   if (form) {
     form.addEventListener('submit', submitReception);
@@ -137,7 +171,45 @@ function setupReceptionListeners() {
 }
 
 // ================================
-// 🔄 QUAND UN PRODUIT EST SÉLECTIONNÉ
+// � QUAND UNE PHOTO EST SÉLECTIONNÉE
+// ================================
+
+function onPhotoSelected(e) {
+  const file = e.target.files[0];
+  const preview = document.getElementById('photoPreviewReception');
+  
+  if (!file) {
+    preview.innerHTML = `
+      <div class="bg-light p-4 rounded-3 border-2 border-dashed">
+        <i class="fas fa-image fa-3x text-muted mb-2 d-block"></i>
+        <p class="text-muted small">La photo apparaîtra ici</p>
+      </div>
+    `;
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const imgSrc = event.target.result;
+    preview.innerHTML = `
+      <div class="position-relative">
+        <img src="${imgSrc}" alt="Prévisualisation" class="img-fluid rounded-3" style="max-height: 250px; object-fit: contain;">
+        <div class="mt-2">
+          <small class="text-muted d-block">📁 ${file.name}</small>
+          <small class="text-muted d-block">📊 ${(file.size / 1024).toFixed(1)}KB</small>
+        </div>
+        <button type="button" class="btn btn-sm btn-danger mt-2" onclick="document.getElementById('photoReception').value=''; onPhotoSelected({target: {files: []}})">
+          <i class="fas fa-trash"></i> Retirer photo
+        </button>
+      </div>
+    `;
+    console.log('📸 Photo sélectionnée:', file.name);
+  };
+  reader.readAsDataURL(file);
+}
+
+// ================================
+// �🔄 QUAND UN PRODUIT EST SÉLECTIONNÉ
 // ================================
 
 function onProduitSelected() {
@@ -151,11 +223,29 @@ function onProduitSelected() {
   if (!produit) return;
 
   console.log('📦 Produit sélectionné:', produit.designation);
+  console.log('📍 Rayon du produit:', produit.rayonId);
 
   // Mettre à jour l'unité
   const uniteLabel = document.getElementById('uniteReceptionLabel');
   if (uniteLabel) {
     uniteLabel.textContent = produit.typeUnite || 'unités';
+  }
+
+  // ✅ PRÉREMPLIR LE RAYON AUTOMATIQUEMENT depuis le produit
+  if (produit.rayonId) {
+    const rayonSelect = document.getElementById('rayonReception');
+    if (rayonSelect) {
+      // Le rayonId peut être un objet (populé) ou une string
+      const rayonId = typeof produit.rayonId === 'object' ? produit.rayonId._id : produit.rayonId;
+      const rayonIdStr = rayonId.toString();
+      rayonSelect.value = rayonIdStr;
+      console.log(`✅ Rayon prérempli: ${rayonIdStr}`);
+      
+      // Vérifier si la sélection a fonctionné
+      if (rayonSelect.value !== rayonIdStr) {
+        console.warn('⚠️ Rayon non trouvé dans la liste - Options disponibles:', Array.from(rayonSelect.options).map(o => o.value));
+      }
+    }
   }
 
   // Pré-remplir le prix d'achat
@@ -298,10 +388,19 @@ async function submitReception(e) {
     const fournisseur = document.getElementById('fournisseurReception').value;
     const dateReception = document.getElementById('dateReception').value;
     const datePeremption = document.getElementById('datePeremption').value;
+    const dateFabrication = document.getElementById('dateFabrication')?.value;
     const statut = document.getElementById('statutReception').value;
     const priorite = document.getElementById('prioriteReception').value;
     const photoFile = document.getElementById('photoReception').files[0];
     const lotNumber = document.getElementById('lotReception').value;
+
+    // Collecter les champs dynamiques
+    const numeroBatch = document.getElementById('numeroBatch')?.value;
+    const certificat = document.getElementById('certificat')?.value;
+    const numeroSerie = document.getElementById('numeroSerie')?.value;
+    const codeBarres = document.getElementById('codeBarres')?.value;
+    const etatColis = document.getElementById('etatColis')?.value;
+    const garantie = parseFloat(document.getElementById('garantie')?.value) || null;
 
     console.log('💾 Enregistrement réception:', {
       produitId,
@@ -310,21 +409,23 @@ async function submitReception(e) {
       prixAchat,
       fournisseur,
       dateReception,
+      datePeremption,
+      dateFabrication,
       statut,
       priorite
     });
 
     // 📸 ÉTAPE 1: Uploader la photo
-    console.log('📸 Début upload photo:', photoFile.name);
+    console.log('📸 Début upload photo:', photoFile?.name || 'Pas de photo');
     let photoUrl = null;
 
     if (photoFile) {
       // Compresser l'image
       const compressedFile = await compressImage(photoFile);
       
-      // Créer FormData
+      // Créer FormData avec le champ 'image' (pas 'file')
       const formData = new FormData();
-      formData.append('file', compressedFile);
+      formData.append('image', compressedFile);
 
       // Récupérer le token
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
@@ -360,11 +461,18 @@ async function submitReception(e) {
       fournisseur,
       dateReception,
       datePeremption,
+      dateFabrication,
       statut,
       priorite,
       photoUrl: photoUrl || null,
       lotNumber: lotNumber || null,
-      typeMouvement: 'RÉCEPTION' // Important pour le mouvement de stock
+      // Champs dynamiques
+      numeroBatch,
+      certificat,
+      numeroSerie,
+      codeBarres,
+      etatColis,
+      garantie
     };
 
     console.log('📡 Envoi données réception:', receptionData);

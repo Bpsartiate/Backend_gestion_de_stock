@@ -2566,10 +2566,20 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       garantie
     } = req.body;
 
+    // Log les données reçues
+    console.log('📥 POST /receptions reçues:', {
+      produitId: produitId || 'MISSING',
+      magasinId: magasinId || 'MISSING',
+      rayonId: rayonId || 'MISSING',
+      quantite: quantite || 'MISSING',
+      prixAchat: prixAchat || 'MISSING'
+    });
+
     // Validation des champs requis
-    if (!produitId || !magasinId || !rayonId || !quantite || !prixAchat) {
+    if (!produitId || !magasinId || !rayonId || !quantite || prixAchat === null || prixAchat === undefined) {
       return res.status(400).json({
-        error: 'Champs requis manquants: produitId, magasinId, rayonId, quantite, prixAchat'
+        error: 'Champs requis manquants',
+        received: { produitId, magasinId, rayonId, quantite, prixAchat }
       });
     }
 
@@ -2595,6 +2605,8 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     if (!rayon || rayon.estSupprime) {
       return res.status(404).json({ error: 'Rayon non trouvé' });
     }
+
+    console.log(`✅ Validations OK - Produit: ${produit.designation}, Quantité: ${quantite}`);
 
     // Calculer le prix total
     const prixTotal = quantite * prixAchat;
@@ -2639,7 +2651,7 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       quantiteEntree: quantite,
       quantiteSortie: 0,
       reference: reception._id,
-      description: `Réception - Fournisseur: ${fournisseur || 'Non spécifié'}, Lot: ${lotNumber}`,
+      description: `Réception - Fournisseur: ${fournisseur || 'Non spécifié'}, Lot: ${lotNumber || ''}`,
       utilisateurId: req.user.id,
       dateCreation: new Date()
     });
@@ -2648,15 +2660,23 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     console.log(`✅ Mouvement de stock créé: ${stockMovement._id}`);
 
     // 3. Mettre à jour la quantité actuelle du produit
-    produit.quantiteActuelle = (produit.quantiteActuelle || 0) + quantite;
-    produit.quantiteEntree = (produit.quantiteEntree || 0) + quantite;
+    produit.quantiteActuelle = (produit.quantiteActuelle || 0) + parseFloat(quantite);
+    produit.quantiteEntree = (produit.quantiteEntree || 0) + parseFloat(quantite);
 
     // Mettre à jour la date de dernière réception
     produit.dateLastMovement = new Date();
 
-    // Mettre en à jour le rayon du produit si différent
-    if (!produit.rayonIds.includes(rayonId)) {
-      produit.rayonIds.push(rayonId);
+    // Mettre à jour le rayon du produit si différent (toujours en String pour la comparaison)
+    try {
+      const currentRayonId = produit.rayonId ? produit.rayonId.toString() : null;
+      const newRayonId = rayonId ? rayonId.toString() : null;
+      
+      if (currentRayonId !== newRayonId) {
+        console.log(`📍 Changement de rayon: ${currentRayonId} → ${newRayonId}`);
+        produit.rayonId = rayonId;
+      }
+    } catch (rayonErr) {
+      console.warn('⚠️ Erreur mise à jour rayon:', rayonErr.message);
     }
 
     await produit.save();

@@ -8,10 +8,11 @@
 // ⚙️ CONFIGURATION GLOBALE
 // ================================
 
-// Vérifier si API_CONFIG existe déjà (pour éviter les duplicatas)
+// Vérifier si API_CONFIG existe déjà (depuis api-config.js)
+// Si non, la créer avec les endpoints locaux
 if (typeof API_CONFIG === 'undefined') {
-  var API_CONFIG = {
-    BASE: 'https://backend-gestion-de-stock.onrender.com',
+  window.API_CONFIG = {
+    BASE_URL: 'https://backend-gestion-de-stock.onrender.com',
     
     ENDPOINTS: {
       // MAGASINS
@@ -64,7 +65,7 @@ async function apiCall(method, endpoint, data = null, params = {}) {
       url = url.replace(`:${key}`, params[key]);
     });
 
-    const fullUrl = `${API_CONFIG.BASE}${url}`;
+    const fullUrl = `${API_CONFIG.BASE_URL || API_CONFIG.BASE}${url}`;
     const options = {
       method,
       headers: {

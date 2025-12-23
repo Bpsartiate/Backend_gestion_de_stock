@@ -474,6 +474,9 @@
   <!-- Modal Paramètres Stock -->
    <?php include_once "modal_stock_settings.php"; ?>
 
+<!-- ⚙️ API Configuration (DOIT être chargée AVANT les autres scripts) -->
+<script src="<?php echo BASE_URL; ?>assets/js/api-config.js"></script>
+
 <!-- 📦 Stock Management System Script -->
 <script src="<?php echo BASE_URL; ?>assets/js/stock.js"></script>
 <!-- 📥 RÉCEPTION SYSTEM SCRIPT -->
