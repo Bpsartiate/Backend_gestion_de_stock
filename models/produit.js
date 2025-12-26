@@ -75,7 +75,10 @@ const produitSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  dateReception: Date,
+  dateFabrication: Date,
   dateExpiration: Date,
+  datePeremption: Date,
 
   // SEUIL D'ALERTE
   seuilAlerte: {
@@ -92,6 +95,19 @@ const produitSchema = new mongoose.Schema({
   notes: String,
 
   // STATUT
+  statut: {
+    type: String,
+    enum: ['controle', 'stocke', 'rejete'],
+    default: 'stocke'
+  },
+
+  // PRIORITÉ
+  priorite: {
+    type: String,
+    enum: ['normale', 'urgente'],
+    default: 'normale'
+  },
+
   status: {
     type: Number,
     enum: [0, 1],

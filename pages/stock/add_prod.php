@@ -132,15 +132,30 @@
                   <small class="text-muted d-block mt-1">Ex: LOT2024001, BATCH-2024-01</small>
                 </div>
 
-                <!-- Date d'Entrée -->
+                <!-- Date de Fabrication -->
                 <div class="col-md-4">
-                  <label class="form-label fw-bold">Date d'Entrée <span class="text-danger">*</span></label>
+                  <label class="form-label fw-bold">Date de Fabrication</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-calendar text-info"></i></span>
+                    <input 
+                      type="date" 
+                      name="dateFabrication" 
+                      id="dateFabrication" 
+                      class="form-control"
+                    >
+                  </div>
+                  <small class="text-muted d-block mt-1">Date de création du produit</small>
+                </div>
+
+                <!-- Date de Réception -->
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Date de Réception <span class="text-danger">*</span></label>
                   <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-calendar text-primary"></i></span>
                     <input 
                       type="date" 
-                      name="dateEntreeLot" 
-                      id="dateEntreeLot" 
+                      name="dateReception" 
+                      id="dateReception" 
                       class="form-control"
                       required
                     >
@@ -148,19 +163,38 @@
                   <small class="text-muted d-block mt-1">Pour FIFO/LIFO</small>
                 </div>
 
-                <!-- Date d'Expiration -->
+                <!-- Date Péremption -->
                 <div class="col-md-4">
-                  <label class="form-label fw-bold">Date Expiration</label>
+                  <label class="form-label fw-bold">Date Péremption</label>
                   <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-calendar-times text-danger"></i></span>
                     <input 
                       type="date" 
-                      name="dateExpiration" 
-                      id="dateExpiration" 
+                      name="datePeremption" 
+                      id="datePeremption" 
                       class="form-control"
                     >
                   </div>
                   <small class="text-muted d-block mt-1">Si applicable</small>
+                </div>
+
+                <!-- Statut -->
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Statut</label>
+                  <select id="statutProduit" name="statut" class="form-select">
+                    <option value="controle">À contrôler</option>
+                    <option value="stocke" selected>Stocké</option>
+                    <option value="rejete">Rejeté</option>
+                  </select>
+                </div>
+
+                <!-- Priorité -->
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Priorité</label>
+                  <select id="prioriteProduit" name="priorite" class="form-select">
+                    <option value="normale" selected>Normale</option>
+                    <option value="urgente">Urgente</option>
+                  </select>
                 </div>
               </div>
 
@@ -767,9 +801,13 @@
       const quantite = parseFloat(document.getElementById('quantite').value) || 0;
       const rayonId = document.getElementById('rayonId').value;
       const categorieId = document.getElementById('categorieId').value;
-      const dateEntree = document.getElementById('dateEntreeLot').value;
+      const dateReception = document.getElementById('dateReception').value;
+      const dateFabrication = document.getElementById('dateFabrication').value;
+      const datePeremption = document.getElementById('datePeremption').value;
+      const statut = document.getElementById('statutProduit').value;
+      const priorite = document.getElementById('prioriteProduit').value;
 
-      if (!reference || !designation || !rayonId || !dateEntree) {
+      if (!reference || !designation || !rayonId || !dateReception) {
         showNotification('⚠️ Veuillez remplir tous les champs obligatoires', 'warning');
         return;
       }
@@ -832,7 +870,11 @@
         quantiteEntree: quantite,
         prixUnitaire: parseFloat(document.getElementById('prixUnitaire').value) || 0,
         etat: document.getElementById('etat').value,
-        dateEntree,
+        dateReception,
+        dateFabrication,
+        datePeremption,
+        statut,
+        priorite,
         seuilAlerte: parseFloat(document.getElementById('seuilAlerte').value) || 0,
         photoUrl: uploadedPhotoUrl,
         notes: `Lot: ${document.getElementById('numeroBatch').value || 'N/A'}`
