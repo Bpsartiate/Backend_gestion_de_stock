@@ -52,7 +52,6 @@ async function chargerHistoriqueReceptions(filters = {}) {
     }
     if (tableContainer) tableContainer.style.display = 'none';
 
-    const tableContainer = document.getElementById('historiqueReceptionsTable');
     if (!tableContainer) {
       console.error('❌ Container historiqueReceptionsTable non trouvé');
       return;
