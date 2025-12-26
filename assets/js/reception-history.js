@@ -115,8 +115,10 @@ async function chargerHistoriqueReceptions(filters = {}) {
 
     // Calculer et afficher les stats (côté frontend si nécessaire)
     let stats = data.stats;
-    if (!stats || typeof stats !== 'object') {
-      console.warn('⚠️ Stats non trouvées, calcul côté frontend...');
+    // Vérifier si stats est vide (objet vide {} retourne typeof === 'object')
+    const statsEmpty = !stats || typeof stats !== 'object' || Object.keys(stats).length === 0;
+    if (statsEmpty) {
+      console.warn('⚠️ Stats vides ou non trouvées, calcul côté frontend...');
       stats = calculerStatsReceptions();
     }
     afficherStatsReceptions(stats);
