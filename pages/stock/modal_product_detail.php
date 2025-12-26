@@ -22,7 +22,7 @@
           </li>
           <li class="nav-item" role="presentation">
             <button class="nav-link" id="tabMouvements-tab" data-bs-toggle="tab" data-bs-target="#tabMouvements" type="button" role="tab" aria-controls="tabMouvements" aria-selected="false">
-              <i class="fas fa-arrows-alt-v me-2"></i>Mouvements
+              <i class="fas fa-arrows-alt-v me-2"></i>Mouvements de stock
             </button>
           </li>
           <li class="nav-item" role="presentation">
