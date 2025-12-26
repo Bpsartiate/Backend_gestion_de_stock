@@ -41,9 +41,16 @@ async function chargerHistoriqueReceptions(filters = {}) {
       }
     }
 
-    // Afficher le spinner
+    // Afficher le spinner ET masquer le tableau
     const spinner = document.getElementById('spinnerHistoriqueReceptions');
-    if (spinner) spinner.style.display = 'flex';
+    const tableContainer = document.getElementById('historiqueReceptionsTable');
+    if (spinner) {
+      spinner.style.display = 'flex';
+      spinner.style.minHeight = '300px';
+      spinner.style.justifyContent = 'center';
+      spinner.style.alignItems = 'center';
+    }
+    if (tableContainer) tableContainer.style.display = 'none';
 
     const tableContainer = document.getElementById('historiqueReceptionsTable');
     if (!tableContainer) {
@@ -86,8 +93,9 @@ async function chargerHistoriqueReceptions(filters = {}) {
     console.log(`✅ ${RECEPTIONS_DATA.length} réceptions chargées`);
     console.log('📊 Données reçues:', data);
 
-    // Masquer le spinner
+    // Masquer le spinner ET afficher le tableau
     if (spinner) spinner.style.display = 'none';
+    if (tableContainer) tableContainer.style.display = 'block';
 
     // Afficher les réceptions
     afficherHistoriqueReceptions();
@@ -97,6 +105,12 @@ async function chargerHistoriqueReceptions(filters = {}) {
 
     // Afficher les stats
     afficherStatsReceptions(data.stats);
+
+    // Mettre à jour les KPIs si la fonction existe
+    if (typeof updateDashboardKPIs === 'function') {
+      console.log('📊 Mise à jour des KPIs...');
+      await updateDashboardKPIs();
+    }
 
   } catch (error) {
     console.error('❌ Erreur chargement historique:', error);
