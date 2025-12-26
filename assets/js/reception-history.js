@@ -579,19 +579,23 @@ function afficherModalDetailReception(reception) {
                   <div class="card-body">
                     <div class="mb-3">
                       <label class="text-muted small d-block">Rayon</label>
-                      <h5 class="mb-0">${rayon.nomRayon || '--'}</h5>
+                      <h5 class="mb-0">${rayon.iconeRayon || '📦'} ${rayon.nomRayon || '--'}</h5>
                     </div>
                     <div class="mb-3">
-                      <label class="text-muted small d-block">Capacité</label>
+                      <label class="text-muted small d-block">Code & Type</label>
+                      <p class="mb-0"><strong>${rayon.codeRayon || '--'}</strong> • <span class="badge bg-secondary">${rayon.typeRayon || '--'}</span></p>
+                    </div>
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Capacité du rayon</label>
                       <div class="progress" style="height: 24px;">
-                        <div class="progress-bar bg-info fw-bold" style="width: ${Math.min(((rayon.quantite || 0) / (rayon.capacite || 100)) * 100, 100)}%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
-                          ${rayon.quantite || 0}/${rayon.capacite || '--'}
+                        <div class="progress-bar bg-info fw-bold" style="width: ${Math.min(((rayon.quantiteActuelle || 0) / (rayon.capaciteMax || 100)) * 100, 100)}%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
+                          ${rayon.quantiteActuelle || 0}/${rayon.capaciteMax || '--'}
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label class="text-muted small d-block">Type</label>
-                      <p class="mb-0">${rayon.typeRayon || '--'}</p>
+                      <label class="text-muted small d-block">Description</label>
+                      <p class="mb-0 small">${rayon.description || 'N/A'}</p>
                     </div>
                   </div>
                 </div>

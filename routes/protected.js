@@ -1599,12 +1599,35 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
     }
 
     const produits = await Produit.find({ magasinId, status: 1 })
-      .populate('typeProduitId', 'nomType unitePrincipale')
-      .populate('rayonId', 'nomRayon codeRayon')
+      .populate({
+        path: 'typeProduitId',
+        select: 'nomType unitePrincipale code icone seuilAlerte'
+      })
+      .populate({
+        path: 'rayonId',
+        select: 'nomRayon codeRayon typeRayon iconeRayon capaciteMax quantiteActuelle'
+      })
       .sort({ designation: 1 })
       .lean();
 
-    return res.json(produits);
+    // Pour chaque produit, récupérer ses alertes actives
+    const produitsAvecAlertes = await Promise.all(
+      produits.map(async (produit) => {
+        const alertes = await AlerteStock.find({
+          produitId: produit._id,
+          statut: 'ACTIVE'
+        })
+        .select('type severite message quantiteActuelle seuilAlerte quantiteManquante dateCreation actionRecommandee')
+        .lean();
+
+        return {
+          ...produit,
+          alertes: alertes || []
+        };
+      })
+    );
+
+    return res.json(produitsAvecAlertes);
   } catch (err) {
     console.error('produits.list.error', err);
     return res.status(500).json({ message: 'Erreur: ' + err.message });
@@ -2168,7 +2191,22 @@ router.get('/magasins/:magasinId/alertes', authMiddleware, async (req, res) => {
     if (type) filter.type = type;
 
     const alertes = await AlerteStock.find(filter)
-      .populate('produitId', 'reference designation')
+      .populate({
+        path: 'produitId',
+        select: 'reference designation quantiteActuelle prixUnitaire typeProduitId rayonId photoUrl',
+        populate: [
+          {
+            path: 'typeProduitId',
+            select: 'nomType unitePrincipale code icone'
+          },
+          {
+            path: 'rayonId',
+            select: 'nomRayon codeRayon typeRayon iconeRayon'
+          }
+        ]
+      })
+      .populate('utilisateurId', 'nom prenom email')
+      .populate('lotId', 'numeroLot dateExpiration')
       .sort({ dateCreation: -1 })
       .lean();
 
@@ -2769,11 +2807,14 @@ router.get('/receptions', authMiddleware, checkMagasinAccess, async (req, res) =
         select: 'designation reference image quantiteActuelle prixUnitaire typeProduitId seuilAlerte etat',
         populate: {
           path: 'typeProduitId',
-          select: 'nomType unitePrincipale'
+          select: 'nomType unitePrincipale code icone'
         }
       })
       .populate('magasinId', 'nom')
-      .populate('rayonId', 'nom codeRayon typeRayon quantite capacite')
+      .populate({
+        path: 'rayonId',
+        select: 'codeRayon nomRayon typeRayon quantiteActuelle capaciteMax couleurRayon iconeRayon typesProduitsAutorises description status'
+      })
       .populate('mouvementStockId')
       .populate('utilisateurId', 'nom prenom email')
       .sort({ dateReception: -1 })
@@ -2833,7 +2874,10 @@ router.get('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
         }
       })
       .populate('magasinId', 'nom')
-      .populate('rayonId', 'nom codeRayon typeRayon quantite capacite')
+      .populate({
+        path: 'rayonId',
+        select: 'codeRayon nomRayon typeRayon quantiteActuelle capaciteMax couleurRayon iconeRayon typesProduitsAutorises description status createdAt updatedAt'
+      })
       .populate('mouvementStockId')
       .populate('utilisateurId', 'nom prenom email');
 
