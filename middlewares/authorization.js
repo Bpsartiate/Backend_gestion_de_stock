@@ -9,7 +9,12 @@ const Magasin = require('../models/magasin');
  */
 const checkMagasinAccess = async (req, res, next) => {
   const requester = req.user;
-  const magasinId = req.params.magasinId || req.body.magasinId || req.query.magasinId;
+  const magasinId = req.params?.magasinId || req.body?.magasinId || req.query?.magasinId;
+
+  // Si pas de magasinId, retourner erreur
+  if (!magasinId) {
+    return res.status(400).json({ message: 'magasinId requis' });
+  }
 
   // Vendeur: pas d'accès
   if (requester.role === 'vendeur') {
