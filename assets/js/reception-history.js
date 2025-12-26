@@ -406,6 +406,18 @@ function afficherModalDetailReception(reception) {
 // 📊 CALCULER STATS (Frontend)
 // ================================
 
+function normalizeStatut(statut) {
+  if (!statut) return 'controle';
+  const lower = statut.toLowerCase().trim();
+  
+  // Mapping pour normaliser différentes variations
+  if (lower.includes('stocke') || lower.includes('stocké')) return 'stocke';
+  if (lower.includes('controle') || lower.includes('contrôle')) return 'controle';
+  if (lower.includes('rejete') || lower.includes('rejeté')) return 'rejete';
+  
+  return 'controle';
+}
+
 function calculerStatsReceptions() {
   const stats = {
     controle: { count: 0, totalQuantite: 0, totalPrix: 0 },
@@ -413,10 +425,15 @@ function calculerStatsReceptions() {
     rejete: { count: 0, totalQuantite: 0, totalPrix: 0 }
   };
 
-  RECEPTIONS_DATA.forEach(reception => {
-    const statut = reception.statut || 'controle';
+  console.log('📊 Calcul stats - RECEPTIONS_DATA:', RECEPTIONS_DATA);
+  console.log('📊 Nombre de réceptions:', RECEPTIONS_DATA.length);
+
+  RECEPTIONS_DATA.forEach((reception, index) => {
+    const statut = normalizeStatut(reception.statut);
     const quantite = reception.quantite || 0;
     const prix = reception.prixTotal || 0;
+
+    console.log(`📊 Réception ${index}:`, { statut: reception.statut, normalized: statut, quantite, prix });
 
     if (!stats[statut]) {
       stats[statut] = { count: 0, totalQuantite: 0, totalPrix: 0 };
