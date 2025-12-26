@@ -989,6 +989,15 @@ function afficherTableProduits(produits) {
 
   console.log('📋 afficherTableProduits appelé avec', produits.length, 'produits');
 
+  // 🚫 Masquer le spinner et afficher le tableau
+  const spinner = document.getElementById('filterSpinner');
+  const table = document.querySelector('#tableReceptions > div');
+  const noResults = document.getElementById('noResultsMessage');
+  
+  if (spinner) spinner.style.display = 'none';
+  if (table) table.style.display = 'block';
+  if (noResults) noResults.style.display = 'none';
+
   // ⚡ Utiliser documentFragment pour performance
   const fragment = document.createDocumentFragment();
 
@@ -1177,22 +1186,31 @@ async function updateDashboardKPIs(produits = null) {
     }
 
     // 3. Alertes stock (active count)
-    const alertes = await API.get(
-      API_CONFIG.ENDPOINTS.ALERTES,
-      { magasinId: MAGASIN_ID }
-    );
-    const alertesActive = alertes.filter(a => a.statut === 'ACTIVE').length;
-    const elemAlertes = document.getElementById('alertesStock');
-    const iconAlertes = document.getElementById('iconAlertes');
-    if (elemAlertes) {
-      elemAlertes.classList.remove('loading');
-      elemAlertes.innerHTML = alertesActive;
-    }
-    // 💃 Ajouter animation si alertes > 0
-    if (iconAlertes) {
-      iconAlertes.classList.remove('alert', 'swing', 'bounce');
-      if (alertesActive > 0) {
-        iconAlertes.classList.add('bounce'); // Animation bounce pour les alertes
+    try {
+      const alertes = await API.get(
+        API_CONFIG.ENDPOINTS.ALERTES,
+        { magasinId: MAGASIN_ID }
+      );
+      const alertesActive = alertes && Array.isArray(alertes) ? alertes.filter(a => a.statut === 'ACTIVE').length : 0;
+      const elemAlertes = document.getElementById('alertesStock');
+      const iconAlertes = document.getElementById('iconAlertes');
+      if (elemAlertes) {
+        elemAlertes.classList.remove('loading');
+        elemAlertes.innerHTML = alertesActive;
+      }
+      // 💃 Ajouter animation si alertes > 0
+      if (iconAlertes) {
+        iconAlertes.classList.remove('alert', 'swing', 'bounce');
+        if (alertesActive > 0) {
+          iconAlertes.classList.add('bounce'); // Animation bounce pour les alertes
+        }
+      }
+    } catch (err) {
+      console.error('⚠️ Erreur chargement alertes:', err);
+      const elemAlertes = document.getElementById('alertesStock');
+      if (elemAlertes) {
+        elemAlertes.classList.remove('loading');
+        elemAlertes.innerHTML = '0';
       }
     }
 
@@ -1214,11 +1232,12 @@ async function updateDashboardKPIs(produits = null) {
       }
     }
 
-    console.log('✅ KPIs mis à jour:', { totalStock, rayonsActifs: CURRENT_STOCK_CONFIG?.rayons?.length, alertesActive, rayonsPleins });
+    console.log('✅ KPIs mis à jour:', { totalStock, alertesActive: donneesProduits.filter(p => !p.quantiteActuelle).length, rayonsPleins });
 
   } catch (err) {
     console.error('❌ Erreur KPIs:', err);
   }
+}
 }
 
 // ================================
@@ -1360,6 +1379,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   MAGASIN_ID = sessionStorage.getItem('currentMagasinId');
   MAGASIN_NOM = sessionStorage.getItem('currentMagasinNom');
 
+  // 🚫 Masquer le spinner du filtre au démarrage
+  const filterSpinner = document.getElementById('filterSpinner');
+  if (filterSpinner) filterSpinner.style.display = 'none';
+
   if (MAGASIN_ID) {
     document.getElementById('magasinActuelText').textContent = MAGASIN_NOM;
     
@@ -1382,11 +1405,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       API.get(
         API_CONFIG.ENDPOINTS.ALERTES,
         { magasinId: MAGASIN_ID }
-      )
+      ).catch(() => [])  // Si erreur, retourner array vide
     ]);
 
     // Mettre à jour les alertes
-    const alerteCount = alertes.filter(a => a.statut === 'ACTIVE').length;
+    const alerteCount = alertes && Array.isArray(alertes) ? alertes.filter(a => a.statut === 'ACTIVE').length : 0;
     const elemAlertes = document.getElementById('alertesStock');
     if (elemAlertes) {
       elemAlertes.classList.remove('loading');
