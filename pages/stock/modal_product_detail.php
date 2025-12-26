@@ -27,7 +27,7 @@
           </li>
           <li class="nav-item" role="presentation">
             <button class="nav-link" id="tabHistorique-tab" data-bs-toggle="tab" data-bs-target="#tabHistorique" type="button" role="tab" aria-controls="tabHistorique" aria-selected="false">
-              <i class="fas fa-history me-2"></i>Historique
+              <i class="fas fa-history me-2"></i>Historiques
             </button>
           </li>
         </ul>
