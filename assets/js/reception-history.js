@@ -49,8 +49,12 @@ async function chargerHistoriqueReceptions(filters = {}) {
       spinner.style.minHeight = '300px';
       spinner.style.justifyContent = 'center';
       spinner.style.alignItems = 'center';
+      console.log('📊 Spinner affiché');
     }
-    if (tableContainer) tableContainer.style.display = 'none';
+    if (tableContainer) {
+      tableContainer.style.display = 'none';
+      console.log('📊 Tableau masqué');
+    }
 
     if (!tableContainer) {
       console.error('❌ Container historiqueReceptionsTable non trouvé');
@@ -94,8 +98,14 @@ async function chargerHistoriqueReceptions(filters = {}) {
     console.log('📊 Stats reçues:', data.stats);
 
     // Masquer le spinner ET afficher le tableau
-    if (spinner) spinner.style.display = 'none';
-    if (tableContainer) tableContainer.style.display = 'block';
+    if (spinner) {
+      spinner.style.cssText = 'display: none !important; min-height: 0 !important;';
+      console.log('📊 Spinner masqué avec !important');
+    }
+    if (tableContainer) {
+      tableContainer.style.display = 'block';
+      console.log('📊 Tableau affiché');
+    }
 
     // Afficher les réceptions
     afficherHistoriqueReceptions();
@@ -121,7 +131,10 @@ async function chargerHistoriqueReceptions(filters = {}) {
     console.error('❌ Erreur chargement historique:', error);
     
     const spinner = document.getElementById('spinnerHistoriqueReceptions');
-    if (spinner) spinner.style.display = 'none';
+    if (spinner) {
+      spinner.style.cssText = 'display: none !important;';
+      console.log('📊 Spinner masqué en cas d\'erreur');
+    }
     
     const tableContainer = document.getElementById('historiqueReceptionsTable');
     if (tableContainer) {
