@@ -171,6 +171,9 @@ function afficherHistoriqueReceptions() {
     return;
   }
 
+  // Déboguer: afficher la structure des données
+  console.log('📸 Structure RECEPTIONS_DATA[0]:', RECEPTIONS_DATA[0]);
+
   // Créer le tableau HTML
   let html = `
     <div class="table-responsive">
@@ -190,17 +193,26 @@ function afficherHistoriqueReceptions() {
         <tbody>
   `;
 
-  RECEPTIONS_DATA.forEach(reception => {
-    const produit = reception.produitId || {};
+  RECEPTIONS_DATA.forEach((reception, index) => {
+    // Essayer de récupérer le produit de plusieurs endroits
+    const produit = reception.produitId || reception.produit || {};
     const dateFormatted = new Date(reception.dateReception).toLocaleDateString('fr-FR');
     const statutBadge = getStatutBadge(reception.statut);
     const prixTotal = (reception.prixTotal || 0).toFixed(2);
+    
+    // Déboguer: afficher les infos du produit
+    console.log(`📸 Réception ${index}:`, { 
+      produitId: reception.produitId,
+      produit: reception.produit,
+      image: produit.image,
+      designation: produit.designation 
+    });
 
     html += `
       <tr>
         <td>
           <div class="d-flex align-items-center gap-2">
-            ${produit.image ? `<img src="${produit.image}" alt="" style="width: 35px; height: 35px; border-radius: 4px; object-fit: cover;">` : '<div style="width: 35px; height: 35px; background: #e9ecef; border-radius: 4px;"></div>'}
+            ${produit.image ? `<img src="${produit.image}" alt="" style="width: 35px; height: 35px; border-radius: 4px; object-fit: cover;">` : '<div style="width: 35px; height: 35px; background: #e9ecef; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image" style="font-size: 14px; color: #999;"></i></div>'}
             <strong>${produit.designation || 'N/A'}</strong>
           </div>
         </td>
