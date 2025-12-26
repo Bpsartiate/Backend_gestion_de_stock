@@ -91,6 +91,7 @@ async function chargerHistoriqueReceptions(filters = {}) {
 
     console.log(`✅ ${RECEPTIONS_DATA.length} réceptions chargées`);
     console.log('📊 Données reçues:', data);
+    console.log('📊 Stats reçues:', data.stats);
 
     // Masquer le spinner ET afficher le tableau
     if (spinner) spinner.style.display = 'none';
@@ -102,8 +103,13 @@ async function chargerHistoriqueReceptions(filters = {}) {
     // Mettre à jour la pagination
     mettreAJourPaginationReceptions(data.total, data.pages);
 
-    // Afficher les stats
-    afficherStatsReceptions(data.stats);
+    // Calculer et afficher les stats (côté frontend si nécessaire)
+    let stats = data.stats;
+    if (!stats || typeof stats !== 'object') {
+      console.warn('⚠️ Stats non trouvées, calcul côté frontend...');
+      stats = calculerStatsReceptions();
+    }
+    afficherStatsReceptions(stats);
 
     // Mettre à jour les KPIs si la fonction existe
     if (typeof updateDashboardKPIs === 'function') {
@@ -397,6 +403,35 @@ function afficherModalDetailReception(reception) {
 }
 
 // ================================
+// 📊 CALCULER STATS (Frontend)
+// ================================
+
+function calculerStatsReceptions() {
+  const stats = {
+    controle: { count: 0, totalQuantite: 0, totalPrix: 0 },
+    stocke: { count: 0, totalQuantite: 0, totalPrix: 0 },
+    rejete: { count: 0, totalQuantite: 0, totalPrix: 0 }
+  };
+
+  RECEPTIONS_DATA.forEach(reception => {
+    const statut = reception.statut || 'controle';
+    const quantite = reception.quantite || 0;
+    const prix = reception.prixTotal || 0;
+
+    if (!stats[statut]) {
+      stats[statut] = { count: 0, totalQuantite: 0, totalPrix: 0 };
+    }
+
+    stats[statut].count++;
+    stats[statut].totalQuantite += quantite;
+    stats[statut].totalPrix += prix;
+  });
+
+  console.log('📊 Stats calculées côté frontend:', stats);
+  return stats;
+}
+
+// ================================
 // 📊 AFFICHER STATS
 // ================================
 
@@ -404,9 +439,21 @@ function afficherStatsReceptions(stats) {
   const statsContainer = document.getElementById('statsReceptions');
   if (!statsContainer) return;
 
-  const controle = stats['controle'] || { count: 0, totalQuantite: 0, totalPrix: 0 };
-  const stocke = stats['stocke'] || { count: 0, totalQuantite: 0, totalPrix: 0 };
-  const rejete = stats['rejete'] || { count: 0, totalQuantite: 0, totalPrix: 0 };
+  // Sécurité: vérifier que stats existe
+  if (!stats || typeof stats !== 'object') {
+    console.warn('⚠️ Stats vide, affichage de 0');
+    stats = {
+      controle: { count: 0, totalQuantite: 0, totalPrix: 0 },
+      stocke: { count: 0, totalQuantite: 0, totalPrix: 0 },
+      rejete: { count: 0, totalQuantite: 0, totalPrix: 0 }
+    };
+  }
+
+  const controle = stats.controle || { count: 0, totalQuantite: 0, totalPrix: 0 };
+  const stocke = stats.stocke || { count: 0, totalQuantite: 0, totalPrix: 0 };
+  const rejete = stats.rejete || { count: 0, totalQuantite: 0, totalPrix: 0 };
+
+  console.log('📊 Affichage stats:', { controle, stocke, rejete });
 
   const html = `
     <div class="row">
@@ -414,8 +461,8 @@ function afficherStatsReceptions(stats) {
         <div class="card border-warning">
           <div class="card-body text-center">
             <h6 class="text-muted mb-2"><i class="fas fa-hourglass-half text-warning"></i> En contrôle</h6>
-            <h3 class="text-warning">${controle.count}</h3>
-            <small class="text-muted d-block">${controle.totalQuantite} articles</small>
+            <h3 class="text-warning">${controle.count || 0}</h3>
+            <small class="text-muted d-block">${controle.totalQuantite || 0} articles</small>
             <small class="text-muted">${(controle.totalPrix || 0).toFixed(2)}€</small>
           </div>
         </div>
@@ -424,8 +471,8 @@ function afficherStatsReceptions(stats) {
         <div class="card border-success">
           <div class="card-body text-center">
             <h6 class="text-muted mb-2"><i class="fas fa-check-circle text-success"></i> Stocké</h6>
-            <h3 class="text-success">${stocke.count}</h3>
-            <small class="text-muted d-block">${stocke.totalQuantite} articles</small>
+            <h3 class="text-success">${stocke.count || 0}</h3>
+            <small class="text-muted d-block">${stocke.totalQuantite || 0} articles</small>
             <small class="text-muted">${(stocke.totalPrix || 0).toFixed(2)}€</small>
           </div>
         </div>
@@ -434,8 +481,8 @@ function afficherStatsReceptions(stats) {
         <div class="card border-danger">
           <div class="card-body text-center">
             <h6 class="text-muted mb-2"><i class="fas fa-times-circle text-danger"></i> Rejeté</h6>
-            <h3 class="text-danger">${rejete.count}</h3>
-            <small class="text-muted d-block">${rejete.totalQuantite} articles</small>
+            <h3 class="text-danger">${rejete.count || 0}</h3>
+            <small class="text-muted d-block">${rejete.totalQuantite || 0} articles</small>
             <small class="text-muted">${(rejete.totalPrix || 0).toFixed(2)}€</small>
           </div>
         </div>
