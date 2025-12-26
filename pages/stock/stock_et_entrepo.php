@@ -432,8 +432,8 @@
     
   </div>
 
-  <!-- 📦 MODAL DÉTAIL PRODUIT -->
-  <?php include_once "modal_product_detail.php"; ?>
+  <!-- 📦 MODAL DÉTAIL PRODUIT - VERSION PREMIUM -->
+  <?php include_once "modal_product_detail_premium.php"; ?>
 
   <!-- 🏪 MODAL SÉLECTION MAGASIN -->
   <div class="modal fade" id="modalSelectMagasin" tabindex="-1" aria-labelledby="modalSelectMagasinLabel" aria-hidden="true">

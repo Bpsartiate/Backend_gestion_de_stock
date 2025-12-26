@@ -2764,9 +2764,16 @@ router.get('/receptions', authMiddleware, checkMagasinAccess, async (req, res) =
 
     // Récupérer les réceptions
     const receptions = await Reception.find(filter)
-      .populate('produitId', 'designation reference image quantiteActuelle prixUnitaire')
+      .populate({
+        path: 'produitId',
+        select: 'designation reference image quantiteActuelle prixUnitaire typeProduitId seuilAlerte etat',
+        populate: {
+          path: 'typeProduitId',
+          select: 'nomType unitePrincipale'
+        }
+      })
       .populate('magasinId', 'nom')
-      .populate('rayonId', 'nom')
+      .populate('rayonId', 'nom codeRayon typeRayon quantite capacite')
       .populate('mouvementStockId')
       .populate('utilisateurId', 'nom prenom email')
       .sort({ dateReception: -1 })
@@ -2812,15 +2819,21 @@ router.get('/receptions', authMiddleware, checkMagasinAccess, async (req, res) =
 
 // ============================================================================
 // ENDPOINT: GET /api/protected/receptions/:receptionId
-// Description: Get a specific reception detail
+// Description: Get a specific reception detail with all populated fields
 // ============================================================================
 
 router.get('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async (req, res) => {
   try {
     const reception = await Reception.findById(req.params.receptionId)
-      .populate('produitId')
-      .populate('magasinId')
-      .populate('rayonId')
+      .populate({
+        path: 'produitId',
+        populate: {
+          path: 'typeProduitId',
+          select: 'nomType unitePrincipale code icone'
+        }
+      })
+      .populate('magasinId', 'nom')
+      .populate('rayonId', 'nom codeRayon typeRayon quantite capacite')
       .populate('mouvementStockId')
       .populate('utilisateurId', 'nom prenom email');
 

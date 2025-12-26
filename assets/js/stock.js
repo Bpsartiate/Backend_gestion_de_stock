@@ -988,7 +988,6 @@ function afficherTableProduits(produits) {
   }
 
   console.log('📋 afficherTableProduits appelé avec', produits.length, 'produits');
-
   // 🚫 Masquer le spinner et afficher le tableau
   const spinner = document.getElementById('filterSpinner');
   const table = document.querySelector('#tableReceptions > div');
@@ -1237,7 +1236,6 @@ async function updateDashboardKPIs(produits = null) {
   } catch (err) {
     console.error('❌ Erreur KPIs:', err);
   }
-}
 }
 
 // ================================

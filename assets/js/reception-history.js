@@ -254,40 +254,55 @@ function getStatutBadge(statut) {
 
 async function afficherDetailReception(receptionId) {
   try {
+    console.log('📋 Ouverture détail réception:', receptionId);
+    
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    // ✅ IMPORTANT: Ajouter magasinId en query param pour passer le middleware
+    const url = `${API_CONFIG.BASE_URL}/api/protected/receptions/${receptionId}?magasinId=${MAGASIN_ID}`;
+    
+    console.log('📡 URL:', url);
+    console.log('🔑 Token:', token ? '✅ Présent' : '❌ Absent');
+    console.log('🏢 MAGASIN_ID:', MAGASIN_ID);
 
-    const response = await fetch(
-      `${API_CONFIG.BASE_URL}/api/protected/receptions/${receptionId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    );
+    });
 
     if (!response.ok) {
-      throw new Error('Erreur lors de la récupération du détail');
+      const errorData = await response.text();
+      console.error(`❌ API Error ${response.status}:`, errorData);
+      throw new Error(`API ${response.status}: ${errorData.substring(0, 200)}`);
     }
 
     const data = await response.json();
-    const reception = data.reception;
+    console.log('📊 Données reçues:', data);
+    
+    const reception = data.reception || data;
 
     // Créer et afficher un modal avec les détails
     afficherModalDetailReception(reception);
 
   } catch (error) {
-    console.error('❌ Erreur:', error);
+    console.error('❌ Erreur détail:', error);
     showToast('❌ Erreur: ' + error.message, 'danger');
   }
 }
 
 // ================================
-// 🪟 MODAL DÉTAIL RÉCEPTION
+// 🪟 MODAL DÉTAIL RÉCEPTION - VERSION PREMIUM ULTRA
 // ================================
 
 function afficherModalDetailReception(reception) {
   const produit = reception.produitId || {};
   const utilisateur = reception.utilisateurId || {};
+  const rayon = reception.rayonId || {};
+  
+  console.log('📊 Données réception reçues:', reception);
+  console.log('📦 Produit:', produit);
+  console.log('📁 Type Produit ID:', produit.typeProduitsId);
+  
   const dateFormatted = new Date(reception.dateReception).toLocaleDateString('fr-FR', {
     year: 'numeric',
     month: 'long',
@@ -296,109 +311,302 @@ function afficherModalDetailReception(reception) {
 
   const datePeremption = reception.datePeremption ? new Date(reception.datePeremption).toLocaleDateString('fr-FR') : 'N/A';
   const datePeremptionClass = reception.datePeremption && new Date(reception.datePeremption) < new Date() ? 'text-danger' : '';
+  const dateFabrication = reception.dateFabrication ? new Date(reception.dateFabrication).toLocaleDateString('fr-FR') : 'N/A';
+
+  // Récupérer la catégorie - maintenant disponible directement depuis l'API
+  const categorie = produit.typeProduitId?.nomType || '--';
+
+  // Alerte péremption
+  let alertePeremption = '';
+  if (reception.datePeremption) {
+    const jours = Math.floor((new Date(reception.datePeremption) - new Date()) / (1000 * 60 * 60 * 24));
+    if (jours < 0) {
+      alertePeremption = '<div class="alert alert-danger mb-4"><i class="fas fa-exclamation-triangle me-2"></i><strong>⚠️ PRODUIT PÉRIMÉ</strong></div>';
+    } else if (jours < 30) {
+      alertePeremption = `<div class="text-warning"><i class="fas fa-clock me-2"></i>Expire dans ${jours} jours</div>`;
+    }
+  }
+
+  // Statut du stock
+  const stockStatus = produit.quantiteActuelle <= 0 ? 'Rupture' : produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'Stock faible' : 'En stock';
+  const stockColor = produit.quantiteActuelle <= 0 ? 'danger' : produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'warning' : 'success';
 
   const html = `
     <div class="modal fade" id="modalDetailReception" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header bg-light">
-            <h5 class="modal-title">
-              <i class="fas fa-info-circle"></i> Détail Réception
-            </h5>
+      <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 90vw;">
+        <div class="modal-content shadow-xl border-0">
+          
+          <!-- HEADER SIMPLE -->
+          <div class="modal-header bg-light border-bottom-0">
+            <h5 class="modal-title fw-bold">
+              <i class="fas fa-inbox me-2 text-success"></i>Détail de la Réception
+            </h5>            ${alertePeremption}
+
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
-          <div class="modal-body">
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <h6 class="text-muted mb-2">PRODUIT</h6>
-                <div class="card border-0 bg-light p-3">
-                  <div class="d-flex align-items-start gap-3">
-                    ${produit.image ? `<img src="${produit.image}" alt="" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">` : '<div style="width: 80px; height: 80px; background: #e9ecef; border-radius: 8px;"></div>'}
-                    <div>
-                      <strong>${produit.designation || 'N/A'}</strong>
-                      <p class="text-muted small mb-1">Référence: ${produit.reference || 'N/A'}</p>
-                      <p class="text-muted small">Stock actuel: ${produit.quantiteActuelle || 0}</p>
+
+          <!-- BODY -->
+          <div class="modal-body p-4">
+
+            <!-- ROW 1: PHOTO (LEFT) + INFOS PRODUIT (RIGHT) -->
+            <div class="row g-4 mb-4">
+              <!-- COL LEFT: PHOTO -->
+              <div class="col-lg-4">
+                <h6 class="text-uppercase text-muted fw-bold mb-3">
+                  <i class="fas fa-image me-2"></i>Photo du produit
+                </h6>
+                <div class="card border-0 bg-light mb-4" style="cursor: pointer;" onclick="showImageLightbox('${reception.photoUrl}', '${produit.designation}')">
+                  <div style="width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; overflow: hidden;">
+                    ${reception.photoUrl ? `<img src="${reception.photoUrl}" style="width: 100%; height: 100%; object-fit: contain;" />` : '<i class="fas fa-box" style="font-size: 80px; color: #ccc;"></i>'}
+                  </div>
+                  <div class="card-body text-center">
+                    <small class="text-muted"><i class="fas fa-search me-1"></i>Cliquez pour agrandir</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- COL RIGHT: INFOS PRODUIT -->
+              <div class="col-lg-8">
+                <h6 class="text-uppercase text-muted fw-bold mb-3">
+                  <i class="fas fa-box me-2"></i>Informations du produit
+                </h6>
+                <div class="">
+                  <div class="card-body">
+                    <div class="row mb-3">
+                      <div class="col-12 mb-3">
+                        <label class="text-muted small d-block">Produit</label>
+                        <h5 class="mb-0">${produit.designation || '--'}</h5>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label class="text-muted small d-block">Référence</label>
+                        <p class="mb-0 fw-bold">${produit.reference || '--'}</p>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label class="text-muted small d-block">Catégorie</label>
+                        <p class="mb-0">${categorie}</p>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label class="text-muted small d-block">Fournisseur</label>
+                        <p class="mb-0">${reception.fournisseur || 'Non spécifié'}</p>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label class="text-muted small d-block">État</label>
+                        <p class="mb-0"><span class="badge bg-info">${produit.etat || 'Neuf'}</span></p>
+                      </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                      <div class="col-md-6 mb-2">
+                        <label class="text-muted small d-block">Prix achat</label>
+                        <h5 class="text-primary">${(reception.prixAchat || 0).toFixed(2)}€</h5>
+                      </div>
+                      <div class="col-md-6 mb-2">
+                        <label class="text-muted small d-block">Prix de vente (unité)</label>
+                        <h5 class="text-success">${(produit.prixUnitaire || 0).toFixed(2)}€</h5>
+                      </div>
+                      <div class="col-md-12">
+                        <label class="text-muted small d-block">Emplacement (Rayon)</label>
+                        <p class="mb-0"><strong>${rayon.nomRayon || '--'}</strong> <small class="text-muted">(${rayon.codeRayon || '--'})</small></p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="col-md-6">
-                <h6 class="text-muted mb-2">STATUT</h6>
-                <div class="mb-2">
-                  ${getStatutBadge(reception.statut)}
-                </div>
-                <h6 class="text-muted mb-2 mt-3">PRIORITÉ</h6>
-                <p><strong>${reception.priorite === 'urgente' ? '🔴 Urgente' : '🟢 Normale'}</strong></p>
-              </div>
             </div>
 
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <h6 class="text-muted">Quantité</h6>
-                <h4><strong>${reception.quantite}</strong></h4>
-              </div>
-              <div class="col-md-6">
-                <h6 class="text-muted">Prix Total</h6>
-                <h4><strong>${(reception.prixTotal || 0).toFixed(2)}€</strong></h4>
-              </div>
-            </div>
-
-            <hr>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <h6 class="text-muted">Fournisseur</h6>
-                <p><strong>${reception.fournisseur || 'Non spécifié'}</strong></p>
-              </div>
-              <div class="col-md-6">
-                <h6 class="text-muted">N° Lot</h6>
-                <p><strong>${reception.lotNumber || 'N/A'}</strong></p>
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <h6 class="text-muted">Date Réception</h6>
-                <p><strong>${dateFormatted}</strong></p>
-              </div>
-              <div class="col-md-6">
-                <h6 class="text-muted">Date Péremption</h6>
-                <p><strong class="${datePeremptionClass}">${datePeremption}</strong></p>
-              </div>
-            </div>
-
-            ${reception.dateFabrication ? `
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <h6 class="text-muted">Date Fabrication</h6>
-                  <p><strong>${new Date(reception.dateFabrication).toLocaleDateString('fr-FR')}</strong></p>
+            <!-- ROW 2: KPIs STOCK -->
+            <div class="row g-3 mb-4">
+              <div class="col-lg-3 col-md-6">
+                <div class="card border-0 shadow-sm bg-light h-100">
+                  <div class="card-body text-center">
+                    <i class="fas fa-boxes" style="font-size: 28px; color: #0dcaf0;" class="mb-3"></i>
+                    <h5 class="card-title mb-1">${produit.quantiteActuelle || 0}</h5>
+                    <p class="text-muted small mb-2">Stock actuel</p>
+                    <span class="badge bg-${stockColor} p-2">${stockStatus}</span>
+                  </div>
                 </div>
               </div>
-            ` : ''}
-
-            <hr>
-
-            <div class="row">
-              <div class="col-md-6">
-                <h6 class="text-muted">Enregistré par</h6>
-                <p><strong>${utilisateur.prenom || ''} ${utilisateur.nom || 'N/A'}</strong></p>
+              <div class="col-lg-3 col-md-6">
+                <div class="card border-0 shadow-sm bg-light h-100">
+                  <div class="card-body text-center">
+                    <i class="fas fa-arrow-down" style="font-size: 28px; color: #ffc107;" class="mb-3"></i>
+                    <h5 class="card-title mb-1">${produit.seuilAlerte || 10}</h5>
+                    <p class="text-muted small mb-2">Stock minimum</p>
+                    ${produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? '<small class="badge bg-danger"><i class="fas fa-warning me-1"></i>Alerte</small>' : '<small class="badge bg-success">OK</small>'}
+                  </div>
+                </div>
               </div>
-              <div class="col-md-6">
-                <h6 class="text-muted">Date d'enregistrement</h6>
-                <p><strong>${new Date(reception.createdAt).toLocaleString('fr-FR')}</strong></p>
+              <div class="col-lg-3 col-md-6">
+                <div class="card border-0 shadow-sm bg-light h-100">
+                  <div class="card-body text-center">
+                    <i class="fas fa-euro-sign" style="font-size: 28px; color: #28a745;" class="mb-3"></i>
+                    <h5 class="card-title mb-1">${((produit.quantiteActuelle || 0) * (produit.prixUnitaire || 0)).toFixed(0)}€</h5>
+                    <p class="text-muted small mb-0">Valeur en stock</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-3 col-md-6">
+                <div class="card border-0 shadow-sm bg-light h-100">
+                  <div class="card-body text-center">
+                    <i class="fas fa-exclamation-circle" style="font-size: 28px; color: ${produit.quantiteActuelle <= 0 ? '#dc3545' : '#6c757d'};" class="mb-3"></i>
+                    <h5 class="card-title mb-1">${produit.quantiteActuelle <= 0 ? 'OUI' : 'NON'}</h5>
+                    <p class="text-muted small mb-0">Rupture de stock</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            ${reception.photoUrl ? `
-              <hr>
-              <div>
-                <h6 class="text-muted">Photo</h6>
-                <img src="${reception.photoUrl}" alt="Photo réception" class="img-fluid" style="max-width: 100%; border-radius: 8px;">
+            <!-- ROW 3: CARACTÉRISTIQUES & STATS DE VENTE -->
+            <div class="row g-4 mb-4">
+              <div class="col-lg-6">
+                <h6 class="text-uppercase text-muted fw-bold mb-3">
+                  <i class="fas fa-cogs me-2"></i>Caractéristiques
+                </h6>
+                <div class="card border-0 bg-light">
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Unité principale</label>
+                      <p class="mb-0 fw-bold">${produit.typeProduitId?.unitePrincipale || '--'}</p>
+                    </div>
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Type de produit</label>
+                      <p class="mb-0">${produit.typeProduitId?.nomType || '--'}</p>
+                    </div>
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Date de péremption</label>
+                      <p class="mb-0"><strong class="${datePeremptionClass}">${datePeremption}</strong></p>
+                    </div>
+                    <div>
+                      <label class="text-muted small d-block">Lot/Série</label>
+                      <p class="mb-0">${reception.lotNumber || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ` : ''}
+
+              <div class="col-lg-6">
+                <h6 class="text-uppercase text-muted fw-bold mb-3">
+                  <i class="fas fa-chart-line me-2"></i>Réception & Statut
+                </h6>
+                <div class="card border-0 bg-light">
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Quantité reçue</label>
+                      <h5 class="mb-0">${reception.quantite}</h5>
+                    </div>
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Date réception</label>
+                      <p class="mb-0">${dateFormatted}</p>
+                    </div>
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Valeur totale réception</label>
+                      <h5 class="text-success mb-0">${(reception.prixTotal || 0).toFixed(2)}€</h5>
+                    </div>
+                    <div>
+                      <label class="text-muted small d-block">Statut contrôle</label>
+                      ${getStatutBadge(reception.statut)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ROW 4: MOUVEMENTS DE STOCK -->
+            <div class="row g-4 mb-4">
+              <div class="col-12">
+                <h6 class="text-uppercase text-muted fw-bold mb-3">
+                  <i class="fas fa-arrows-alt-v me-2"></i>Mouvements de stock
+                </h6>
+                <div class="card border-0 bg-light">
+                  <div class="card-body">
+                    <div class="table-responsive">
+                      <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                          <tr>
+                            <th><i class="fas fa-calendar"></i> Date</th>
+                            <th><i class="fas fa-exchange-alt"></i> Type</th>
+                            <th><i class="fas fa-boxes"></i> Quantité</th>
+                            <th><i class="fas fa-info-circle"></i> Détails</th>
+                          </tr>
+                        </thead>
+                        <tbody id="mouvementsTableBody">
+                          <tr>
+                            <td>${dateFormatted}</td>
+                            <td><span class="badge bg-success"><i class="fas fa-arrow-down me-1"></i>Entrée</span></td>
+                            <td><strong>${reception.quantite}</strong></td>
+                            <td><small class="text-muted">Réception fournisseur</small></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="mt-2">
+                      <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Affichage du dernier mouvement. Voir l'historique complet dans l'onglet Mouvements.</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ROW 5: INFORMATIONS D'ENREGISTREMENT -->
+            <div class="row g-4">
+              <div class="col-md-6">
+                <h6 class="text-uppercase text-muted fw-bold mb-3">
+                  <i class="fas fa-user me-2"></i>Enregistrement
+                </h6>
+                <div class="card border-0 bg-light">
+                  <div class="card-body">
+                    <div class="mb-2">
+                      <small class="text-muted d-block">Enregistré par</small>
+                      <strong>${utilisateur.prenom || ''} ${utilisateur.nom || ''}</strong>
+                    </div>
+                    <div class="mb-2">
+                      <small class="text-muted d-block">Créé le</small>
+                      <small>${new Date(reception.createdAt).toLocaleString('fr-FR')}</small>
+                    </div>
+                    <div>
+                      <small class="text-muted d-block">Mis à jour</small>
+                      <small>${new Date(reception.updatedAt).toLocaleString('fr-FR')}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <h6 class="text-uppercase text-muted fw-bold mb-3">
+                  <i class="fas fa-map-location-dot me-2"></i>Localisation (Rayon)
+                </h6>
+                <div class="card border-0 bg-light">
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Rayon</label>
+                      <h5 class="mb-0">${rayon.nomRayon || '--'}</h5>
+                    </div>
+                    <div class="mb-3">
+                      <label class="text-muted small d-block">Capacité</label>
+                      <div class="progress" style="height: 24px;">
+                        <div class="progress-bar bg-info fw-bold" style="width: ${Math.min(((rayon.quantite || 0) / (rayon.capacite || 100)) * 100, 100)}%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
+                          ${rayon.quantite || 0}/${rayon.capacite || '--'}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="text-muted small d-block">Type</label>
+                      <p class="mb-0">${rayon.typeRayon || '--'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+
+          <!-- FOOTER -->
+          <div class="modal-footer bg-light border-top">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Fermer
+            </button>
+            <button type="button" class="btn btn-primary" onclick="editerReception('${reception._id}')">
+              <i class="fas fa-edit me-2"></i>Modifier
+            </button>
           </div>
         </div>
       </div>
@@ -406,7 +614,6 @@ function afficherModalDetailReception(reception) {
   `;
 
   // Injecter et afficher le modal
-  const modalContainer = document.getElementById('detailReceptionContainer') || document.body;
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
   const modal = tempDiv.querySelector('.modal');
@@ -419,6 +626,24 @@ function afficherModalDetailReception(reception) {
   modal.addEventListener('hidden.bs.modal', () => {
     modal.remove();
   });
+}
+
+// Lightbox
+function showImageLightbox(url, title) {
+  if (!url) {
+    showToast('Pas d\'image disponible', 'info');
+    return;
+  }
+  const img = document.getElementById('lightboxImage');
+  if (img) {
+    img.src = url;
+    new bootstrap.Modal(document.getElementById('imageLightbox')).show();
+  }
+}
+
+// Éditer réception
+function editerReception(receptionId) {
+  showToast('⏳ Édition en développement', 'info');
 }
 
 // ================================
