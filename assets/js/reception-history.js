@@ -8,18 +8,48 @@ let RECEPTIONS_DATA = [];
 let CURRENT_PAGE = 1;
 let ITEMS_PER_PAGE = 20;
 
+// ✅ Attendre que MAGASIN_ID soit défini
+async function waitForMagasinIdHistory(maxWait = 10000) {
+  const startTime = Date.now();
+  const checkInterval = 100; // vérifier toutes les 100ms
+  
+  while (Date.now() - startTime < maxWait) {
+    if (typeof MAGASIN_ID !== 'undefined' && MAGASIN_ID) {
+      console.log(`✅ MAGASIN_ID détecté: ${MAGASIN_ID}`);
+      return true;
+    }
+    await new Promise(resolve => setTimeout(resolve, checkInterval));
+  }
+  
+  console.warn('⏱️ Timeout: MAGASIN_ID non trouvé après 10s');
+  return false;
+}
+
 // ================================
 // 📊 CHARGER L'HISTORIQUE
 // ================================
 
 async function chargerHistoriqueReceptions(filters = {}) {
   try {
+    // Vérifier que MAGASIN_ID est défini
+    if (!MAGASIN_ID) {
+      console.warn('⚠️ MAGASIN_ID non défini, attente...');
+      const ready = await waitForMagasinIdHistory();
+      if (!ready) {
+        showToast('❌ Erreur: Magasin non sélectionné', 'danger');
+        return;
+      }
+    }
+
     // Afficher le spinner
     const spinner = document.getElementById('spinnerHistoriqueReceptions');
     if (spinner) spinner.style.display = 'flex';
 
     const tableContainer = document.getElementById('historiqueReceptionsTable');
-    if (!tableContainer) return;
+    if (!tableContainer) {
+      console.error('❌ Container historiqueReceptionsTable non trouvé');
+      return;
+    }
 
     // Construire les paramètres de recherche
     const params = new URLSearchParams({
@@ -30,25 +60,31 @@ async function chargerHistoriqueReceptions(filters = {}) {
     });
 
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const url = `${API_CONFIG.BASE_URL}/api/protected/receptions?${params}`;
+    
+    console.log(`📡 Fetch: ${url}`);
+    console.log(`🔑 Token: ${token ? 'OK' : 'MANQUANT'}`);
+    console.log(`📦 MAGASIN_ID: ${MAGASIN_ID}`);
 
     // Récupérer les réceptions
-    const response = await fetch(
-      `${API_CONFIG.BASE_URL}/api/protected/receptions?${params}`,
-      {
-        headers: {
+    const response = await fetch(url, {
+      headers: {
           'Authorization': `Bearer ${token}`
         }
       }
     );
 
     if (!response.ok) {
-      throw new Error('Erreur lors du chargement des réceptions');
+      const errorData = await response.text();
+      console.error(`❌ API Error ${response.status}:`, errorData);
+      throw new Error(`API ${response.status}: ${errorData.substring(0, 200)}`);
     }
 
     const data = await response.json();
-    RECEPTIONS_DATA = data.receptions || [];
+    RECEPTIONS_DATA = data.receptions || data || [];
 
     console.log(`✅ ${RECEPTIONS_DATA.length} réceptions chargées`);
+    console.log('📊 Données reçues:', data);
 
     // Masquer le spinner
     if (spinner) spinner.style.display = 'none';
@@ -64,10 +100,22 @@ async function chargerHistoriqueReceptions(filters = {}) {
 
   } catch (error) {
     console.error('❌ Erreur chargement historique:', error);
-    showToast('❌ Erreur: ' + error.message, 'danger');
-
+    
     const spinner = document.getElementById('spinnerHistoriqueReceptions');
     if (spinner) spinner.style.display = 'none';
+    
+    const tableContainer = document.getElementById('historiqueReceptionsTable');
+    if (tableContainer) {
+      tableContainer.innerHTML = `
+        <div class="alert alert-danger" role="alert">
+          <h5><i class="fas fa-exclamation-circle"></i> Erreur de chargement</h5>
+          <p>${error.message}</p>
+          <small>Vérifiez les logs du navigateur (F12)</small>
+        </div>
+      `;
+    }
+    
+    showToast('❌ Erreur: ' + error.message, 'danger');
   }
 }
 
@@ -467,12 +515,39 @@ window.addEventListener('magasinChanged', () => {
 });
 
 // Rafraîchir quand le modal des réceptions est montré
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🚀 Initialisation historique des réceptions');
+  
+  // Attendre que le magasin soit sélectionné
+  const ready = await waitForMagasinIdHistory();
+  if (!ready) {
+    console.error('❌ Impossible de charger l\'historique: MAGASIN_ID non défini');
+    return;
+  }
+
+  console.log('✅ MAGASIN_ID prêt, ajout listeners...');
+
+  // Écouter les clics sur l'onglet historique
+  const tabHistorique = document.getElementById('tabHistoriqueReceptions');
+  if (tabHistorique) {
+    console.log('✅ Tab historique trouvé');
+    tabHistorique.addEventListener('shown.bs.tab', function(e) {
+      console.log('📑 Tab historique affiché');
+      chargerHistoriqueReceptions();
+    });
+  } else {
+    console.warn('⚠️ Tab historique non trouvé');
+  }
+
+  // Écouter quand la modal s'ouvre
   const modal = document.getElementById('modalReception');
   if (modal) {
     modal.addEventListener('shown.bs.modal', () => {
-      const tabHistorique = document.querySelector('a[href="#historiqueReceptions"]');
+      console.log('📦 Modal réception ouverte');
+      // Vérifier si l'onglet historique est actif
+      const tabHistorique = document.getElementById('tabHistoriqueReceptions');
       if (tabHistorique && tabHistorique.classList.contains('active')) {
+        console.log('📊 Historique est actif, chargement...');
         chargerHistoriqueReceptions();
       }
     });

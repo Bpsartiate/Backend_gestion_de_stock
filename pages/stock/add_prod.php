@@ -98,6 +98,11 @@
                 <option value="">Choisir rayon...</option>
               </select>
               <div class="invalid-feedback">Rayon obligatoire</div>
+              <!-- Alerte rayon plein -->
+              <div id="alerteRayonPlein" class="alert alert-warning mt-2 py-2 px-3 mb-0" style="display: none;">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <small><strong>Attention:</strong> <span id="messageRayonPlein"></span></small>
+              </div>
             </div>
             <div class="col-md-6">
               <label class="form-label fw-bold">Prix Unitaire</label>
@@ -520,6 +525,49 @@
     }
   }
 
+  // ✅ Vérifier si le rayon est plein
+  function verificarRayonPlein(rayonId) {
+    const alerte = document.getElementById('alerteRayonPlein');
+    const messageSpan = document.getElementById('messageRayonPlein');
+    
+    if (!rayonId) {
+      alerte.style.display = 'none';
+      return;
+    }
+
+    // Trouver le rayon
+    const rayon = allRayons.find(r => r._id === rayonId);
+    if (!rayon) {
+      alerte.style.display = 'none';
+      return;
+    }
+
+    // Vérifier la capacité
+    const capaciteMax = rayon.capaciteMax || 100; // Par défaut 100 si non défini
+    const quantiteActuelle = rayon.quantiteActuelle || 0;
+    const pourcentageUtilisation = (quantiteActuelle / capaciteMax) * 100;
+
+    // Afficher une alerte si le rayon est à 80% ou plus
+    if (pourcentageUtilisation >= 80) {
+      alerte.style.display = 'block';
+      
+      if (pourcentageUtilisation >= 100) {
+        // Rayon complètement plein
+        messageSpan.innerHTML = `Ce rayon est <strong>PLEIN</strong> (${quantiteActuelle}/${capaciteMax} unités) ⛔`;
+        alerte.classList.remove('alert-warning');
+        alerte.classList.add('alert-danger');
+      } else {
+        // Rayon presque plein
+        const pourcentage = Math.round(pourcentageUtilisation);
+        messageSpan.innerHTML = `Ce rayon est presque plein (${quantiteActuelle}/${capaciteMax} unités - ${pourcentage}%) ⚠️`;
+        alerte.classList.remove('alert-danger');
+        alerte.classList.add('alert-warning');
+      }
+    } else {
+      alerte.style.display = 'none';
+    }
+  }
+
   // ✅ Afficher les catégories dans le dropdown
   function renderCategoriesList() {
     const list = document.getElementById('categorieList');
@@ -671,6 +719,14 @@
 
     // Charger les catégories
     loadCategories();
+
+    // ✅ Listener pour vérifier rayon plein
+    const rayonSelect = document.getElementById('rayonId');
+    if (rayonSelect) {
+      rayonSelect.addEventListener('change', function() {
+        verificarRayonPlein(this.value);
+      });
+    }
 
     // Dropdown search input
     const categorieSearch = document.getElementById('categorieSearch');

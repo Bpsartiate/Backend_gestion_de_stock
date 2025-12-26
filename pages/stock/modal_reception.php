@@ -61,6 +61,11 @@
                     <option value="">Choisir rayon...</option>
                   </select>
                   <div class="invalid-feedback">Rayon obligatoire</div>
+                  <!-- Alerte rayon plein -->
+                  <div id="alerteRayonPleinReception" class="alert alert-warning mt-2 py-2 px-3 mb-0" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <small><strong>Attention:</strong> <span id="messageRayonPleinReception"></span></small>
+                  </div>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">Prix Achat Unitaire</label>

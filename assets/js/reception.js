@@ -156,7 +156,10 @@ function setupReceptionListeners() {
 
   // Recalculer le récapitulatif quand rayon change
   if (rayonSelect) {
-    rayonSelect.addEventListener('change', updateRecapitulatif);
+    rayonSelect.addEventListener('change', function() {
+      updateRecapitulatif();
+      verificarRayonPleinReception(this.value);
+    });
   }
 
   // 📸 PRÉVISUALISATION PHOTO EN TEMPS RÉEL
@@ -363,6 +366,52 @@ function updateRecapitulatif() {
   
   const total = quantite * prix;
   if (recapTotal) recapTotal.textContent = total > 0 ? `${total.toLocaleString()} CDF` : '0 CDF';
+}
+
+// ================================
+// ✅ VÉRIFIER SI RAYON EST PLEIN
+// ================================
+
+function verificarRayonPleinReception(rayonId) {
+  const alerte = document.getElementById('alerteRayonPleinReception');
+  const messageSpan = document.getElementById('messageRayonPleinReception');
+  
+  if (!rayonId) {
+    alerte.style.display = 'none';
+    return;
+  }
+
+  // Trouver le rayon
+  const rayon = RAYONS_RECEPTION.find(r => r._id === rayonId);
+  if (!rayon) {
+    alerte.style.display = 'none';
+    return;
+  }
+
+  // Vérifier la capacité
+  const capaciteMax = rayon.capaciteMax || 100; // Par défaut 100 si non défini
+  const quantiteActuelle = rayon.quantiteActuelle || 0;
+  const pourcentageUtilisation = (quantiteActuelle / capaciteMax) * 100;
+
+  // Afficher une alerte si le rayon est à 80% ou plus
+  if (pourcentageUtilisation >= 80) {
+    alerte.style.display = 'block';
+    
+    if (pourcentageUtilisation >= 100) {
+      // Rayon complètement plein
+      messageSpan.innerHTML = `Ce rayon est <strong>PLEIN</strong> (${quantiteActuelle}/${capaciteMax} unités) ⛔`;
+      alerte.classList.remove('alert-warning');
+      alerte.classList.add('alert-danger');
+    } else {
+      // Rayon presque plein
+      const pourcentage = Math.round(pourcentageUtilisation);
+      messageSpan.innerHTML = `Ce rayon est presque plein (${quantiteActuelle}/${capaciteMax} unités - ${pourcentage}%) ⚠️`;
+      alerte.classList.remove('alert-danger');
+      alerte.classList.add('alert-warning');
+    }
+  } else {
+    alerte.style.display = 'none';
+  }
 }
 
 // ================================
