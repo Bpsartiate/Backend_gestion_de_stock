@@ -2895,14 +2895,20 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     console.log(`✅ Mouvement de stock créé: ${stockMovement._id}`);
 
     // 3. Mettre à jour StockRayon (NEW LOGIC)
+    console.log(`\n🔍 === CRÉATION/MISE À JOUR STOCKRAYON ===`);
+    console.log(`   Recherche: produitId=${produitId}, magasinId=${magasinId}, rayonId=${rayonId}`);
+    
     let stockRayon = await StockRayon.findOne({
       produitId,
       magasinId,
       rayonId
     });
 
+    console.log(`   Résultat recherche: ${stockRayon ? '✅ Trouvé' : '❌ Pas trouvé'}`);
+
     if (!stockRayon) {
       // Créer une nouvelle entrée StockRayon
+      console.log(`   ➡️ Création nouveau StockRayon...`);
       stockRayon = new StockRayon({
         produitId,
         magasinId,
@@ -2919,9 +2925,16 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
           }
         ]
       });
-      console.log(`✅ StockRayon créé pour Rayon: ${rayonId}`);
+      console.log(`   ✅ StockRayon préparé: ${JSON.stringify({
+        _id: stockRayon._id,
+        produitId: stockRayon.produitId,
+        rayonId: stockRayon.rayonId,
+        quantiteDisponible: stockRayon.quantiteDisponible
+      })}`);
     } else {
       // Mettre à jour le StockRayon existant
+      console.log(`   ➡️ Mise à jour StockRayon existant...`);
+      const ancienneQte = stockRayon.quantiteDisponible;
       stockRayon.quantiteDisponible = (stockRayon.quantiteDisponible || 0) + parseFloat(quantite);
       stockRayon.réceptions.push({
         receptionId: reception._id,
@@ -2931,10 +2944,16 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         fournisseur: fournisseur || 'Non spécifié',
         datePeremption
       });
-      console.log(`✅ StockRayon mis à jour: ${stockRayon._id}`);
+      console.log(`   ✅ StockRayon mis à jour: ${ancienneQte} → ${stockRayon.quantiteDisponible}`);
     }
 
-    await stockRayon.save();
+    try {
+      await stockRayon.save();
+      console.log(`✅ StockRayon SAUVEGARDÉ: ${stockRayon._id}`);
+    } catch (saveError) {
+      console.error(`❌ ERREUR SAUVEGARDE StockRayon:`, saveError.message);
+      throw saveError;
+    }
 
     // 4. Mettre à jour la quantité du rayon
     rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + parseFloat(quantite);

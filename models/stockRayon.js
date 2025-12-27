@@ -65,8 +65,9 @@ const stockRayonSchema = new mongoose.Schema({
 
   // INDEX COMPOSITE POUR ÉVITER LES DOUBLONS
 }, {
+  // Index unique sur la clé composite
   indexes: [
-    { produitId: 1, magasinId: 1, rayonId: 1 } // Index unique virtuel
+    { produitId: 1, magasinId: 1, rayonId: 1, unique: true }
   ]
 });
 
