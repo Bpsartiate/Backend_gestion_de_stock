@@ -1167,9 +1167,13 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
 
     // Enrichir chaque rayon avec les stats de stock
     const rayonsAvecStats = await Promise.all(rayons.map(async (rayon) => {
-      // 1. Compter les articles (StockRayons distincts)
-      const stocks = await StockRayon.find({ rayonId: rayon._id }).select('_id quantiteDisponible');
+      // 1. Compter les articles (StockRayons distincts pour ce rayon)
+      const stocks = await StockRayon.find({ rayonId: rayon._id }).select('_id quantiteDisponible produitId');
       const nombreArticles = stocks.length;
+      
+      console.log(`📊 Rayon "${rayon.nomRayon}" (${rayon._id}):`);
+      console.log(`   - StockRayons trouvés: ${nombreArticles}`);
+      console.log(`   - StockRayons details: ${stocks.map(s => `${s._id} (${s.quantiteDisponible})`).join(', ')}`);
       
       // 2. Calculer la quantité totale
       const quantiteTotale = stocks.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
@@ -2953,7 +2957,8 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       }
     ]);
 
-    produit.quantiteActuelle = (totalStockParProduit[0]?.totalQuantite || 0);
+    const nouvelleQuantiteActuelle = (totalStockParProduit[0]?.totalQuantite || 0);
+    produit.quantiteActuelle = nouvelleQuantiteActuelle;
     produit.quantiteEntree = (produit.quantiteEntree || 0) + parseFloat(quantite);
     produit.dateLastMovement = new Date();
 
@@ -2964,7 +2969,9 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     }
 
     await produit.save();
-    console.log(`✅ Produit mis à jour: quantité totale ${produit.quantiteActuelle}`);
+    console.log(`✅ Produit "${produit.designation}" mis à jour:`);
+    console.log(`   - quantiteActuelle: ${nouvelleQuantiteActuelle} (aggregate result: ${totalStockParProduit[0]?.totalQuantite || 'vide'})`);
+    console.log(`   - quantiteEntree: ${produit.quantiteEntree}`);
 
     // 6. Lier le mouvement à la réception
     reception.mouvementStockId = stockMovement._id;

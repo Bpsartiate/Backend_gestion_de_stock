@@ -623,30 +623,35 @@
     // ========== VÉRIFICATION CAPACITÉ TYPE DE PRODUIT ==========
     if (categorie.capaciteMax) {
       const capaciteMaxType = categorie.capaciteMax;
-      // La capacité type est en kg/litre/etc (même unité que le produit)
-      // Donc on compare directement la quantité que l'utilisateur rentre
       
-      if (quantite > capaciteMaxType) {
-        // L'utilisateur essaie d'ajouter plus que la capacité max du type
+      // ⚠️ IMPORTANT: La capacité type doit tenir compte du stock EXISTANT
+      // Si capacité max = 10kg et qu'on a déjà 5kg, on peut ajouter max 5kg
+      // categorie.stats.enStock contient le stock existant
+      const stockExistantType = parseFloat(categorie.stats?.enStock || 0);
+      const disponibleType = capaciteMaxType - stockExistantType;
+      const quantiteApreAjout = stockExistantType + quantite;
+      
+      if (quantiteApreAjout > capaciteMaxType) {
+        // L'utilisateur essaie d'ajouter plus que ce qui reste disponible
         alerteType.style.display = 'block';
         alerteType.classList.remove('alert-warning');
         alerteType.classList.add('alert-danger');
-        const excedent = (quantite - capaciteMaxType).toFixed(2);
-        messageType.innerHTML = `<strong>❌ Capacité type de produit dépassée!</strong> Type "${categorie.nomType}": Capacité max = ${capaciteMaxType} ${categorie.unitePrincipale || 'unités'}. Vous essayez d'ajouter ${quantite.toFixed(2)}, ce qui dépasse de ${excedent} ${categorie.unitePrincipale || 'unités'}.`;
+        const excedent = (quantiteApreAjout - capaciteMaxType).toFixed(2);
+        messageType.innerHTML = `<strong>❌ Capacité type de produit dépassée!</strong> Type "${categorie.nomType}": Capacité max = ${capaciteMaxType} ${categorie.unitePrincipale || 'unités'}, Stock existant = ${stockExistantType.toFixed(2)}, Disponible = ${disponibleType.toFixed(2)}. Vous essayez d'ajouter ${quantite.toFixed(2)}, ce qui dépasse de ${excedent} ${categorie.unitePrincipale || 'unités'}.`;
         hasError = true;
-      } else if (quantite > capaciteMaxType * 0.8) {
-        // L'utilisateur est à 80% de la capacité max
+      } else if (quantite > disponibleType * 0.8) {
+        // L'utilisateur utilise 80% de ce qui reste
         alerteType.style.display = 'block';
         alerteType.classList.remove('alert-danger');
         alerteType.classList.add('alert-warning');
-        const disponible = (capaciteMaxType - quantite).toFixed(2);
-        messageType.innerHTML = `<strong>⚠️ Quantité importante:</strong> Type "${categorie.nomType}": Capacité max = ${capaciteMaxType} ${categorie.unitePrincipale || 'unités'}. Vous ajouteriez ${quantite.toFixed(2)}, vous auriez ${disponible} ${categorie.unitePrincipale || 'unités'} de disponible.`;
+        const restantApreAjout = (disponibleType - quantite).toFixed(2);
+        messageType.innerHTML = `<strong>⚠️ Quantité importante:</strong> Type "${categorie.nomType}": Capacité max = ${capaciteMaxType} ${categorie.unitePrincipale || 'unités'}, Stock existant = ${stockExistantType.toFixed(2)}, Disponible = ${disponibleType.toFixed(2)}. Vous ajouteriez ${quantite.toFixed(2)}, il resterait ${restantApreAjout} ${categorie.unitePrincipale || 'unités'}.`;
       } else {
         // C'est OK
-        const disponible = (capaciteMaxType - quantite).toFixed(2);
+        const restantApreAjout = (disponibleType - quantite).toFixed(2);
         alerteInfo.style.display = 'block';
         const sep = messageInfo.innerHTML ? '<br>' : '';
-        messageInfo.innerHTML += `${sep}📦 Type "${categorie.nomType}": ${disponible} ${categorie.unitePrincipale || 'unités'} restants sur ${capaciteMaxType}.`;
+        messageInfo.innerHTML += `${sep}📦 Type "${categorie.nomType}": Stock existant = ${stockExistantType.toFixed(2)} ${categorie.unitePrincipale || 'unités'}, Disponible = ${disponibleType.toFixed(2)}, Après ajout = ${restantApreAjout} ${categorie.unitePrincipale || 'unités'}.`;
       }
     }
 
