@@ -855,7 +855,22 @@ function afficherModalEditReception(reception) {
                 </div>
               </div>
 
-              <!-- ROW 5: STATUT -->
+              <!-- ROW 5: PHOTO DE LA RÉCEPTION -->
+              <div class="mb-4">
+                <label class="form-label fw-bold d-block">Photo de la réception</label>
+                <div class="text-center">
+                  <div style="position: relative; display: inline-block;">
+                    <img id="photoPreviewEdit" src="${reception.photoUrl || 'assets/img/team/user_prof.svg'}" class="mb-2" style="width: 150px; height: 150px; object-fit: cover; border: 1px solid rgba(0,0,0,0.08);" alt="Photo" />
+                    <button type="button" id="photoUploadBtn" class="btn btn-sm btn-secondary" style="position: absolute; right: 0; bottom: 0; border-radius: 50%; padding: 8px 10px;">
+                      <i class="fas fa-camera"></i>
+                    </button>
+                  </div>
+                  <input id="editPhotoFile" type="file" accept="image/*" style="display: none;" />
+                  <small class="text-muted d-block mt-2"><i class="fas fa-info-circle"></i> JPG, PNG, WebP (max 5MB)</small>
+                </div>
+              </div>
+
+              <!-- ROW 6: STATUT -->
               <div class="mb-4">
                 <label class="form-label fw-bold">Statut contrôle</label>
                 <select class="form-select" id="editStatut" required>
@@ -902,6 +917,43 @@ function afficherModalEditReception(reception) {
   quantiteInput.addEventListener('change', calculerPrixTotal);
   prixAchatInput.addEventListener('change', calculerPrixTotal);
 
+  // Ajouter la logique de preview photo
+  const photoFileInput = modal.querySelector('#editPhotoFile');
+  const photoPreviewImg = modal.querySelector('#photoPreviewEdit');
+  const photoUploadBtn = modal.querySelector('#photoUploadBtn');
+  let photoFileSelected = null;
+
+  // Au clic sur le bouton caméra
+  if (photoUploadBtn) {
+    photoUploadBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      photoFileInput?.click();
+    });
+  }
+
+  if (photoFileInput) {
+    photoFileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        // Valider la taille
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('❌ La photo ne doit pas dépasser 5MB', 'danger');
+          this.value = '';
+          return;
+        }
+
+        // Afficher la preview
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          photoPreviewImg.src = event.target.result;
+          photoFileSelected = file;
+          console.log('📸 Photo sélectionnée:', file.name);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
   const bsModal = new bootstrap.Modal(modal);
   bsModal.show();
 
@@ -922,28 +974,38 @@ async function sauvegarderReception(receptionId) {
     const dateFabrication = document.getElementById('editDateFabrication').value;
     const statut = document.getElementById('editStatut').value;
     const fournisseur = document.getElementById('editFournisseur').value;
+    const photoFileInput = document.getElementById('editPhotoFile');
 
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     const url = `${API_CONFIG.BASE_URL}/api/protected/receptions/${receptionId}`;
 
+    // Créer FormData pour pouvoir envoyer la photo
+    const formData = new FormData();
+    formData.append('quantite', quantite);
+    formData.append('prixAchat', prixAchat);
+    formData.append('prixTotal', prixTotal);
+    formData.append('dateReception', dateReception);
+    formData.append('datePeremption', datePeremption || '');
+    formData.append('lotNumber', lotNumber);
+    formData.append('dateFabrication', dateFabrication || '');
+    formData.append('statut', statut);
+    formData.append('fournisseur', fournisseur);
+    formData.append('magasinId', MAGASIN_ID);
+
+    // Si une photo a été sélectionnée, l'ajouter au FormData
+    if (photoFileInput && photoFileInput.files.length > 0) {
+      console.log('📸 Photo sélectionnée:', photoFileInput.files[0].name);
+      formData.append('photo', photoFileInput.files[0]);
+    }
+
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${token}`
+        // ⚠️ NE PAS ajouter 'Content-Type': 'application/json'
+        // Le navigateur définira 'multipart/form-data' automatiquement
       },
-      body: JSON.stringify({
-        quantite: parseInt(quantite),
-        prixAchat: parseFloat(prixAchat),
-        prixTotal: parseFloat(prixTotal),
-        dateReception,
-        datePeremption: datePeremption || null,
-        lotNumber,
-        dateFabrication: dateFabrication || null,
-        statut,
-        fournisseur,
-        magasinId: MAGASIN_ID
-      })
+      body: formData
     });
 
     if (!response.ok) {
@@ -951,14 +1013,28 @@ async function sauvegarderReception(receptionId) {
       throw new Error(error);
     }
 
+    const responseData = await response.json();
+    const updatedReception = responseData.reception;
+
     showToast('✅ Réception modifiée avec succès', 'success');
     
-    // Fermer le modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditReception'));
-    if (modal) modal.hide();
+    // Fermer le modal d'édition
+    const modalEdit = bootstrap.Modal.getInstance(document.getElementById('modalEditReception'));
+    if (modalEdit) modalEdit.hide();
+
+    // Fermer aussi le modal détail (s'il est ouvert)
+    const modalDetail = bootstrap.Modal.getInstance(document.getElementById('modalDetailReception'));
+    if (modalDetail) modalDetail.hide();
 
     // Recharger l'historique
-    chargerHistoriqueReceptions();
+    await chargerHistoriqueReceptions();
+
+    // Rouvrir le modal détail avec les données mises à jour
+    setTimeout(() => {
+      if (updatedReception) {
+        afficherModalDetailReception(updatedReception);
+      }
+    }, 500);
 
   } catch (error) {
     console.error('❌ Erreur sauvegarde:', error);
@@ -1264,6 +1340,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         chargerHistoriqueReceptions();
       }
     });
+  }
+
+  // Ajouter les event listeners aux filtres
+  const filterStatut = document.getElementById('filterStatutReception');
+  const filterFournisseur = document.getElementById('filterFournisseur');
+  const filterDateDebut = document.getElementById('filterDateDebut');
+  const filterDateFin = document.getElementById('filterDateFin');
+
+  if (filterStatut) {
+    filterStatut.addEventListener('change', filtrerReceptions);
+    console.log('✅ Event listener ajouté à filterStatut');
+  }
+  if (filterFournisseur) {
+    filterFournisseur.addEventListener('input', filtrerReceptions);
+    console.log('✅ Event listener ajouté à filterFournisseur');
+  }
+  if (filterDateDebut) {
+    filterDateDebut.addEventListener('change', filtrerReceptions);
+    console.log('✅ Event listener ajouté à filterDateDebut');
+  }
+  if (filterDateFin) {
+    filterDateFin.addEventListener('change', filtrerReceptions);
+    console.log('✅ Event listener ajouté à filterDateFin');
   }
 });
 

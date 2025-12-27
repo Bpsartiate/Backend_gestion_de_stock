@@ -2897,7 +2897,7 @@ router.get('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
 // Description: Update a specific reception
 // ============================================================================
 
-router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async (req, res) => {
+router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, upload.single('photo'), async (req, res) => {
   try {
     const { receptionId } = req.params;
     const { 
@@ -2910,7 +2910,8 @@ router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
       dateFabrication, 
       statut, 
       fournisseur,
-      magasinId 
+      magasinId,
+      photoUrl
     } = req.body;
 
     // Vérifier que la réception existe
@@ -2934,6 +2935,7 @@ router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
     if (dateFabrication) reception.dateFabrication = new Date(dateFabrication);
     if (statut) reception.statut = statut;
     if (fournisseur !== undefined) reception.fournisseur = fournisseur;
+    if (photoUrl) reception.photoUrl = photoUrl;
 
     // Sauvegarder
     await reception.save();
@@ -2942,7 +2944,8 @@ router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
       id: receptionId,
       quantite,
       prixTotal,
-      statut
+      statut,
+      photoUrl: photoUrl ? '✅ Photo uploadée' : '❌ Pas de photo'
     });
 
     // Retourner la réception mise à jour avec données peuplées
