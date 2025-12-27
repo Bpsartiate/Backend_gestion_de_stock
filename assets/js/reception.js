@@ -5,6 +5,54 @@
 let PRODUITS_RECEPTION = [];
 let RAYONS_RECEPTION = [];
 
+// ================================
+// 🖼️ COMPRESSION IMAGE
+// ================================
+
+async function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        // Créer un canvas et redimensionner
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Redimensionner agressivement (max 800px de côté)
+        const maxDim = 800;
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Dessiner et compresser fortement
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convertir en blob avec compression maximale (60% de qualité)
+        canvas.toBlob((blob) => {
+          console.log(`📦 Image compressée: ${(file.size / 1024).toFixed(2)}KB → ${(blob.size / 1024).toFixed(2)}KB`);
+          resolve(blob);
+        }, 'image/jpeg', 0.6); // 60% de qualité pour réduire drastiquement
+      };
+    };
+  });
+}
+
 // Fonction pour attendre que MAGASIN_ID soit défini
 async function waitForMagasinId(maxWait = 10000) {
   const startTime = Date.now();

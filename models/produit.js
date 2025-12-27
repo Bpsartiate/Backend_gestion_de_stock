@@ -26,13 +26,16 @@ const produitSchema = new mongoose.Schema({
     ref: 'TypeProduit',
     required: true
   },
+  
+  // ⚠️ rayonId: DEPRECATED - Utiliser StockRayon pour la localisation
+  // Gardé pour compatibilité, mais ne devrait pas être modifié
   rayonId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Rayon',
-    required: true
+    default: null
   },
 
-  // QUANTITÉS
+  // QUANTITÉS (TOTALES - somme de tous les rayons)
   quantiteActuelle: {
     type: Number,
     default: 0,

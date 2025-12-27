@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth');
 const { canModifyUser, checkMagasinAccess, checkBusinessAccess, blockVendeur } = require('../middlewares/authorization');
@@ -22,6 +23,7 @@ const Lot = require('../models/lot');
 const AlerteStock = require('../models/alerteStock');
 const RapportInventaire = require('../models/rapportInventaire');
 const Reception = require('../models/reception');
+const StockRayon = require('../models/stockRayon');
 
 // Profil et membres protégés
 router.get('/members', authMiddleware, utilisateurController.listerMembres);
@@ -2650,10 +2652,49 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     }
 
     // Vérifier que le rayon existe
-    const rayon = await Rayon.findById(rayonId);
+    const rayon = await Rayon.findById(rayonId)
+      .populate('typesProduitsAutorises', 'nomType');
     if (!rayon || rayon.estSupprime) {
       return res.status(404).json({ error: 'Rayon non trouvé' });
     }
+
+    // ⚠️ VALIDATION: Vérifier si le type de produit est autorisé dans ce rayon
+    if (rayon.typesProduitsAutorises && rayon.typesProduitsAutorises.length > 0) {
+      const typeProduitsIds = rayon.typesProduitsAutorises.map(t => t._id.toString());
+      const produitTypeId = produit.typeProduitId.toString();
+      
+      if (!typeProduitsIds.includes(produitTypeId)) {
+        const typesNoms = rayon.typesProduitsAutorises.map(t => t.nomType).join(', ');
+        return res.status(400).json({
+          error: `❌ Type produit non autorisé dans ce rayon`,
+          details: `Ce rayon n'accepte que: ${typesNoms}`,
+          typeProduitsAutorisés: typesNoms
+        });
+      }
+      console.log(`✅ Type produit autorisé dans ce rayon`);
+    }
+
+    // ⚠️ VALIDATION: Vérifier la capacité du rayon
+    const stockActuelRayon = await StockRayon.findOne({
+      produitId,
+      rayonId,
+      magasinId
+    });
+    
+    const quantiteActuelleEnRayon = stockActuelRayon?.quantiteDisponible || 0;
+    const quantiteTotaleApreAjout = quantiteActuelleEnRayon + parseFloat(quantite);
+    
+    if (quantiteTotaleApreAjout > rayon.capaciteMax) {
+      return res.status(400).json({
+        error: '❌ Capacité du rayon dépassée',
+        details: `Capacité: ${rayon.capaciteMax}, Actuellement: ${quantiteActuelleEnRayon}, À ajouter: ${quantite}, Total: ${quantiteTotaleApreAjout}`,
+        capaciteRayon: rayon.capaciteMax,
+        stockActuel: quantiteActuelleEnRayon,
+        quantiteAjout: quantite,
+        quantiteTotale: quantiteTotaleApreAjout
+      });
+    }
+    console.log(`✅ Capacité OK - Rayon: ${rayon.nomRayon} (${quantiteTotaleApreAjout}/${rayon.capaciteMax})`);
 
     console.log(`✅ Validations OK - Produit: ${produit.designation}, Quantité: ${quantite}`);
 
@@ -2708,34 +2749,88 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     await stockMovement.save();
     console.log(`✅ Mouvement de stock créé: ${stockMovement._id}`);
 
-    // 3. Mettre à jour la quantité actuelle du produit
-    produit.quantiteActuelle = (produit.quantiteActuelle || 0) + parseFloat(quantite);
-    produit.quantiteEntree = (produit.quantiteEntree || 0) + parseFloat(quantite);
+    // 3. Mettre à jour StockRayon (NEW LOGIC)
+    let stockRayon = await StockRayon.findOne({
+      produitId,
+      magasinId,
+      rayonId
+    });
 
-    // Mettre à jour la date de dernière réception
+    if (!stockRayon) {
+      // Créer une nouvelle entrée StockRayon
+      stockRayon = new StockRayon({
+        produitId,
+        magasinId,
+        rayonId,
+        quantiteDisponible: parseFloat(quantite),
+        réceptions: [
+          {
+            receptionId: reception._id,
+            quantite: parseFloat(quantite),
+            dateReception: dateReception || new Date(),
+            lotNumber: lotNumber || `LOT-${Date.now()}`,
+            fournisseur: fournisseur || 'Non spécifié',
+            datePeremption
+          }
+        ]
+      });
+      console.log(`✅ StockRayon créé pour Rayon: ${rayonId}`);
+    } else {
+      // Mettre à jour le StockRayon existant
+      stockRayon.quantiteDisponible = (stockRayon.quantiteDisponible || 0) + parseFloat(quantite);
+      stockRayon.réceptions.push({
+        receptionId: reception._id,
+        quantite: parseFloat(quantite),
+        dateReception: dateReception || new Date(),
+        lotNumber: lotNumber || `LOT-${Date.now()}`,
+        fournisseur: fournisseur || 'Non spécifié',
+        datePeremption
+      });
+      console.log(`✅ StockRayon mis à jour: ${stockRayon._id}`);
+    }
+
+    await stockRayon.save();
+
+    // 4. Mettre à jour la quantité du rayon
+    rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + parseFloat(quantite);
+    await rayon.save();
+    console.log(`✅ Rayon mis à jour: ${rayon.nomRayon} (${rayon.quantiteActuelle}/${rayon.capaciteMax})`);
+
+    // 5. Mettre à jour la quantité totale du produit (somme de tous les rayons)
+    const totalStockParProduit = await StockRayon.aggregate([
+      {
+        $match: {
+          produitId: mongoose.Types.ObjectId(produitId),
+          magasinId: mongoose.Types.ObjectId(magasinId)
+        }
+      },
+      {
+        $group: {
+          _id: '$produitId',
+          totalQuantite: { $sum: '$quantiteDisponible' }
+        }
+      }
+    ]);
+
+    produit.quantiteActuelle = (totalStockParProduit[0]?.totalQuantite || 0);
+    produit.quantiteEntree = (produit.quantiteEntree || 0) + parseFloat(quantite);
     produit.dateLastMovement = new Date();
 
-    // Mettre à jour le rayon du produit si différent (toujours en String pour la comparaison)
-    try {
-      const currentRayonId = produit.rayonId ? produit.rayonId.toString() : null;
-      const newRayonId = rayonId ? rayonId.toString() : null;
-      
-      if (currentRayonId !== newRayonId) {
-        console.log(`📍 Changement de rayon: ${currentRayonId} → ${newRayonId}`);
-        produit.rayonId = rayonId;
-      }
-    } catch (rayonErr) {
-      console.warn('⚠️ Erreur mise à jour rayon:', rayonErr.message);
+    // Si le produit n'a pas encore de rayonId, assigner le premier
+    if (!produit.rayonId) {
+      produit.rayonId = rayonId;
+      console.log(`📍 Premier rayon assigné au produit: ${rayonId}`);
     }
 
     await produit.save();
-    console.log(`✅ Produit mis à jour: quantité ${produit.quantiteActuelle}`);
+    console.log(`✅ Produit mis à jour: quantité totale ${produit.quantiteActuelle}`);
 
-    // 4. Lier le mouvement à la réception
+    // 6. Lier le mouvement à la réception
     reception.mouvementStockId = stockMovement._id;
     await reception.save();
 
-    // 5. Retourner la réception avec tous les détails
+    // 7. Retourner la réception avec tous les détails
+
     const populatedReception = await Reception.findById(reception._id)
       .populate('produitId', 'designation reference image quantiteActuelle')
       .populate('magasinId', 'nom')
@@ -2759,6 +2854,45 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       error: 'Erreur lors de l\'enregistrement de la réception',
       details: error.message
     });
+  }
+});
+
+// ============================================================================
+// ENDPOINT: GET /api/protected/stock-rayons
+// Description: Get stock par rayon for a product/magasin
+// ============================================================================
+
+router.get('/stock-rayons', authMiddleware, checkMagasinAccess, async (req, res) => {
+  try {
+    const { magasinId, produitId } = req.query;
+
+    if (!magasinId || !produitId) {
+      return res.status(400).json({ error: 'magasinId et produitId requis' });
+    }
+
+    // Récupérer tous les StockRayon pour ce produit/magasin
+    const stocksRayons = await StockRayon.find({
+      produitId,
+      magasinId
+    })
+      .populate('rayonId', 'nomRayon codeRayon')
+      .populate({
+        path: 'réceptions.receptionId',
+        select: 'dateReception fournisseur lotNumber datePeremption'
+      })
+      .sort({ 'rayonId': 1 });
+
+    res.json({
+      success: true,
+      data: stocksRayons,
+      summary: {
+        totalQuantite: stocksRayons.reduce((sum, s) => sum + (s.quantiteDisponible || 0), 0),
+        nombreRayons: stocksRayons.length
+      }
+    });
+  } catch (error) {
+    console.error('❌ GET /stock-rayons error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

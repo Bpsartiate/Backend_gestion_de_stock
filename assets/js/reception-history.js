@@ -218,9 +218,14 @@ function afficherHistoriqueReceptions() {
         <td><small>${dateFormatted}</small></td>
         <td>${statutBadge}</td>
         <td>
-          <button class="btn btn-sm btn-outline-primary" onclick="afficherDetailReception('${reception._id}')" title="Voir détails">
-            <i class="fas fa-eye"></i>
-          </button>
+          <div class="btn-group btn-group-sm" role="group">
+            <button class="btn btn-outline-primary" onclick="editerReception('${reception._id}')" title="Modifier">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-info" onclick="afficherDetailReception('${reception._id}')" title="Voir détails">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
         </td>
       </tr>
     `;

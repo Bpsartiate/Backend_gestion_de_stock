@@ -1091,7 +1091,7 @@ function afficherTableProduits(produits) {
 // ================================
 
 function editProduct(produitId) {
-  openProductDetailModal(produitId);
+  openProductDetailPremium(produitId);
 }
 
 // ================================
@@ -1099,7 +1099,7 @@ function editProduct(produitId) {
 // ================================
 
 function registerMovement(produitId, designation) {
-  openProductDetailModal(produitId);
+  openProductDetailPremium(produitId);
 }
 
 // ================================
@@ -1107,7 +1107,7 @@ function registerMovement(produitId, designation) {
 // ================================
 
 function deleteProduct(produitId) {
-  openProductDetailModal(produitId);
+  openProductDetailPremium(produitId);
 }
 
 // ================================
