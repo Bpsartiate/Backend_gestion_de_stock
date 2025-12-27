@@ -87,6 +87,19 @@
                 <span class="input-group-text" id="uniteLabel">unités</span>
               </div>
               <div class="invalid-feedback">Quantité obligatoire</div>
+              <!-- Alertes de validation quantité -->
+              <div id="alerteQuantiteRayon" class="alert alert-warning mt-2 py-2 px-3 mb-0" style="display: none;">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <small><span id="messageQuantiteRayon"></span></small>
+              </div>
+              <div id="alerteQuantiteType" class="alert alert-warning mt-2 py-2 px-3 mb-0" style="display: none;">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <small><span id="messageQuantiteType"></span></small>
+              </div>
+              <div id="alerteQuantiteInfo" class="alert alert-info mt-2 py-2 px-3 mb-0" style="display: none;">
+                <i class="fas fa-info-circle me-2"></i>
+                <small><span id="messageQuantiteInfo"></span></small>
+              </div>
             </div>
           </div>
 
@@ -498,7 +511,13 @@
         return true;
       }
       // Sinon, vérifier si notre catégorie est dans la liste
-      return rayon.typesProduitsAutorises.some(typeId => typeId.toString() === categorie._id);
+      // Note: typesProduitsAutorises peut être des objets (de .populate()) ou des IDs
+      return rayon.typesProduitsAutorises.some(typeOrId => {
+        const typeIdStr = (typeof typeOrId === 'object' && typeOrId._id) 
+          ? typeOrId._id.toString() 
+          : typeOrId.toString();
+        return typeIdStr === categorie._id;
+      });
     });
 
     console.log(`🔍 Rayons filtrés pour "${categorie.nomType}":`, rayonsFilters.length, 'sur', allRayons.length);
@@ -525,7 +544,73 @@
     }
   }
 
-  // ✅ Vérifier si le rayon est plein
+  // ✅ Vérifier la capacité en temps réel (rayon + type de produit)
+  function verifierCapacites() {
+    const quantite = parseFloat(document.getElementById('quantite').value) || 0;
+    const rayonId = document.getElementById('rayonId').value;
+    const categorieId = document.getElementById('categorieId').value;
+
+    const alerteRayon = document.getElementById('alerteQuantiteRayon');
+    const messageRayon = document.getElementById('messageQuantiteRayon');
+    const alerteType = document.getElementById('alerteQuantiteType');
+    const messageType = document.getElementById('messageQuantiteType');
+    const alerteInfo = document.getElementById('alerteQuantiteInfo');
+    const messageInfo = document.getElementById('messageQuantiteInfo');
+
+    // Reset les alertes
+    alerteRayon.style.display = 'none';
+    alerteType.style.display = 'none';
+    alerteInfo.style.display = 'none';
+
+    if (quantite <= 0 || !rayonId || !categorieId) {
+      return; // Pas assez d'infos
+    }
+
+    // Trouver le rayon
+    const rayon = allRayons.find(r => r._id === rayonId);
+    if (!rayon) return;
+
+    // Trouver la catégorie
+    const categorie = allCategories.find(c => c._id === categorieId);
+    if (!categorie) return;
+
+    // ========== VÉRIFICATION CAPACITÉ RAYON ==========
+    const capaciteMaxRayon = rayon.capaciteMax || 100;
+    const quantiteActuelleRayon = rayon.quantiteActuelle || 0;
+    const quantiteTotalRayonApreAjout = quantiteActuelleRayon + quantite;
+
+    if (quantiteTotalRayonApreAjout > capaciteMaxRayon) {
+      alerteRayon.style.display = 'block';
+      alerteRayon.classList.remove('alert-warning');
+      alerteRayon.classList.add('alert-danger');
+      const excedent = (quantiteTotalRayonApreAjout - capaciteMaxRayon).toFixed(2);
+      messageRayon.innerHTML = `<strong>❌ Capacité rayon dépassée!</strong> Actuellement: ${quantiteActuelleRayon}/${capaciteMaxRayon}, Vous dépasseriez de ${excedent} ${categorie.unitePrincipale || 'unités'}.`;
+    } else if (quantiteTotalRayonApreAjout > capaciteMaxRayon * 0.8) {
+      alerteRayon.style.display = 'block';
+      alerteRayon.classList.remove('alert-danger');
+      alerteRayon.classList.add('alert-warning');
+      const disponible = (capaciteMaxRayon - quantiteActuelleRayon).toFixed(2);
+      messageRayon.innerHTML = `<strong>⚠️ Rayon presque plein:</strong> Disponible: ${disponible}/${capaciteMaxRayon} ${categorie.unitePrincipale || 'unités'} (${Math.round((quantiteTotalRayonApreAjout / capaciteMaxRayon) * 100)}% utilisé).`;
+    } else {
+      const disponible = (capaciteMaxRayon - quantiteActuelleRayon).toFixed(2);
+      alerteInfo.style.display = 'block';
+      messageInfo.innerHTML = `✅ Rayon: ${disponible} ${categorie.unitePrincipale || 'unités'} disponible sur ${capaciteMaxRayon}.`;
+    }
+
+    // ========== VÉRIFICATION CAPACITÉ TYPE DE PRODUIT ==========
+    if (categorie.capaciteMax) {
+      const capaciteMaxType = categorie.capaciteMax;
+      // Note: On doit calculer le stock total du type depuis le backend
+      // Pour maintenant, affichons juste l'info
+      alerteInfo.style.display = 'block';
+      if (!messageInfo.innerHTML.includes('Rayon:')) {
+        messageInfo.innerHTML = '';
+      }
+      messageInfo.innerHTML += `<br>📦 Type "${categorie.nomType}": Capacité max = ${capaciteMaxType} ${categorie.unitePrincipale || 'unités'}`;
+    }
+  }
+
+  // ✅ Vérifier la capacité en temps réel (rayon + type de produit)
   function verificarRayonPlein(rayonId) {
     const alerte = document.getElementById('alerteRayonPlein');
     const messageSpan = document.getElementById('messageRayonPlein');
@@ -725,13 +810,21 @@
     if (rayonSelect) {
       rayonSelect.addEventListener('change', function() {
         verificarRayonPlein(this.value);
+        verifierCapacites(); // Vérifier aussi les capacités
       });
     }
 
-    // Dropdown search input
+    // ✅ Listener pour vérifier les capacités en temps réel (quantité)
+    const quantiteInput = document.getElementById('quantite');
+    if (quantiteInput) {
+      quantiteInput.addEventListener('input', verifierCapacites);
+    }
+
+    // ✅ Listener pour vérifier les capacités quand catégorie change
     const categorieSearch = document.getElementById('categorieSearch');
-    if (categorieSearch) {
-      categorieSearch.addEventListener('input', (e) => {
+    const oldListener = categorieSearch?.addEventListener('change', () => {
+      setTimeout(verifierCapacites, 100);
+    });
         document.getElementById('categorieDropdown').style.display = 'block';
         filterCategories(e.target.value);
       });

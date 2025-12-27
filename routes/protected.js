@@ -1179,6 +1179,10 @@ router.post('/magasins/:magasinId/rayons', authMiddleware, blockVendeur, async (
     const requester = req.user;
     const { codeRayon, nomRayon, typeRayon, capaciteMax, couleurRayon, iconeRayon, typesProduitsAutorises, description } = req.body;
 
+    console.log('📝 POST /magasins/:magasinId/rayons reçu');
+    console.log('   typesProduitsAutorises:', typesProduitsAutorises);
+    console.log('   Types reçus:', typeof typesProduitsAutorises, Array.isArray(typesProduitsAutorises));
+
     // Vérifier l'accès au magasin
     const magasin = await Magasin.findById(magasinId);
     if (!magasin) {
@@ -1195,6 +1199,11 @@ router.post('/magasins/:magasinId/rayons', authMiddleware, blockVendeur, async (
       return res.status(400).json({ message: 'Code rayon déjà existant' });
     }
 
+    // Convertir les IDs string en ObjectId
+    const typesIds = Array.isArray(typesProduitsAutorises) 
+      ? typesProduitsAutorises.map(id => mongoose.Types.ObjectId(id))
+      : [];
+
     const rayon = new Rayon({
       magasinId,
       codeRayon,
@@ -1203,9 +1212,11 @@ router.post('/magasins/:magasinId/rayons', authMiddleware, blockVendeur, async (
       capaciteMax,
       couleurRayon,
       iconeRayon,
-      typesProduitsAutorises,
+      typesProduitsAutorises: typesIds,
       description
     });
+
+    console.log('✅ Rayon créé avec types:', rayon.typesProduitsAutorises);
 
     await rayon.save();
 
@@ -1238,6 +1249,10 @@ router.put('/rayons/:rayonId', authMiddleware, blockVendeur, async (req, res) =>
     const requester = req.user;
     const { nomRayon, typeRayon, capaciteMax, couleurRayon, iconeRayon, typesProduitsAutorises, description } = req.body;
 
+    console.log('📝 PUT /rayons/:rayonId reçu');
+    console.log('   typesProduitsAutorises:', typesProduitsAutorises);
+    console.log('   Types reçus:', typeof typesProduitsAutorises, Array.isArray(typesProduitsAutorises));
+
     const rayon = await Rayon.findById(rayonId);
     if (!rayon) {
       return res.status(404).json({ message: 'Rayon non trouvé' });
@@ -1255,10 +1270,18 @@ router.put('/rayons/:rayonId', authMiddleware, blockVendeur, async (req, res) =>
     rayon.capaciteMax = capaciteMax !== undefined ? capaciteMax : rayon.capaciteMax;
     rayon.couleurRayon = couleurRayon || rayon.couleurRayon;
     rayon.iconeRayon = iconeRayon || rayon.iconeRayon;
-    rayon.typesProduitsAutorises = typesProduitsAutorises || rayon.typesProduitsAutorises;
+    
+    // Mettre à jour les types produits (array of ObjectIds)
+    if (Array.isArray(typesProduitsAutorises)) {
+      rayon.typesProduitsAutorises = typesProduitsAutorises.map(id => mongoose.Types.ObjectId(id));
+      console.log('✅ Types produits mis à jour:', rayon.typesProduitsAutorises);
+    }
+    
     rayon.description = description !== undefined ? description : rayon.description;
 
     await rayon.save();
+
+    console.log('✅ Rayon sauvegardé avec types:', rayon.typesProduitsAutorises);
 
     try {
       const activity = new Activity({
@@ -2674,27 +2697,54 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       console.log(`✅ Type produit autorisé dans ce rayon`);
     }
 
-    // ⚠️ VALIDATION: Vérifier la capacité du rayon
-    const stockActuelRayon = await StockRayon.findOne({
-      produitId,
+    // ⚠️ VALIDATION: Vérifier la capacité TOTALE du rayon (tous les produits)
+    const allStocksInRayon = await StockRayon.find({
       rayonId,
       magasinId
     });
     
-    const quantiteActuelleEnRayon = stockActuelRayon?.quantiteDisponible || 0;
-    const quantiteTotaleApreAjout = quantiteActuelleEnRayon + parseFloat(quantite);
+    const quantiteTotalRayonActuelle = allStocksInRayon.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+    const quantiteTotalRayonApreAjout = quantiteTotalRayonActuelle + parseFloat(quantite);
     
-    if (quantiteTotaleApreAjout > rayon.capaciteMax) {
+    if (quantiteTotalRayonApreAjout > rayon.capaciteMax) {
       return res.status(400).json({
         error: '❌ Capacité du rayon dépassée',
-        details: `Capacité: ${rayon.capaciteMax}, Actuellement: ${quantiteActuelleEnRayon}, À ajouter: ${quantite}, Total: ${quantiteTotaleApreAjout}`,
+        details: `Capacité totale rayon: ${rayon.capaciteMax} ${rayon.uniteMesure || 'unités'}, Stock total actuel: ${quantiteTotalRayonActuelle}, À ajouter: ${quantite}, Total après: ${quantiteTotalRayonApreAjout}`,
         capaciteRayon: rayon.capaciteMax,
-        stockActuel: quantiteActuelleEnRayon,
+        stockTotalActuel: quantiteTotalRayonActuelle,
         quantiteAjout: quantite,
-        quantiteTotale: quantiteTotaleApreAjout
+        quantiteTotaleApreAjout: quantiteTotalRayonApreAjout
       });
     }
-    console.log(`✅ Capacité OK - Rayon: ${rayon.nomRayon} (${quantiteTotaleApreAjout}/${rayon.capaciteMax})`);
+    console.log(`✅ Capacité rayon OK - ${rayon.nomRayon} (${quantiteTotalRayonApreAjout}/${rayon.capaciteMax})`);
+
+    // ⚠️ VALIDATION: Vérifier la capacité MAX du TYPE DE PRODUIT (tous les rayons du magasin)
+    const typeProduit = await TypeProduit.findById(produit.typeProduitId);
+    if (typeProduit && typeProduit.capaciteMax) {
+      // Calculer la quantité totale de ce type de produit dans ce magasin
+      const produitsType = await Produit.find({ typeProduitId: produit.typeProduitId, magasinId }).select('_id');
+      const produitsTypeIds = produitsType.map(p => p._id);
+      
+      const allStocksTypeProduit = await StockRayon.find({
+        produitId: { $in: produitsTypeIds },
+        magasinId
+      });
+      
+      const quantiteTotalTypeProduit = allStocksTypeProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+      const quantiteTotalTypeApreAjout = quantiteTotalTypeProduit + parseFloat(quantite);
+      
+      if (quantiteTotalTypeApreAjout > typeProduit.capaciteMax) {
+        return res.status(400).json({
+          error: '❌ Capacité du type de produit dépassée',
+          details: `Capacité max pour type "${typeProduit.nomType}": ${typeProduit.capaciteMax} ${typeProduit.unitePrincipale || 'unités'}, Stock actuel: ${quantiteTotalTypeProduit}, À ajouter: ${quantite}, Total: ${quantiteTotalTypeApreAjout}`,
+          capaciteType: typeProduit.capaciteMax,
+          stockTypeActuel: quantiteTotalTypeProduit,
+          quantiteAjout: quantite,
+          quantiteTotalType: quantiteTotalTypeApreAjout
+        });
+      }
+      console.log(`✅ Capacité type produit OK - "${typeProduit.nomType}" (${quantiteTotalTypeApreAjout}/${typeProduit.capaciteMax})`);
+    }
 
     console.log(`✅ Validations OK - Produit: ${produit.designation}, Quantité: ${quantite}`);
 

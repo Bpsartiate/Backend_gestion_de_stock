@@ -42,11 +42,11 @@
                       <i class="fas fa-layer-group me-2 text-info"></i>
                       <h5 class="mb-0 panel-title text-dark fw-bold">Mes Rayons</h5>
                     </div>
-                    <div class="d-flex align-items-center position-relative" style="z-index: 1;">
-                      <span class="badge bg-info text-white total-badge me-2" id="totalRayons">0</span>
-                      <button type="button" class="btn btn-sm btn-light text-info"
-                              onclick="newRayon()" title="Nouveau rayon">
-                        <i class="fas fa-plus"></i>
+                    <div class="d-flex align-items-center gap-2 position-relative" style="z-index: 1;">
+                      <span class="badge bg-info text-white total-badge" id="totalRayons">0</span>
+                      <button type="button" class="btn btn-sm btn-success text-white"
+                              onclick="newRayon()" title="Ajouter un nouveau rayon">
+                        <i class="fas fa-plus-circle me-1"></i>Nouveau
                       </button>
                     </div>
                   </div>
@@ -63,10 +63,8 @@
                       <!-- Dynamique -->
                     </div>
                   </div>
-                  <div class="card-footer bg-light border-0 py-2">
-                    <button class="btn btn-outline-primary btn-sm w-100" id="btnCreateRayonFooter">
-                      <i class="fas fa-plus me-2"></i>Créer un rayon
-                    </button>
+                  <div class="card-footer border-0 bg-transparent">
+                    <!-- Les boutons sont dans le header et le formulaire -->
                   </div>
                 </div>
               </div>
@@ -1397,8 +1395,15 @@
       }
       
       // ✅ AFFICHER LE MODE LISTE avec les catégories sélectionnées
-      const typesProduitsIds = (rayon.typesProduitsAutorises || []).map(id => String(id));
-      console.log('📋 Types produits autorisés:', typesProduitsIds);
+      const typesProduitsIds = (rayon.typesProduitsAutorises || []).map(typeOrId => {
+        // Si c'est un objet (retourné par .populate()), extraire ._id
+        // Si c'est déjà un string (ID), le retourner tel quel
+        if (typeof typeOrId === 'object' && typeOrId._id) {
+          return String(typeOrId._id);
+        }
+        return String(typeOrId);
+      });
+      console.log('📋 Types produits autorisés (convertis):', typesProduitsIds);
       
       // Masquer le mode sélection, afficher le mode liste
       document.getElementById('selectionMode').style.display = 'none';
@@ -1455,14 +1460,21 @@
           typesProduitsAutorises.push(cb.value);
         });
       } else {
-        // Si en mode liste, récupérer les badges
-        document.querySelectorAll('#selectedTypesList .badge button').forEach(btn => {
-          const catId = btn.getAttribute('data-category-id');
-          typesProduitsAutorises.push(catId);
+        // Si en mode liste, récupérer depuis les badges avec l'attribut data-category-id
+        document.querySelectorAll('#selectedTypesList .badge').forEach(badge => {
+          const btn = badge.querySelector('button[data-category-id]');
+          if (btn) {
+            const catId = btn.getAttribute('data-category-id');
+            typesProduitsAutorises.push(catId);
+          }
         });
       }
       
-      console.log('📋 Types produits autorisés à envoyer:', typesProduitsAutorises);
+      console.log('📋 Types produits sélectionnés:', typesProduitsAutorises);
+      console.log('📋 Nombre de types:', typesProduitsAutorises.length);
+      typesProduitsAutorises.forEach((id, idx) => {
+        console.log(`  [${idx}] ID: ${id}, Type: ${typeof id}`);
+      });
 
       const rayonData = {
         codeRayon,
@@ -1587,7 +1599,7 @@
     }
 
     // Afficher les types produits sélectionnés en MODE LISTE (édition)
-    function displaySelectedTypesList(selectedIds) {
+    async function displaySelectedTypesList(selectedIds) {
       const listContainer = document.getElementById('selectedTypesList');
       listContainer.innerHTML = '';
 
@@ -1597,9 +1609,17 @@
         return;
       }
 
+      // ⚠️ Si allCategories n'est pas chargée, la charger d'abord
+      if (!allCategories || allCategories.length === 0) {
+        console.log('⚠️ allCategories vide, chargement nécessaire...');
+        await loadCategoriesModal(); // Charger les catégories
+      }
+
+      let badgesCreated = 0;
       selectedIds.forEach(typeId => {
         const cat = allCategories.find(c => String(c._id) === String(typeId));
         if (cat) {
+          badgesCreated++;
           const badge = document.createElement('span');
           badge.className = 'badge bg-success text-white p-2 d-flex align-items-center gap-2';
           badge.style.fontSize = '0.95rem';
@@ -1622,9 +1642,29 @@
           });
           
           listContainer.appendChild(badge);
+        } else {
+          // La catégorie n'a pas été trouvée - afficher juste l'ID
+          console.warn('⚠️ Catégorie non trouvée pour ID:', typeId);
+          const badge = document.createElement('span');
+          badge.className = 'badge bg-warning text-dark p-2 d-flex align-items-center gap-2';
+          badge.style.fontSize = '0.95rem';
+          badge.innerHTML = `
+            <span>❓ ID: ${typeId.substring(0, 8)}...</span>
+            <button type="button" class="btn-close" data-category-id="${typeId}" style="font-size: 0.7rem;"></button>
+          `;
+          
+          badge.querySelector('button').addEventListener('click', (e) => {
+            e.preventDefault();
+            const categoryId = e.currentTarget.getAttribute('data-category-id');
+            const updatedIds = selectedIds.filter(id => String(id) !== String(categoryId));
+            displaySelectedTypesList(updatedIds);
+          });
+          
+          listContainer.appendChild(badge);
         }
       });
 
+      console.log(`✅ displaySelectedTypesList - ${badgesCreated} badges créés sur ${selectedIds.length} types`);
       document.getElementById('btnModifyTypes').style.display = 'inline-block';
     }
 
