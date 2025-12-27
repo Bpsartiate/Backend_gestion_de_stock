@@ -336,13 +336,26 @@ function afficherModalDetailReception(reception) {
       <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 90vw;">
         <div class="modal-content shadow-xl border-0">
           
-          <!-- HEADER SIMPLE -->
-          <div class="modal-header bg-light border-bottom-0">
-            <h5 class="modal-title fw-bold">
-              <i class="fas fa-inbox me-2 text-success"></i>Détail de la Réception
-            </h5>            ${alertePeremption}
-
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          <!-- HEADER AVEC ACTIONS EN HAUT -->
+          <div class="modal-header bg-light border-bottom-0 p-3">
+            <div class="d-flex align-items-start w-100 gap-2">
+              <div class="flex-grow-1">
+                <h5 class="modal-title fw-bold mb-1">
+                  <i class="fas fa-inbox me-2 text-success"></i>Détail de la Réception
+                </h5>
+                ${alertePeremption}
+              </div>
+              <!-- BADGES ACTIONS EN HAUT À DROITE -->
+              <div class="d-flex gap-2 flex-shrink-0">
+                <button type="button" class="btn btn-sm btn-primary rounded-pill" onclick="editerReception('${reception._id}')" title="Modifier la réception">
+                  <i class="fas fa-edit me-1"></i><span class="d-none d-sm-inline">Modifier</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" title="Supprimer la réception">
+                  <i class="fas fa-trash me-1"></i><span class="d-none d-sm-inline">Supprimer</span>
+                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+            </div>
           </div>
 
           <!-- BODY -->
@@ -352,15 +365,13 @@ function afficherModalDetailReception(reception) {
             <div class="row g-4 mb-4">
               <!-- COL LEFT: PHOTO -->
               <div class="col-lg-4">
-                <h6 class="text-uppercase text-muted fw-bold mb-3">
-                  <i class="fas fa-image me-2"></i>Photo du produit
-                </h6>
-                <div class="card border-0 bg-light mb-4" style="cursor: pointer;" onclick="showImageLightbox('${reception.photoUrl}', '${produit.designation}')">
-                  <div style="width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; overflow: hidden;">
+              
+                <div class="card border-0 bg-light mb-4" style="cursor: pointer; position: relative;" onclick="showImageLightbox('${reception.photoUrl}', '${produit.designation}')">
+                  <div style="width: 100%; height: 400px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; overflow: hidden;">
                     ${reception.photoUrl ? `<img src="${reception.photoUrl}" style="width: 100%; height: 100%; object-fit: contain;" />` : '<i class="fas fa-box" style="font-size: 80px; color: #ccc;"></i>'}
                   </div>
-                  <div class="card-body text-center">
-                    <small class="text-muted"><i class="fas fa-search me-1"></i>Cliquez pour agrandir</small>
+                  <div style="position: absolute; top: 80%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                    <i class="fas fa-search" style="font-size: 48px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);"></i>
                   </div>
                 </div>
               </div>
@@ -462,7 +473,7 @@ function afficherModalDetailReception(reception) {
                 <h6 class="text-uppercase text-muted fw-bold mb-3">
                   <i class="fas fa-cogs me-2"></i>Caractéristiques
                 </h6>
-                <div class="card border-0 bg-light">
+                <div class="">
                   <div class="card-body">
                     <div class="mb-3">
                       <label class="text-muted small d-block">Unité principale</label>
@@ -488,7 +499,7 @@ function afficherModalDetailReception(reception) {
                 <h6 class="text-uppercase text-muted fw-bold mb-3">
                   <i class="fas fa-chart-line me-2"></i>Réception & Statut
                 </h6>
-                <div class="card border-0 bg-light">
+                <div class=" bg-light">
                   <div class="card-body">
                     <div class="mb-3">
                       <label class="text-muted small d-block">Quantité reçue</label>
@@ -511,71 +522,135 @@ function afficherModalDetailReception(reception) {
               </div>
             </div>
 
-            <!-- ROW 4: MOUVEMENTS DE STOCK -->
+            <!-- ROW 4: STATISTIQUES DE VENTE -->
             <div class="row g-4 mb-4">
               <div class="col-12">
                 <h6 class="text-uppercase text-muted fw-bold mb-3">
-                  <i class="fas fa-arrows-alt-v me-2"></i>Mouvements de stock
+                  <i class="fas fa-chart-bar me-2"></i>Statistiques de vente
                 </h6>
-                <div class="card border-0 bg-light">
-                  <div class="card-body">
-                    <div class="table-responsive">
-                      <table class="table table-sm table-hover mb-0">
-                        <thead class="table-light">
-                          <tr>
-                            <th><i class="fas fa-calendar"></i> Date</th>
-                            <th><i class="fas fa-exchange-alt"></i> Type</th>
-                            <th><i class="fas fa-boxes"></i> Quantité</th>
-                            <th><i class="fas fa-info-circle"></i> Détails</th>
-                          </tr>
-                        </thead>
-                        <tbody id="mouvementsTableBody">
-                          <tr>
-                            <td>${dateFormatted}</td>
-                            <td><span class="badge bg-success"><i class="fas fa-arrow-down me-1"></i>Entrée</span></td>
-                            <td><strong>${reception.quantite}</strong></td>
-                            <td><small class="text-muted">Réception fournisseur</small></td>
-                          </tr>
-                        </tbody>
-                      </table>
+                <div class="alert alert-info" id="alerteStatsVente">
+                  <i class="fas fa-info-circle me-2"></i>
+                  Les données de vente seront disponibles une fois le système de vente implémenté.
+                </div>
+                <div class="row g-3" id="statsVenteContainer">
+                  <!-- Les stats de vente s'afficheront ici -->
+                  <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm bg-light h-100">
+                      <div class="card-body text-center">
+                        <i class="fas fa-shopping-cart" style="font-size: 28px; color: #0dcaf0;" class="mb-3"></i>
+                        <h5 class="card-title mb-1">--</h5>
+                        <p class="text-muted small mb-0">Nombre de ventes</p>
+                      </div>
                     </div>
-                    <div class="mt-2">
-                      <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Affichage du dernier mouvement. Voir l'historique complet dans l'onglet Mouvements.</small>
+                  </div>
+                  <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm bg-light h-100">
+                      <div class="card-body text-center">
+                        <i class="fas fa-boxes" style="font-size: 28px; color: #28a745;" class="mb-3"></i>
+                        <h5 class="card-title mb-1">--</h5>
+                        <p class="text-muted small mb-0">Quantité vendue</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm bg-light h-100">
+                      <div class="card-body text-center">
+                        <i class="fas fa-euro-sign" style="font-size: 28px; color: #ffc107;" class="mb-3"></i>
+                        <h5 class="card-title mb-1">--€</h5>
+                        <p class="text-muted small mb-0">Revenu généré</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm bg-light h-100">
+                      <div class="card-body text-center">
+                        <i class="fas fa-tachometer-alt" style="font-size: 28px; color: #6f42c1;" class="mb-3"></i>
+                        <h5 class="card-title mb-1">--</h5>
+                        <p class="text-muted small mb-0">Taux rotation</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- ROW 5: INFORMATIONS D'ENREGISTREMENT -->
-            <div class="row g-4">
-              <div class="col-md-6">
-                <h6 class="text-uppercase text-muted fw-bold mb-3">
-                  <i class="fas fa-user me-2"></i>Enregistrement
-                </h6>
+            <!-- ROW 5: MOUVEMENTS DE STOCK (COLLAPSIBLE) -->
+            <div class="row g-4 mb-4">
+              <div class="col-12">
                 <div class="card border-0 bg-light">
-                  <div class="card-body">
-                    <div class="mb-2">
-                      <small class="text-muted d-block">Enregistré par</small>
-                      <strong>${utilisateur.prenom || ''} ${utilisateur.nom || ''}</strong>
+                  <div class="card-header bg-white border-bottom cursor-pointer" data-bs-toggle="collapse" data-bs-target="#collapseMovements" style="cursor: pointer;">
+                    <h6 class="mb-0 text-uppercase text-muted fw-bold">
+                      <i class="fas fa-chevron-right me-2"></i>
+                      <i class="fas fa-arrows-alt-v me-2"></i>Mouvements de stock
+                    </h6>
+                  </div>
+                  <div id="collapseMovements" class="collapse show">
+                    <div class="card-body">
+                      <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                          <thead class="table-light">
+                            <tr>
+                              <th><i class="fas fa-calendar"></i> Date</th>
+                              <th><i class="fas fa-exchange-alt"></i> Type</th>
+                              <th><i class="fas fa-boxes"></i> Quantité</th>
+                              <th><i class="fas fa-info-circle"></i> Détails</th>
+                            </tr>
+                          </thead>
+                          <tbody id="mouvementsTableBody">
+                            <tr>
+                              <td>${dateFormatted}</td>
+                              <td><span class="badge bg-success"><i class="fas fa-arrow-down me-1"></i>Entrée</span></td>
+                              <td><strong>${reception.quantite}</strong></td>
+                              <td><small class="text-muted">Réception fournisseur</small></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="mt-2">
+                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Affichage du dernier mouvement. Voir l'historique complet dans l'onglet Mouvements.</small>
+                      </div>
                     </div>
-                    <div class="mb-2">
-                      <small class="text-muted d-block">Créé le</small>
-                      <small>${new Date(reception.createdAt).toLocaleString('fr-FR')}</small>
-                    </div>
-                    <div>
-                      <small class="text-muted d-block">Mis à jour</small>
-                      <small>${new Date(reception.updatedAt).toLocaleString('fr-FR')}</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ROW 6: INFORMATIONS D'ENREGISTREMENT & LOCALISATION RAYON -->
+            <div class="row g-4">
+              <!-- ENREGISTREMENT (COLLAPSIBLE) -->
+              <div class="col-md-6">
+                <div class="bg-light h-100">
+                  <div class="card-header bg-white border-bottom cursor-pointer" data-bs-toggle="collapse" data-bs-target="#collapseEnregistrement" style="cursor: pointer;">
+                    <h6 class="mb-0 text-uppercase text-muted fw-bold">
+                      <i class="fas fa-chevron-right me-2"></i>
+                      <i class="fas fa-user me-2"></i>Enregistrement
+                    </h6>
+                  </div>
+                  <div id="collapseEnregistrement" class="collapse">
+                    <div class="card-body">
+                      <div class="mb-2">
+                        <small class="text-muted d-block">Enregistré par</small>
+                        <strong>${utilisateur.prenom || ''} ${utilisateur.nom || ''}</strong>
+                      </div>
+                      <div class="mb-2">
+                        <small class="text-muted d-block">Créé le</small>
+                        <small>${new Date(reception.createdAt).toLocaleString('fr-FR')}</small>
+                      </div>
+                      <div>
+                        <small class="text-muted d-block">Mis à jour</small>
+                        <small>${new Date(reception.updatedAt).toLocaleString('fr-FR')}</small>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
+              <!-- LOCALISATION RAYON (EXPANDABLE POUR DESCRIPTION) -->
               <div class="col-md-6">
                 <h6 class="text-uppercase text-muted fw-bold mb-3">
                   <i class="fas fa-map-location-dot me-2"></i>Localisation (Rayon)
                 </h6>
-                <div class="card border-0 bg-light">
+                <div class="bg-light">
                   <div class="card-body">
                     <div class="mb-3">
                       <label class="text-muted small d-block">Rayon</label>
@@ -593,23 +668,39 @@ function afficherModalDetailReception(reception) {
                         </div>
                       </div>
                     </div>
+                    ${rayon.description ? `
                     <div>
-                      <label class="text-muted small d-block">Description</label>
-                      <p class="mb-0 small">${rayon.description || 'N/A'}</p>
+                      <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="rayonInfo" id="rayonBasic" checked>
+                        <label class="btn btn-sm btn-outline-secondary" for="rayonBasic">Basique</label>
+                        <input type="radio" class="btn-check" name="rayonInfo" id="rayonDetails">
+                        <label class="btn btn-sm btn-outline-secondary" for="rayonDetails">Détails</label>
+                      </div>
+                      <div id="rayonDetailsContent" class="mt-2" style="display: none;">
+                        <small class="text-muted d-block mb-2"><strong>Description:</strong></small>
+                        <p class="mb-0 small">${rayon.description}</p>
+                      </div>
                     </div>
+                    <script>
+                      document.getElementById('rayonBasic')?.addEventListener('change', function() {
+                        document.getElementById('rayonDetailsContent').style.display = 'none';
+                      });
+                      document.getElementById('rayonDetails')?.addEventListener('change', function() {
+                        document.getElementById('rayonDetailsContent').style.display = 'block';
+                      });
+                    </script>
+                    ` : ''}
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- FOOTER -->
+          <!-- FOOTER SIMPLE -->
           <div class="modal-footer bg-light border-top">
+            <small class="text-muted me-auto"><i class="fas fa-info-circle me-1"></i>Actions disponibles en haut de la modal</small>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               <i class="fas fa-times me-2"></i>Fermer
-            </button>
-            <button type="button" class="btn btn-primary" onclick="editerReception('${reception._id}')">
-              <i class="fas fa-edit me-2"></i>Modifier
             </button>
           </div>
         </div>
@@ -625,6 +716,14 @@ function afficherModalDetailReception(reception) {
 
   const bsModal = new bootstrap.Modal(modal);
   bsModal.show();
+
+  // 📊 Essayer de charger les stats de vente si l'API est disponible
+  if (typeof chargerStatsVente === 'function') {
+    console.log('📊 Tentative de chargement des stats de vente pour:', produit._id);
+    chargerStatsVente(produit._id).catch(err => {
+      console.log('ℹ️ Pas de stats de vente disponibles encore (API en développement)');
+    });
+  }
 
   // Nettoyer après fermeture
   modal.addEventListener('hidden.bs.modal', () => {
@@ -646,8 +745,297 @@ function showImageLightbox(url, title) {
 }
 
 // Éditer réception
-function editerReception(receptionId) {
-  showToast('⏳ Édition en développement', 'info');
+async function editerReception(receptionId) {
+  try {
+    // Récupérer les données actuelles de la réception
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const url = `${API_CONFIG.BASE_URL}/api/protected/receptions/${receptionId}?magasinId=${MAGASIN_ID}`;
+    
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) throw new Error('Erreur chargement réception');
+    
+    const data = await response.json();
+    const reception = data.reception || data;
+    
+    afficherModalEditReception(reception);
+  } catch (error) {
+    console.error('❌ Erreur:', error);
+    showToast('❌ Erreur: ' + error.message, 'danger');
+  }
+}
+
+// Modal d'édition réception
+function afficherModalEditReception(reception) {
+  const dateFormatted = reception.dateReception ? new Date(reception.dateReception).toISOString().split('T')[0] : '';
+  const datePeremption = reception.datePeremption ? new Date(reception.datePeremption).toISOString().split('T')[0] : '';
+  const dateFabrication = reception.dateFabrication ? new Date(reception.dateFabrication).toISOString().split('T')[0] : '';
+
+  const html = `
+    <div class="modal fade" id="modalEditReception" tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable" style="max-width: 600px;">
+        <div class="modal-content shadow-xl border-0">
+          
+          <!-- HEADER AVEC ACTIONS -->
+          <div class="modal-header bg-light border-bottom-0 p-3">
+            <div class="d-flex align-items-start w-100 gap-2">
+              <div class="flex-grow-1">
+                <h5 class="modal-title fw-bold mb-1">
+                  <i class="fas fa-edit me-2 text-primary"></i>Modifier la réception
+                </h5>
+                <small class="text-muted">Mettez à jour les informations de cette réception</small>
+              </div>
+              <div class="d-flex gap-2 flex-shrink-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="modal-body p-4">
+            <form id="formEditReception">
+              
+              <!-- ROW 1: QUANTITÉ & FOURNISSEUR -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Quantité reçue</label>
+                  <input type="number" class="form-control" id="editQuantite" value="${reception.quantite}" min="1" required>
+                  <small class="text-muted">Nombre d'unités reçues</small>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Fournisseur</label>
+                  <input type="text" class="form-control" id="editFournisseur" value="${reception.fournisseur || ''}">
+                  <small class="text-muted">Nom du fournisseur</small>
+                </div>
+              </div>
+
+              <!-- ROW 2: PRIX ACHAT & PRIX TOTAL -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Prix achat (unitaire)</label>
+                  <input type="number" class="form-control" id="editPrixAchat" value="${reception.prixAchat || 0}" step="0.01" min="0" required>
+                  <small class="text-muted">Prix par unité</small>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Prix total réception</label>
+                  <div class="input-group">
+                    <input type="number" class="form-control" id="editPrixTotal" value="${reception.prixTotal || 0}" step="0.01" min="0" required>
+                    <span class="input-group-text">€</span>
+                  </div>
+                  <small class="text-muted">Calcul automatique: Quantité × Prix</small>
+                </div>
+              </div>
+
+              <!-- ROW 3: DATES -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Date réception</label>
+                  <input type="date" class="form-control" id="editDateReception" value="${dateFormatted}" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Date péremption</label>
+                  <input type="date" class="form-control" id="editDatePeremption" value="${datePeremption}">
+                  <small class="text-muted">Optionnel</small>
+                </div>
+              </div>
+
+              <!-- ROW 4: LOT & FABRICATION -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Lot/Série</label>
+                  <input type="text" class="form-control" id="editLotNumber" value="${reception.lotNumber || ''}">
+                  <small class="text-muted">Numéro de lot</small>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Date fabrication</label>
+                  <input type="date" class="form-control" id="editDateFabrication" value="${dateFabrication}">
+                  <small class="text-muted">Optionnel</small>
+                </div>
+              </div>
+
+              <!-- ROW 5: STATUT -->
+              <div class="mb-4">
+                <label class="form-label fw-bold">Statut contrôle</label>
+                <select class="form-select" id="editStatut" required>
+                  <option value="controle" ${reception.statut?.toLowerCase() === 'controle' ? 'selected' : ''}>En attente de contrôle</option>
+                  <option value="stocke" ${reception.statut?.toLowerCase() === 'stocke' ? 'selected' : ''}>Contrôlé & Stocké</option>
+                  <option value="rejete" ${reception.statut?.toLowerCase() === 'rejete' ? 'selected' : ''}>Rejeté</option>
+                </select>
+              </div>
+
+            </form>
+          </div>
+
+          <!-- FOOTER -->
+          <div class="modal-footer bg-light border-top">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Annuler
+            </button>
+            <button type="button" class="btn btn-primary" onclick="sauvegarderReception('${reception._id}')">
+              <i class="fas fa-save me-2"></i>Enregistrer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Injecter et afficher le modal
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  const modal = tempDiv.querySelector('.modal');
+  document.body.appendChild(modal);
+
+  // Calculer automatiquement le prix total
+  const quantiteInput = modal.querySelector('#editQuantite');
+  const prixAchatInput = modal.querySelector('#editPrixAchat');
+  const prixTotalInput = modal.querySelector('#editPrixTotal');
+
+  const calculerPrixTotal = () => {
+    const q = parseFloat(quantiteInput.value) || 0;
+    const p = parseFloat(prixAchatInput.value) || 0;
+    prixTotalInput.value = (q * p).toFixed(2);
+  };
+
+  quantiteInput.addEventListener('change', calculerPrixTotal);
+  prixAchatInput.addEventListener('change', calculerPrixTotal);
+
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+
+  modal.addEventListener('hidden.bs.modal', () => {
+    modal.remove();
+  });
+}
+
+// Sauvegarder les modifications de réception
+async function sauvegarderReception(receptionId) {
+  try {
+    const quantite = document.getElementById('editQuantite').value;
+    const prixAchat = document.getElementById('editPrixAchat').value;
+    const prixTotal = document.getElementById('editPrixTotal').value;
+    const dateReception = document.getElementById('editDateReception').value;
+    const datePeremption = document.getElementById('editDatePeremption').value;
+    const lotNumber = document.getElementById('editLotNumber').value;
+    const dateFabrication = document.getElementById('editDateFabrication').value;
+    const statut = document.getElementById('editStatut').value;
+    const fournisseur = document.getElementById('editFournisseur').value;
+
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const url = `${API_CONFIG.BASE_URL}/api/protected/receptions/${receptionId}`;
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        quantite: parseInt(quantite),
+        prixAchat: parseFloat(prixAchat),
+        prixTotal: parseFloat(prixTotal),
+        dateReception,
+        datePeremption: datePeremption || null,
+        lotNumber,
+        dateFabrication: dateFabrication || null,
+        statut,
+        fournisseur,
+        magasinId: MAGASIN_ID
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error);
+    }
+
+    showToast('✅ Réception modifiée avec succès', 'success');
+    
+    // Fermer le modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditReception'));
+    if (modal) modal.hide();
+
+    // Recharger l'historique
+    chargerHistoriqueReceptions();
+
+  } catch (error) {
+    console.error('❌ Erreur sauvegarde:', error);
+    showToast('❌ Erreur: ' + error.message, 'danger');
+  }
+}
+
+// ================================
+// 📊 AFFICHER STATS DE VENTE
+// ================================
+
+function afficherStatsVente(produitId, statsVente) {
+  const container = document.getElementById('statsVenteContainer');
+  const alerte = document.getElementById('alerteStatsVente');
+  
+  if (!statsVente || Object.keys(statsVente).length === 0) {
+    // Pas de données - laisser le message par défaut
+    return;
+  }
+
+  // Masquer l'alerte d'info
+  if (alerte) {
+    alerte.style.display = 'none';
+  }
+
+  const {
+    nombreVentes = 0,
+    quantiteVendue = 0,
+    revenuGenere = 0,
+    tauxRotation = 0,
+    articleLesPlus = '--'
+  } = statsVente;
+
+  const html = `
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm bg-light h-100">
+        <div class="card-body text-center">
+          <i class="fas fa-shopping-cart" style="font-size: 28px; color: #0dcaf0;" class="mb-3"></i>
+          <h5 class="card-title mb-1">${nombreVentes}</h5>
+          <p class="text-muted small mb-0">Nombre de ventes</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm bg-light h-100">
+        <div class="card-body text-center">
+          <i class="fas fa-boxes" style="font-size: 28px; color: #28a745;" class="mb-3"></i>
+          <h5 class="card-title mb-1">${quantiteVendue}</h5>
+          <p class="text-muted small mb-0">Quantité vendue</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm bg-light h-100">
+        <div class="card-body text-center">
+          <i class="fas fa-euro-sign" style="font-size: 28px; color: #ffc107;" class="mb-3"></i>
+          <h5 class="card-title mb-1">${revenuGenere.toFixed(2)}€</h5>
+          <p class="text-muted small mb-0">Revenu généré</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card border-0 shadow-sm bg-light h-100">
+        <div class="card-body text-center">
+          <i class="fas fa-tachometer-alt" style="font-size: 28px; color: #6f42c1;" class="mb-3"></i>
+          <h5 class="card-title mb-1">${tauxRotation.toFixed(2)}</h5>
+          <p class="text-muted small mb-0">Taux rotation</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (container) {
+    container.innerHTML = html;
+  }
+
+  console.log('📊 Stats de vente affichées pour produit:', produitId, statsVente);
 }
 
 // ================================

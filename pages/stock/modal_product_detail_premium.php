@@ -6,14 +6,24 @@
   <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 95vw;">
     <div class="modal-content border-0 shadow-lg">
       
-      <!-- ============= HEADER ============= -->
-      <div class="modal-header bg-gradient p-0 border-0">
-        <div class="w-100 p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fas fa-box me-2"></i>Détail du Produit
+      <!-- ============= HEADER AVEC ACTIONS ============= -->
+      <div class="modal-header bg-light border-bottom-0 p-3">
+        <div class="d-flex align-items-start w-100 gap-2">
+          <div class="flex-grow-1">
+            <h5 class="modal-title fw-bold mb-1">
+              <i class="fas fa-box me-2 text-info"></i>Détail du Produit
             </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <small class="text-muted">Informations complètes du produit</small>
+          </div>
+          <!-- BADGES ACTIONS EN HAUT À DROITE -->
+          <div class="d-flex gap-2 flex-shrink-0">
+            <button type="button" class="btn btn-sm btn-primary rounded-pill" id="btnEditProduct" title="Modifier le produit">
+              <i class="fas fa-edit me-1"></i><span class="d-none d-sm-inline">Modifier</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" title="Supprimer le produit">
+              <i class="fas fa-trash me-1"></i><span class="d-none d-sm-inline">Supprimer</span>
+            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
         </div>
       </div>
@@ -27,21 +37,18 @@
           
           <!-- Colonne 1: Image & Actions -->
           <div class="col-lg-3">
-            <div class="card border-0 shadow-sm overflow-hidden">
+            <div class="card border-0 shadow-sm overflow-hidden" style="cursor: pointer; position: relative;" onclick="ouvrirImageLightbox()">
               <!-- Image -->
-              <div style="background: #f8f9fa; height: 250px; display: flex; align-items: center; justify-content: center; position: relative;">
-                <img id="premiumProductImage" src="" alt="Produit" style="max-width: 100%; max-height: 100%; object-fit: cover; display: none;" />
+              <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); height: 300px; display: flex; align-items: center; justify-content: center; position: relative;">
+                <img id="premiumProductImage" src="" alt="Produit" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;" />
                 <div id="premiumImagePlaceholder" class="text-center text-muted">
                   <i class="fas fa-image" style="font-size: 48px; opacity: 0.3;"></i>
                   <p class="mt-2 small">Pas d'image</p>
                 </div>
-              </div>
-
-              <!-- Bouton voir image -->
-              <div class="card-body p-3 text-center">
-                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="ouvrirImageLightbox()">
-                  <i class="fas fa-expand me-2"></i>Voir l'image
-                </button>
+                <!-- Overlay loupe -->
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                  <i class="fas fa-search" style="font-size: 48px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);"></i>
+                </div>
               </div>
             </div>
           </div>
@@ -259,13 +266,11 @@
 
       </div>
 
-      <!-- ============= FOOTER ============= -->
+      <!-- ============= FOOTER SIMPLE ============= -->
       <div class="modal-footer bg-light border-top">
+        <small class="text-muted me-auto"><i class="fas fa-info-circle me-1"></i>Actions disponibles en haut de la modal</small>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
           <i class="fas fa-times me-2"></i>Fermer
-        </button>
-        <button type="button" class="btn btn-primary" onclick="editerProduitPremium()">
-          <i class="fas fa-edit me-2"></i>Modifier
         </button>
       </div>
 
@@ -274,7 +279,7 @@
 </div>
 
 <!-- ============= LIGHTBOX IMAGE ============= -->
-<div class="modal fade" id="imageLightbox" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="imageLightbox" tabindex="-1" aria-hidden="true" style="z-index: 9999;">
   <div class="modal-dialog modal-fullscreen">
     <div class="modal-content bg-dark">
       <div class="modal-header bg-dark border-0">
@@ -376,6 +381,12 @@ async function openProductDetailPremium(produitId) {
     const modal = new bootstrap.Modal(document.getElementById('modalProductDetailPremium'));
     modal.show();
 
+    // Ajouter l'event listener au bouton éditer
+    const btnEdit = document.getElementById('btnEditProduct');
+    if (btnEdit) {
+      btnEdit.onclick = () => editerProduitPremium(produitId);
+    }
+
   } catch (err) {
     console.error('❌ Erreur:', err);
     showToast('❌ Erreur: ' + err.message, 'danger');
@@ -434,15 +445,32 @@ function ouvrirImageLightbox() {
 }
 
 // Éditer le produit
-function editerProduitPremium() {
-  const produitId = document.getElementById('premiumProductId').value;
-  console.log('✏️ Édition produit:', produitId);
+function editerProduitPremium(produitId) {
+  // Récupérer l'ID depuis le paramètre ou depuis le DOM
+  const pId = produitId || document.getElementById('premiumProductId').value;
+  
+  if (!pId) {
+    showToast('❌ Produit non trouvé', 'danger');
+    return;
+  }
+
+  console.log('✏️ Édition produit:', pId);
   
   // Fermer le modal détail
-  bootstrap.Modal.getInstance(document.getElementById('modalProductDetailPremium')).hide();
+  const detailModal = bootstrap.Modal.getInstance(document.getElementById('modalProductDetailPremium'));
+  if (detailModal) {
+    detailModal.hide();
+  }
   
-  // Ouvrir le modal d'édition (à implémenter)
-  showToast('⏳ Fonctionnalité d\'édition en développement', 'info');
+  // Rediriger vers la page d'édition (ou ouvrir un modal d'édition)
+  // Pour maintenant, on utilise le modal existant sur la page magasin.php
+  if (typeof openProductEditModal === 'function') {
+    openProductEditModal(pId);
+  } else {
+    showToast('⏳ Redirection vers l\'édition du produit...', 'info');
+    // Optionnel: rediriger vers une page d'édition
+    // window.location.href = `/backend_Stock/pages/stock/magasin.php?edit=${pId}`;
+  }
 }
 
 // Ajouter des alertes

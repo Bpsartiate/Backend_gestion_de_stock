@@ -2892,6 +2892,84 @@ router.get('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
   }
 });
 
+// ============================================================================
+// ENDPOINT: PUT /api/protected/receptions/:receptionId
+// Description: Update a specific reception
+// ============================================================================
+
+router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async (req, res) => {
+  try {
+    const { receptionId } = req.params;
+    const { 
+      quantite, 
+      prixAchat, 
+      prixTotal, 
+      dateReception, 
+      datePeremption, 
+      lotNumber, 
+      dateFabrication, 
+      statut, 
+      fournisseur,
+      magasinId 
+    } = req.body;
+
+    // Vérifier que la réception existe
+    const reception = await Reception.findById(receptionId);
+    if (!reception) {
+      return res.status(404).json({ error: 'Réception non trouvée' });
+    }
+
+    // Vérifier que l'utilisateur a accès à ce magasin
+    if (reception.magasinId.toString() !== magasinId) {
+      return res.status(403).json({ error: 'Accès refusé à ce magasin' });
+    }
+
+    // Mettre à jour les champs
+    if (quantite !== undefined) reception.quantite = parseInt(quantite);
+    if (prixAchat !== undefined) reception.prixAchat = parseFloat(prixAchat);
+    if (prixTotal !== undefined) reception.prixTotal = parseFloat(prixTotal);
+    if (dateReception) reception.dateReception = new Date(dateReception);
+    if (datePeremption) reception.datePeremption = new Date(datePeremption);
+    if (lotNumber !== undefined) reception.lotNumber = lotNumber;
+    if (dateFabrication) reception.dateFabrication = new Date(dateFabrication);
+    if (statut) reception.statut = statut;
+    if (fournisseur !== undefined) reception.fournisseur = fournisseur;
+
+    // Sauvegarder
+    await reception.save();
+
+    console.log('✅ Réception modifiée:', {
+      id: receptionId,
+      quantite,
+      prixTotal,
+      statut
+    });
+
+    // Retourner la réception mise à jour avec données peuplées
+    const updatedReception = await Reception.findById(receptionId)
+      .populate({
+        path: 'produitId',
+        populate: {
+          path: 'typeProduitId',
+          select: 'nomType unitePrincipale code icone'
+        }
+      })
+      .populate('magasinId', 'nom')
+      .populate({
+        path: 'rayonId',
+        select: 'codeRayon nomRayon typeRayon quantiteActuelle capaciteMax couleurRayon iconeRayon typesProduitsAutorises description status createdAt updatedAt'
+      })
+      .populate('mouvementStockId')
+      .populate('utilisateurId', 'nom prenom email');
+
+    res.json({ success: true, reception: updatedReception });
+
+  } catch (error) {
+    console.error('❌ PUT /receptions/:id error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
 
 
