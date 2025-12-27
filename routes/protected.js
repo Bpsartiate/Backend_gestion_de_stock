@@ -2897,8 +2897,11 @@ router.get('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
 // Description: Update a specific reception
 // ============================================================================
 
-router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, upload.single('photo'), async (req, res) => {
+router.put('/receptions/:receptionId', authMiddleware, upload.single('photo'), checkMagasinAccess, async (req, res) => {
   try {
+    console.log('\n=== PUT /receptions/:receptionId START ===');
+    console.log('📦 req.file:', req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'null');
+    
     const { receptionId } = req.params;
     const { 
       quantite, 
@@ -2913,6 +2916,8 @@ router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, uploa
       magasinId,
       photoUrl
     } = req.body;
+
+    console.log('📝 Champs reçus:', { quantite, prixAchat, fournisseur, statut });
 
     // Vérifier que la réception existe
     const reception = await Reception.findById(receptionId);
@@ -2935,17 +2940,46 @@ router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, uploa
     if (dateFabrication) reception.dateFabrication = new Date(dateFabrication);
     if (statut) reception.statut = statut;
     if (fournisseur !== undefined) reception.fournisseur = fournisseur;
-    if (photoUrl) reception.photoUrl = photoUrl;
+
+    // Gérer l'upload de la photo
+    if (req.file && req.file.buffer) {
+      try {
+        console.log('📸 Photo reçue pour upload Cloudinary:', (req.file.buffer.length / 1024).toFixed(2), 'KB');
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream({ folder: 'receptions' }, (error, result) => {
+            if (error) {
+              console.error('❌ Cloudinary upload error:', error);
+              reject(error);
+            } else {
+              console.log('✅ Upload Cloudinary réussi:', result.secure_url);
+              resolve(result);
+            }
+          });
+          uploadStream.end(req.file.buffer);
+        });
+        reception.photoUrl = result.secure_url;
+        console.log('✅ PhotoUrl mise à jour (Cloudinary):', reception.photoUrl);
+      } catch (upErr) {
+        console.error('❌ Erreur Cloudinary upload:', upErr);
+        return res.status(400).json({ message: 'Erreur lors de l\'upload de la photo.' });
+      }
+    } else if (photoUrl) {
+      // Si une photoUrl est fournie directement dans le body
+      console.log('📷 photoUrl du body utilisée:', photoUrl);
+      reception.photoUrl = photoUrl;
+    } else {
+      console.log('⚠️ Aucune photo uploadée, photoUrl conservée:', reception.photoUrl);
+    }
 
     // Sauvegarder
     await reception.save();
 
-    console.log('✅ Réception modifiée:', {
+    console.log('✅ Réception modifiée et sauvegardée:', {
       id: receptionId,
       quantite,
       prixTotal,
       statut,
-      photoUrl: photoUrl ? '✅ Photo uploadée' : '❌ Pas de photo'
+      photoUrl: reception.photoUrl
     });
 
     // Retourner la réception mise à jour avec données peuplées
@@ -2965,6 +2999,9 @@ router.put('/receptions/:receptionId', authMiddleware, checkMagasinAccess, uploa
       .populate('mouvementStockId')
       .populate('utilisateurId', 'nom prenom email');
 
+    console.log('📤 Réponse avec photoUrl:', updatedReception.photoUrl);
+    console.log('=== PUT /receptions/:receptionId END ===\n');
+    
     res.json({ success: true, reception: updatedReception });
 
   } catch (error) {

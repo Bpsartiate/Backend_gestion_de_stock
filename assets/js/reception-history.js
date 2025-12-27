@@ -300,7 +300,8 @@ function afficherModalDetailReception(reception) {
   const rayon = reception.rayonId || {};
   
   console.log('📊 Données réception reçues:', reception);
-  console.log('📦 Produit:', produit);
+  console.log('� PhotoURL dans l\'objet:', reception.photoUrl);
+  console.log('�📦 Produit:', produit);
   console.log('📁 Type Produit ID:', produit.typeProduitsId);
   
   const dateFormatted = new Date(reception.dateReception).toLocaleDateString('fr-FR', {
@@ -368,7 +369,7 @@ function afficherModalDetailReception(reception) {
               
                 <div class="card border-0 bg-light mb-4" style="cursor: pointer; position: relative;" onclick="showImageLightbox('${reception.photoUrl}', '${produit.designation}')">
                   <div style="width: 100%; height: 400px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; overflow: hidden;">
-                    ${reception.photoUrl ? `<img src="${reception.photoUrl}" style="width: 100%; height: 100%; object-fit: contain;" />` : '<i class="fas fa-box" style="font-size: 80px; color: #ccc;"></i>'}
+                    ${reception.photoUrl ? `<img src="${reception.photoUrl}" style="width: 100%; height: 100%; object-fit: contain;" onerror="console.log('❌ Erreur chargement image:', this.src)" onload="console.log('✅ Image chargée:', this.src)" />` : '<i class="fas fa-box" style="font-size: 80px; color: #ccc;"></i>'}
                   </div>
                   <div style="position: absolute; top: 80%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
                     <i class="fas fa-search" style="font-size: 48px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);"></i>
@@ -965,6 +966,9 @@ function afficherModalEditReception(reception) {
 // Sauvegarder les modifications de réception
 async function sauvegarderReception(receptionId) {
   try {
+    console.log('💾 Début sauvegarde réception...');
+    console.log('📦 MAGASIN_ID:', MAGASIN_ID);
+
     const quantite = document.getElementById('editQuantite').value;
     const prixAchat = document.getElementById('editPrixAchat').value;
     const prixTotal = document.getElementById('editPrixTotal').value;
@@ -976,20 +980,34 @@ async function sauvegarderReception(receptionId) {
     const fournisseur = document.getElementById('editFournisseur').value;
     const photoFileInput = document.getElementById('editPhotoFile');
 
+    console.log('🔍 Vérification élément file input:');
+    console.log('   photoFileInput existe?', !!photoFileInput);
+    console.log('   photoFileInput.files?', !!photoFileInput?.files);
+    console.log('   photoFileInput.files.length?', photoFileInput?.files?.length);
+    if (photoFileInput?.files?.length > 0) {
+      console.log('   Fichier trouvé:', photoFileInput.files[0].name, photoFileInput.files[0].size, 'bytes');
+    }
+
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-    const url = `${API_CONFIG.BASE_URL}/api/protected/receptions/${receptionId}`;
+    // ⚠️ Ajouter magasinId en query parameter pour le middleware
+    const url = `${API_CONFIG.BASE_URL}/api/protected/receptions/${receptionId}?magasinId=${MAGASIN_ID}`;
 
     // Créer FormData pour pouvoir envoyer la photo
     const formData = new FormData();
-    formData.append('quantite', quantite);
-    formData.append('prixAchat', prixAchat);
-    formData.append('prixTotal', prixTotal);
-    formData.append('dateReception', dateReception);
-    formData.append('datePeremption', datePeremption || '');
-    formData.append('lotNumber', lotNumber);
-    formData.append('dateFabrication', dateFabrication || '');
-    formData.append('statut', statut);
-    formData.append('fournisseur', fournisseur);
+    
+    // Ajouter tous les champs (même vides) pour que FormData les récupère
+    formData.append('quantite', quantite || '');
+    formData.append('prixAchat', prixAchat || '');
+    formData.append('prixTotal', prixTotal || '');
+    formData.append('dateReception', dateReception || '');
+    if (datePeremption) formData.append('datePeremption', datePeremption);
+    formData.append('lotNumber', lotNumber || '');
+    if (dateFabrication) formData.append('dateFabrication', dateFabrication);
+    formData.append('statut', statut || 'controle');
+    formData.append('fournisseur', fournisseur || '');
+    
+    // ⚠️ AUSSI ajouter magasinId en FormData pour le handler
+    console.log('📝 Ajout magasinId:', MAGASIN_ID);
     formData.append('magasinId', MAGASIN_ID);
 
     // Si une photo a été sélectionnée, l'ajouter au FormData
@@ -997,6 +1015,8 @@ async function sauvegarderReception(receptionId) {
       console.log('📸 Photo sélectionnée:', photoFileInput.files[0].name);
       formData.append('photo', photoFileInput.files[0]);
     }
+
+    console.log('📤 Envoi FormData vers:', url);
 
     const response = await fetch(url, {
       method: 'PUT',
@@ -1008,13 +1028,19 @@ async function sauvegarderReception(receptionId) {
       body: formData
     });
 
+    console.log('📥 Réponse status:', response.status);
+
     if (!response.ok) {
       const error = await response.text();
+      console.error('❌ Erreur réponse (status ' + response.status + '):', error);
       throw new Error(error);
     }
 
     const responseData = await response.json();
+    console.log('📊 Données réponse:', responseData);
+    
     const updatedReception = responseData.reception;
+    console.log('✅ Réception mise à jour reçue:', updatedReception?._id);
 
     showToast('✅ Réception modifiée avec succès', 'success');
     
@@ -1027,6 +1053,7 @@ async function sauvegarderReception(receptionId) {
     if (modalDetail) modalDetail.hide();
 
     // Recharger l'historique
+    console.log('🔄 Rechargement historique...');
     await chargerHistoriqueReceptions();
 
     // Rouvrir le modal détail avec les données mises à jour
