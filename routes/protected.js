@@ -2713,6 +2713,8 @@ router.delete('/categories/:categoryId', authMiddleware, async (req, res) => {
 
 router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) => {
   try {
+    console.log('\n\n🚀🚀🚀 === DÉBUT POST /RECEPTIONS ===');
+    
     const {
       produitId,
       magasinId,
@@ -2746,62 +2748,89 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
 
     // Validation des champs requis
     if (!produitId || !magasinId || !rayonId || !quantite || prixAchat === null || prixAchat === undefined) {
+      console.error('❌ Champs manquants - ARRÊT');
       return res.status(400).json({
         error: 'Champs requis manquants',
         received: { produitId, magasinId, rayonId, quantite, prixAchat }
       });
     }
+    console.log('✅ Tous les champs requis présents');
 
     // Vérifier que la quantité est valide
     if (quantite <= 0) {
+      console.error('❌ Quantité invalide - ARRÊT');
       return res.status(400).json({ error: 'Quantité doit être > 0' });
     }
+    console.log('✅ Quantité valide:', quantite);
 
     // Vérifier que le produit existe et qu'il n'est pas supprimé
     const produit = await Produit.findById(produitId);
     if (!produit || produit.estSupprime) {
+      console.error('❌ Produit non trouvé ou supprimé - ARRÊT');
       return res.status(404).json({ error: 'Produit non trouvé' });
     }
+    console.log('✅ Produit trouvé:', produit.designation);
 
     // Vérifier que le magasin existe
     const magasin = await Magasin.findById(magasinId);
     if (!magasin || magasin.estSupprime) {
+      console.error('❌ Magasin non trouvé ou supprimé - ARRÊT');
       return res.status(404).json({ error: 'Magasin non trouvé' });
     }
+    console.log('✅ Magasin trouvé:', magasin.nom);
 
     // Vérifier que le rayon existe
     const rayon = await Rayon.findById(rayonId)
       .populate('typesProduitsAutorises', 'nomType');
     if (!rayon || rayon.estSupprime) {
+      console.error('❌ Rayon non trouvé ou supprimé - ARRÊT');
       return res.status(404).json({ error: 'Rayon non trouvé' });
     }
+    console.log('✅ Rayon trouvé:', rayon.nomRayon);
 
     // ⚠️ VALIDATION: Vérifier si le type de produit est autorisé dans ce rayon
+    console.log('🔍 VALIDATION 1: Type produit autorisé?');
+    console.log(`   typesProduitsAutorises: ${rayon.typesProduitsAutorises ? rayon.typesProduitsAutorises.length + ' types' : 'NONE'}`);
+    
     if (rayon.typesProduitsAutorises && rayon.typesProduitsAutorises.length > 0) {
       const typeProduitsIds = rayon.typesProduitsAutorises.map(t => t._id.toString());
       const produitTypeId = produit.typeProduitId.toString();
       
+      console.log(`   typeProduitsIds autorisés: [${typeProduitsIds.join(', ')}]`);
+      console.log(`   produitTypeId: ${produitTypeId}`);
+      
       if (!typeProduitsIds.includes(produitTypeId)) {
         const typesNoms = rayon.typesProduitsAutorises.map(t => t.nomType).join(', ');
+        console.error(`❌ VALIDATION 1 ÉCHOUÉE - Type produit non autorisé - ARRÊT`);
         return res.status(400).json({
           error: `❌ Type produit non autorisé dans ce rayon`,
           details: `Ce rayon n'accepte que: ${typesNoms}`,
           typeProduitsAutorisés: typesNoms
         });
       }
-      console.log(`✅ Type produit autorisé dans ce rayon`);
+      console.log(`✅ VALIDATION 1 OK - Type produit autorisé`);
+    } else {
+      console.log(`✅ VALIDATION 1 OK - Pas de restriction de types`);
     }
 
     // ⚠️ VALIDATION: Vérifier la capacité TOTALE du rayon (tous les produits)
+    console.log('🔍 VALIDATION 2: Capacité rayon?');
     const allStocksInRayon = await StockRayon.find({
       rayonId,
       magasinId
     });
     
+    console.log(`   StockRayons dans ce rayon: ${allStocksInRayon.length}`);
     const quantiteTotalRayonActuelle = allStocksInRayon.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
     const quantiteTotalRayonApreAjout = quantiteTotalRayonActuelle + parseFloat(quantite);
     
+    console.log(`   Stock actuellement dans rayon: ${quantiteTotalRayonActuelle}`);
+    console.log(`   À ajouter: ${quantite}`);
+    console.log(`   Total après ajout: ${quantiteTotalRayonApreAjout}`);
+    console.log(`   Capacité max rayon: ${rayon.capaciteMax}`);
+    
     if (quantiteTotalRayonApreAjout > rayon.capaciteMax) {
+      console.error(`❌ VALIDATION 2 ÉCHOUÉE - Capacité rayon dépassée - ARRÊT`);
       return res.status(400).json({
         error: '❌ Capacité du rayon dépassée',
         details: `Capacité totale rayon: ${rayon.capaciteMax} ${rayon.uniteMesure || 'unités'}, Stock total actuel: ${quantiteTotalRayonActuelle}, À ajouter: ${quantite}, Total après: ${quantiteTotalRayonApreAjout}`,
@@ -2811,24 +2840,36 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         quantiteTotaleApreAjout: quantiteTotalRayonApreAjout
       });
     }
-    console.log(`✅ Capacité rayon OK - ${rayon.nomRayon} (${quantiteTotalRayonApreAjout}/${rayon.capaciteMax})`);
+    console.log(`✅ VALIDATION 2 OK - Capacité rayon respectée`);
 
     // ⚠️ VALIDATION: Vérifier la capacité MAX du TYPE DE PRODUIT (tous les rayons du magasin)
+    console.log('🔍 VALIDATION 3: Capacité type produit?');
     const typeProduit = await TypeProduit.findById(produit.typeProduitId);
+    console.log(`   Type produit trouvé: ${typeProduit ? typeProduit.nomType : 'PAS TROUVÉ'}`);
+    
     if (typeProduit && typeProduit.capaciteMax) {
+      console.log(`   Capacité max type: ${typeProduit.capaciteMax}`);
+      
       // Calculer la quantité totale de ce type de produit dans ce magasin
       const produitsType = await Produit.find({ typeProduitId: produit.typeProduitId, magasinId }).select('_id');
       const produitsTypeIds = produitsType.map(p => p._id);
+      console.log(`   ${produitsType.length} produit(s) de ce type dans ce magasin`);
       
       const allStocksTypeProduit = await StockRayon.find({
         produitId: { $in: produitsTypeIds },
         magasinId
       });
       
+      console.log(`   ${allStocksTypeProduit.length} StockRayons trouvés pour ce type`);
       const quantiteTotalTypeProduit = allStocksTypeProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
       const quantiteTotalTypeApreAjout = quantiteTotalTypeProduit + parseFloat(quantite);
       
+      console.log(`   Stock actuellement: ${quantiteTotalTypeProduit}`);
+      console.log(`   À ajouter: ${quantite}`);
+      console.log(`   Total après: ${quantiteTotalTypeApreAjout}`);
+      
       if (quantiteTotalTypeApreAjout > typeProduit.capaciteMax) {
+        console.error(`❌ VALIDATION 3 ÉCHOUÉE - Capacité type dépassée - ARRÊT`);
         return res.status(400).json({
           error: '❌ Capacité du type de produit dépassée',
           details: `Capacité max pour type "${typeProduit.nomType}": ${typeProduit.capaciteMax} ${typeProduit.unitePrincipale || 'unités'}, Stock actuel: ${quantiteTotalTypeProduit}, À ajouter: ${quantite}, Total: ${quantiteTotalTypeApreAjout}`,
@@ -2838,10 +2879,10 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
           quantiteTotalType: quantiteTotalTypeApreAjout
         });
       }
-      console.log(`✅ Capacité type produit OK - "${typeProduit.nomType}" (${quantiteTotalTypeApreAjout}/${typeProduit.capaciteMax})`);
+      console.log(`✅ VALIDATION 3 OK - Capacité type respectée`);
+    } else {
+      console.log(`✅ VALIDATION 3 OK - Pas de limite de capacité pour ce type`);
     }
-
-    console.log(`✅ Validations OK - Produit: ${produit.designation}, Quantité: ${quantite}`);
 
     // Calculer le prix total
     const prixTotal = quantite * prixAchat;
