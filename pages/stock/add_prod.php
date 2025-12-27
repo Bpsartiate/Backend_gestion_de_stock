@@ -257,7 +257,7 @@
         </div>
         <div class="modal-footer bg-light">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-          <button type="submit" class="btn btn-primary px-4">
+          <button type="submit" id="btnEnregistrerProduit" class="btn btn-primary px-4">
             <i class="fas fa-save me-2"></i>Enregistrer Produit
           </button>
         </div>
@@ -545,6 +545,7 @@
   }
 
   // ✅ Vérifier la capacité en temps réel (rayon + type de produit)
+  // ✅ Vérifier la capacité en temps réel (rayon + type de produit)
   function verifierCapacites() {
     const quantite = parseFloat(document.getElementById('quantite').value) || 0;
     const rayonId = document.getElementById('rayonId').value;
@@ -556,11 +557,15 @@
     const messageType = document.getElementById('messageQuantiteType');
     const alerteInfo = document.getElementById('alerteQuantiteInfo');
     const messageInfo = document.getElementById('messageQuantiteInfo');
+    const submitBtn = document.getElementById('btnEnregistrerProduit');
 
     // Reset les alertes
     alerteRayon.style.display = 'none';
     alerteType.style.display = 'none';
     alerteInfo.style.display = 'none';
+    
+    // Par défaut, le bouton est activé
+    if (submitBtn) submitBtn.disabled = false;
 
     if (quantite <= 0 || !rayonId || !categorieId) {
       return; // Pas assez d'infos
@@ -574,39 +579,88 @@
     const categorie = allCategories.find(c => c._id === categorieId);
     if (!categorie) return;
 
-    // ========== VÉRIFICATION CAPACITÉ RAYON ==========
-    const capaciteMaxRayon = rayon.capaciteMax || 100;
-    const quantiteActuelleRayon = rayon.quantiteActuelle || 0;
-    const quantiteTotalRayonApreAjout = quantiteActuelleRayon + quantite;
+    // Flag pour tracker les erreurs
+    let hasError = false;
 
-    if (quantiteTotalRayonApreAjout > capaciteMaxRayon) {
+    // ========== VÉRIFICATION CAPACITÉ RAYON ==========
+    // La capacité du rayon est en UNITÉS (nombre d'articles/produits), pas en kg
+    // Donc on compte 1 article = 1 unité, peu importe la quantité en kg
+    const capaciteMaxRayon = rayon.capaciteMax || 100;
+    
+    // Obtenir le nombre exact de produits depuis les stats du rayon (retourné par l'API)
+    // Format: "1/1" ou "0/100" -> on extrait le premier nombre
+    let nombreProduitsEnRayon = 0;
+    if (rayon.stocks && rayon.stocks.articles) {
+      const articlesStr = rayon.stocks.articles; // Format: "1/1"
+      const match = articlesStr.match(/(\d+)\//);
+      nombreProduitsEnRayon = match ? parseInt(match[1]) : 0;
+    }
+    
+    const nombreProduitsApreAjout = nombreProduitsEnRayon + 1;  // On ajoute 1 produit
+    
+    // Afficher aussi la quantité en kg pour info
+    const quantiteActuelleRayonKg = rayon.quantiteActuelle || 0;
+
+    if (nombreProduitsApreAjout > capaciteMaxRayon) {
       alerteRayon.style.display = 'block';
       alerteRayon.classList.remove('alert-warning');
       alerteRayon.classList.add('alert-danger');
-      const excedent = (quantiteTotalRayonApreAjout - capaciteMaxRayon).toFixed(2);
-      messageRayon.innerHTML = `<strong>❌ Capacité rayon dépassée!</strong> Actuellement: ${quantiteActuelleRayon}/${capaciteMaxRayon}, Vous dépasseriez de ${excedent} ${categorie.unitePrincipale || 'unités'}.`;
-    } else if (quantiteTotalRayonApreAjout > capaciteMaxRayon * 0.8) {
+      const excedent = nombreProduitsApreAjout - capaciteMaxRayon;
+      messageRayon.innerHTML = `<strong>❌ Capacité rayon dépassée!</strong> Le rayon peut contenir ${capaciteMaxRayon} articles. Actuellement: ${nombreProduitsEnRayon} article(s). Vous dépasseriez de ${excedent} article(s).<br><small>Stock actuel: ${quantiteActuelleRayonKg.toFixed(2)} ${categorie.unitePrincipale || 'unités'} | Vous ajouteriez: ${quantite.toFixed(2)} ${categorie.unitePrincipale || 'unités'}</small>`;
+      hasError = true;
+    } else if (nombreProduitsApreAjout > capaciteMaxRayon * 0.8) {
       alerteRayon.style.display = 'block';
       alerteRayon.classList.remove('alert-danger');
       alerteRayon.classList.add('alert-warning');
-      const disponible = (capaciteMaxRayon - quantiteActuelleRayon).toFixed(2);
-      messageRayon.innerHTML = `<strong>⚠️ Rayon presque plein:</strong> Disponible: ${disponible}/${capaciteMaxRayon} ${categorie.unitePrincipale || 'unités'} (${Math.round((quantiteTotalRayonApreAjout / capaciteMaxRayon) * 100)}% utilisé).`;
+      const disponible = capaciteMaxRayon - nombreProduitsEnRayon;
+      messageRayon.innerHTML = `<strong>⚠️ Rayon presque plein:</strong> Peut contenir ${capaciteMaxRayon} articles. Actuellement: ${nombreProduitsEnRayon} article(s). Disponible: ${disponible} article(s) (${Math.round((nombreProduitsApreAjout / capaciteMaxRayon) * 100)}% rempli).`;
     } else {
-      const disponible = (capaciteMaxRayon - quantiteActuelleRayon).toFixed(2);
+      const disponible = capaciteMaxRayon - nombreProduitsEnRayon;
       alerteInfo.style.display = 'block';
-      messageInfo.innerHTML = `✅ Rayon: ${disponible} ${categorie.unitePrincipale || 'unités'} disponible sur ${capaciteMaxRayon}.`;
+      messageInfo.innerHTML = `✅ Rayon: ${disponible} article(s) disponible(s) sur ${capaciteMaxRayon}.<br><small>Stock actuel: ${quantiteActuelleRayonKg.toFixed(2)} ${categorie.unitePrincipale || 'unités'} | Vous ajouteriez: ${quantite.toFixed(2)} ${categorie.unitePrincipale || 'unités'}</small>`;
     }
 
     // ========== VÉRIFICATION CAPACITÉ TYPE DE PRODUIT ==========
     if (categorie.capaciteMax) {
       const capaciteMaxType = categorie.capaciteMax;
-      // Note: On doit calculer le stock total du type depuis le backend
-      // Pour maintenant, affichons juste l'info
-      alerteInfo.style.display = 'block';
-      if (!messageInfo.innerHTML.includes('Rayon:')) {
-        messageInfo.innerHTML = '';
+      // La capacité type est en kg/litre/etc (même unité que le produit)
+      // Donc on compare directement la quantité que l'utilisateur rentre
+      
+      if (quantite > capaciteMaxType) {
+        // L'utilisateur essaie d'ajouter plus que la capacité max du type
+        alerteType.style.display = 'block';
+        alerteType.classList.remove('alert-warning');
+        alerteType.classList.add('alert-danger');
+        const excedent = (quantite - capaciteMaxType).toFixed(2);
+        messageType.innerHTML = `<strong>❌ Capacité type de produit dépassée!</strong> Type "${categorie.nomType}": Capacité max = ${capaciteMaxType} ${categorie.unitePrincipale || 'unités'}. Vous essayez d'ajouter ${quantite.toFixed(2)}, ce qui dépasse de ${excedent} ${categorie.unitePrincipale || 'unités'}.`;
+        hasError = true;
+      } else if (quantite > capaciteMaxType * 0.8) {
+        // L'utilisateur est à 80% de la capacité max
+        alerteType.style.display = 'block';
+        alerteType.classList.remove('alert-danger');
+        alerteType.classList.add('alert-warning');
+        const disponible = (capaciteMaxType - quantite).toFixed(2);
+        messageType.innerHTML = `<strong>⚠️ Quantité importante:</strong> Type "${categorie.nomType}": Capacité max = ${capaciteMaxType} ${categorie.unitePrincipale || 'unités'}. Vous ajouteriez ${quantite.toFixed(2)}, vous auriez ${disponible} ${categorie.unitePrincipale || 'unités'} de disponible.`;
+      } else {
+        // C'est OK
+        const disponible = (capaciteMaxType - quantite).toFixed(2);
+        alerteInfo.style.display = 'block';
+        const sep = messageInfo.innerHTML ? '<br>' : '';
+        messageInfo.innerHTML += `${sep}📦 Type "${categorie.nomType}": ${disponible} ${categorie.unitePrincipale || 'unités'} restants sur ${capaciteMaxType}.`;
       }
-      messageInfo.innerHTML += `<br>📦 Type "${categorie.nomType}": Capacité max = ${capaciteMaxType} ${categorie.unitePrincipale || 'unités'}`;
+    }
+
+    // ========== DÉSACTIVER/ACTIVER LE BOUTON SUBMIT ==========
+    if (submitBtn) {
+      if (hasError) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('disabled');
+        submitBtn.title = '⛔ Corrigez les erreurs avant de continuer';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('disabled');
+        submitBtn.title = '';
+      }
     }
   }
 

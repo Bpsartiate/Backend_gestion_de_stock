@@ -1143,7 +1143,7 @@ router.delete('/affectations/:id', authMiddleware, async (req, res) => {
 // 📦 ROUTES STOCK - RAYONS
 // ================================
 
-// GET /api/protected/magasins/:magasinId/rayons - Lister les rayons
+// GET /api/protected/magasins/:magasinId/rayons - Lister les rayons avec stats
 router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
   try {
     const { magasinId } = req.params;
@@ -1165,7 +1165,37 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
       .sort({ codeRayon: 1 })
       .lean();
 
-    return res.json(rayons);
+    // Enrichir chaque rayon avec les stats de stock
+    const rayonsAvecStats = await Promise.all(rayons.map(async (rayon) => {
+      // 1. Compter les articles (StockRayons distincts)
+      const stocks = await StockRayon.find({ rayonId: rayon._id }).select('_id quantiteDisponible');
+      const nombreArticles = stocks.length;
+      
+      // 2. Calculer la quantité totale
+      const quantiteTotale = stocks.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+      
+      // 3. Calculer l'occupation (%)
+      const capaciteMax = rayon.capaciteMax || 1000;
+      const occupationPourcent = Math.round((nombreArticles / capaciteMax) * 100);
+      
+      // 4. Compter les alertes (produits avec quantité <= seuilAlerte)
+      // TODO: À implémenter si besoin
+      const nombreAlertes = 0;
+      
+      return {
+        ...rayon,
+        // STATS DU RAYON
+        stocks: {
+          occupation: occupationPourcent,  // %
+          articles: `${nombreArticles}/${capaciteMax}`,  // Nombre/Capacité
+          quantiteTotale: quantiteTotale,  // Total en kg/L/etc
+          alertes: `${nombreAlertes}/${nombreArticles}`,  // Alertes/Total
+          capacite: capaciteMax
+        }
+      };
+    }));
+
+    return res.json(rayonsAvecStats);
   } catch (err) {
     console.error('rayons.list.error', err);
     return res.status(500).json({ message: 'Erreur: ' + err.message });
@@ -1344,11 +1374,41 @@ router.delete('/rayons/:rayonId', authMiddleware, blockVendeur, async (req, res)
   }
 });
 
+// GET /api/protected/rayons/:rayonId/stocks - Obtenir les stocks d'un rayon
+router.get('/rayons/:rayonId/stocks', async (req, res) => {
+  try {
+    const { rayonId } = req.params;
+    const requester = req.user;
+
+    // Récupérer le rayon
+    const rayon = await Rayon.findById(rayonId);
+    if (!rayon) {
+      return res.status(404).json({ message: 'Rayon non trouvé' });
+    }
+
+    // Vérifier l'accès au magasin
+    const magasin = await Magasin.findById(rayon.magasinId);
+    if (!magasin || (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // Récupérer tous les stocks de ce rayon
+    const stocks = await StockRayon.find({ rayonId }).select('_id produitId quantiteDisponible');
+    
+    console.log(`✅ Récupéré ${stocks.length} produits pour rayon ${rayonId}`);
+    
+    return res.json(stocks);
+  } catch (err) {
+    console.error('rayons.stocks.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
 // ================================
 // 📦 ROUTES STOCK - TYPES PRODUITS
 // ================================
 
-// GET /api/protected/magasins/:magasinId/types-produits - Lister les types de produits
+// GET /api/protected/magasins/:magasinId/types-produits - Lister les types de produits avec stats
 router.get('/magasins/:magasinId/types-produits', authMiddleware, async (req, res) => {
   try {
     const { magasinId } = req.params;
@@ -1367,7 +1427,38 @@ router.get('/magasins/:magasinId/types-produits', authMiddleware, async (req, re
       .sort({ nomType: 1 })
       .lean();
 
-    return res.json(typesProduits);
+    // Enrichir chaque type avec les stats de stock
+    const typesAvecStats = await Promise.all(typesProduits.map(async (type) => {
+      // 1. Obtenir tous les produits de ce type dans ce magasin
+      const produits = await Produit.find({ 
+        magasinId, 
+        typeProduitId: type._id 
+      }).select('_id quantiteActuelle prixUnitaire seuilAlerte');
+      
+      // 2. Calculer les stats
+      const enStock = produits.reduce((sum, p) => sum + (p.quantiteActuelle || 0), 0);
+      const valeurTotale = produits.reduce((sum, p) => sum + ((p.quantiteActuelle || 0) * (p.prixUnitaire || 0)), 0);
+      const nombreArticles = produits.length;
+      
+      // 3. Compter les alertes (produits avec quantité <= seuilAlerte)
+      const nombreAlertes = produits.filter(p => {
+        const seuil = p.seuilAlerte || 10;
+        return (p.quantiteActuelle || 0) <= seuil;
+      }).length;
+      
+      return {
+        ...type,
+        // STATS DU TYPE DE PRODUIT
+        stats: {
+          enStock: enStock.toFixed(2),      // Quantité totale en stock
+          articles: nombreArticles,          // Nombre de produits différents
+          alertes: nombreAlertes,            // Nombre en alerte
+          valeur: valeurTotale.toFixed(2)   // Valeur totale en CDF
+        }
+      };
+    }));
+
+    return res.json(typesAvecStats);
   } catch (err) {
     console.error('types-produits.list.error', err);
     return res.status(500).json({ message: 'Erreur: ' + err.message });
