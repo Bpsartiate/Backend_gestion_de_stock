@@ -233,7 +233,12 @@
                       <i class="fas fa-layer-group me-2 text-info"></i>
                       <h5 class="mb-0 panel-title text-dark fw-bold">Catégories Produits</h5>
                     </div>
-                    <span class="badge bg-info text-white total-badge position-relative" id="totalCategories" style="z-index: 1;">0</span>
+                    <div class="d-flex align-items-center gap-2 position-relative" style="z-index: 1;">
+                      <span class="badge bg-info text-white total-badge">0</span>
+                      <button type="button" class="btn btn-sm btn-success text-white" id="btnAddNewCategory" title="Ajouter une nouvelle catégorie">
+                        <i class="fas fa-plus-circle me-1"></i>Nouveau
+                      </button>
+                    </div>
                   </div>
 
                   <div class="card-body p-2">
@@ -246,12 +251,6 @@
                          style="max-height: 55vh; overflow: auto; padding: .25rem;">
                       <!-- Dynamique: Catégories chargées depuis localStorage -->
                     </div>
-                  </div>
-
-                  <div class="card-footer bg-light border-0 py-2">
-                    <button class="btn btn-outline-primary btn-sm w-100" id="btnAddNewCategory">
-                      <i class="fas fa-plus me-2"></i>Ajouter Catégorie
-                    </button>
                   </div>
                 </div>
               </div>
