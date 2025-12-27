@@ -821,12 +821,11 @@
     }
 
     // ✅ Listener pour vérifier les capacités quand catégorie change
-    const categorieSearch = document.getElementById('categorieSearch');
-    const oldListener = categorieSearch?.addEventListener('change', () => {
-      setTimeout(verifierCapacites, 100);
-    });
+    if (categorieSearch) {
+      categorieSearch.addEventListener('input', function(e) {
         document.getElementById('categorieDropdown').style.display = 'block';
         filterCategories(e.target.value);
+        setTimeout(verifierCapacites, 100);
       });
 
       categorieSearch.addEventListener('focus', () => {

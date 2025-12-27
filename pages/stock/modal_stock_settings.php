@@ -234,7 +234,7 @@
                       <h5 class="mb-0 panel-title text-dark fw-bold">Catégories Produits</h5>
                     </div>
                     <div class="d-flex align-items-center gap-2 position-relative" style="z-index: 1;">
-                      <span class="badge bg-info text-white total-badge">0</span>
+                      <span class="badge bg-info text-white total-badge" id="totalCategories">0</span>
                       <button type="button" class="btn btn-sm btn-success text-white" id="btnAddNewCategory" title="Ajouter une nouvelle catégorie">
                         <i class="fas fa-plus-circle me-1"></i>Nouveau
                       </button>
@@ -1510,7 +1510,8 @@
           if (response.status === 401) {
             throw new Error('⚠️ Authentification expirée. Veuillez vous reconnecter.');
           }
-          throw new Error(errorData.error || `Erreur API: ${response.status}`);
+          console.error('❌ Réponse erreur du serveur:', errorData);
+          throw new Error(errorData.message || errorData.error || `Erreur API: ${response.status}`);
         }
 
         const result = await response.json();
@@ -1846,5 +1847,14 @@
         });
       }
     });
+
+    // ✅ EXPOSER LES FONCTIONS GLOBALEMENT
+    window.newRayon = newRayon;
+    window.editRayon = editRayon;
+    window.newCategory = newCategory;
+    window.editCategory = editCategory;
+    window.saveRayon = saveRayon;
+    window.saveCategory = saveCategory;
+    
     })(); // Fin du module IIFE
   </script>

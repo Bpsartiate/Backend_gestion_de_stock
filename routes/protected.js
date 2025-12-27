@@ -1201,7 +1201,7 @@ router.post('/magasins/:magasinId/rayons', authMiddleware, blockVendeur, async (
 
     // Convertir les IDs string en ObjectId
     const typesIds = Array.isArray(typesProduitsAutorises) 
-      ? typesProduitsAutorises.map(id => mongoose.Types.ObjectId(id))
+      ? typesProduitsAutorises.map(id => new mongoose.Types.ObjectId(id))
       : [];
 
     const rayon = new Rayon({
@@ -1273,7 +1273,7 @@ router.put('/rayons/:rayonId', authMiddleware, blockVendeur, async (req, res) =>
     
     // Mettre à jour les types produits (array of ObjectIds)
     if (Array.isArray(typesProduitsAutorises)) {
-      rayon.typesProduitsAutorises = typesProduitsAutorises.map(id => mongoose.Types.ObjectId(id));
+      rayon.typesProduitsAutorises = typesProduitsAutorises.map(id => new mongoose.Types.ObjectId(id));
       console.log('✅ Types produits mis à jour:', rayon.typesProduitsAutorises);
     }
     
@@ -2850,8 +2850,8 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     const totalStockParProduit = await StockRayon.aggregate([
       {
         $match: {
-          produitId: mongoose.Types.ObjectId(produitId),
-          magasinId: mongoose.Types.ObjectId(magasinId)
+          produitId: new mongoose.Types.ObjectId(produitId),
+          magasinId: new mongoose.Types.ObjectId(magasinId)
         }
       },
       {
