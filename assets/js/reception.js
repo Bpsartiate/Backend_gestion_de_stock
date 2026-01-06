@@ -491,6 +491,19 @@ async function submitReception(e) {
     const photoFile = document.getElementById('photoReception').files[0];
     const lotNumber = document.getElementById('lotReception').value;
 
+    // ⚡ VALIDATION: S'assurer que les champs requis sont présents
+    if (!produitId || !quantite || !rayonId || prixAchat === null || prixAchat === undefined) {
+      console.error('❌ Champs requis manquants!', {
+        produitId: produitId || 'MISSING',
+        quantite: quantite || 'MISSING',
+        rayonId: rayonId || 'MISSING',
+        prixAchat: prixAchat,
+        MAGASIN_ID: MAGASIN_ID
+      });
+      showToast('❌ Veuillez remplir tous les champs requis (quantité, rayon, prix)', 'danger');
+      return;
+    }
+
     // Collecter les champs dynamiques
     const numeroBatch = document.getElementById('numeroBatch')?.value;
     const certificat = document.getElementById('certificat')?.value;
@@ -504,6 +517,7 @@ async function submitReception(e) {
       quantite,
       rayonId,
       prixAchat,
+      MAGASIN_ID,
       fournisseur,
       dateReception,
       datePeremption,

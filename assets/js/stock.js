@@ -1461,28 +1461,39 @@ async function updateDashboardKPIs(produits = null) {
       }
     }
 
-    // 3. Alertes stock (active count)
+    // 3. Alertes stock - Compter les produits avec quantité <= seuil
     try {
-      const alertes = await API.get(
-        API_CONFIG.ENDPOINTS.ALERTES,
-        { magasinId: MAGASIN_ID }
-      );
-      const alertesActive = alertes && Array.isArray(alertes) ? alertes.filter(a => a.statut === 'ACTIVE').length : 0;
+      // ⚡ Calculer les alertes EN TEMPS RÉEL basées sur quantité vs seuil
+      // Au lieu de récupérer un endpoint d'alertes séparé
+      let nombreAlertes = 0;
+      
+      if (Array.isArray(donneesProduits)) {
+        nombreAlertes = donneesProduits.filter(p => {
+          const seuil = p.seuilAlerte || 10;
+          const quantite = p.quantiteActuelle || 0;
+          return quantite <= seuil;
+        }).length;
+      }
+      
       const elemAlertes = document.getElementById('alertesStock');
       const iconAlertes = document.getElementById('iconAlertes');
+      
       if (elemAlertes) {
         elemAlertes.classList.remove('loading');
-        elemAlertes.innerHTML = alertesActive;
+        elemAlertes.innerHTML = nombreAlertes;
       }
+      
       // 💃 Ajouter animation si alertes > 0
       if (iconAlertes) {
         iconAlertes.classList.remove('alert', 'swing', 'bounce');
-        if (alertesActive > 0) {
+        if (nombreAlertes > 0) {
           iconAlertes.classList.add('bounce'); // Animation bounce pour les alertes
         }
       }
+      
+      console.log(`🚨 Alertes calculées: ${nombreAlertes} produits sous seuil`);
     } catch (err) {
-      console.error('⚠️ Erreur chargement alertes:', err);
+      console.error('⚠️ Erreur calcul alertes:', err);
       const elemAlertes = document.getElementById('alertesStock');
       if (elemAlertes) {
         elemAlertes.classList.remove('loading');
@@ -1490,10 +1501,27 @@ async function updateDashboardKPIs(produits = null) {
       }
     }
 
-    // 4. Rayons pleins (quantité > 80% capacité max)
-    const rayonsPleins = donneesProduits.filter(p => {
-      return p.quantiteActuelle > 0 && (p.quantiteActuelle >= (p.capaciteMax || 1000));
-    }).length;
+    // 4. Rayons pleins (occupation >= 80%)
+    // ⚡ Charger les rayons avec leurs stats d'occupation
+    let rayonsPleins = 0;
+    try {
+      const rayons = await API.get(
+        API_CONFIG.ENDPOINTS.RAYONS,
+        { magasinId: MAGASIN_ID }
+      );
+      
+      // Compter les rayons avec occupation >= 80%
+      rayonsPleins = (rayons || []).filter(rayon => {
+        const occupation = rayon.occupation || 0;
+        return occupation >= 80;
+      }).length;
+      
+      console.log(`📦 Rayons pleins (occupation >= 80%): ${rayonsPleins} sur ${rayons.length}`);
+    } catch (err) {
+      console.error('⚠️ Erreur chargement rayons:', err);
+      rayonsPleins = 0;
+    }
+    
     const elemPleins = document.getElementById('rayonsPleins');
     const iconRayonsPleins = document.getElementById('iconRayonsPleins');
     if (elemPleins) {
@@ -1508,7 +1536,7 @@ async function updateDashboardKPIs(produits = null) {
       }
     }
 
-    console.log('✅ KPIs mis à jour:', { totalStock, alertesActive: donneesProduits.filter(p => !p.quantiteActuelle).length, rayonsPleins });
+    console.log('✅ KPIs mis à jour:', { totalStock, rayonsPleins });
 
   } catch (err) {
     console.error('❌ Erreur KPIs:', err);

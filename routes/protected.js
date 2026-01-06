@@ -1185,8 +1185,17 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
       const occupationPourcent = Math.round((nombreArticles / capaciteMax) * 100);
       
       // 4. Compter les alertes (produits avec quantité <= seuilAlerte)
-      // TODO: À implémenter si besoin
-      const nombreAlertes = 0;
+      // Récupérer les produits avec leurs seuils d'alerte
+      const produitsIds = stocks.map(s => s.produitId);
+      const produits = await Produit.find({ _id: { $in: produitsIds } }).select('_id quantiteActuelle seuilAlerte');
+      
+      // Compter les produits avec quantité <= seuil
+      const nombreAlertes = produits.filter(p => {
+        const seuil = p.seuilAlerte || 10;
+        return p.quantiteActuelle <= seuil;
+      }).length;
+      
+      console.log(`   - Produits en alerte (< seuil): ${nombreAlertes}`);
       
       return {
         ...rayon,
@@ -3274,24 +3283,33 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       magasinId
     });
     
+    // ⚡ La capacité d'un rayon est en NOMBRE D'ARTICLES (produits différents)
+    // PAS en quantité/poids!
+    // Donc on vérifie: le produit existe-t-il déjà dans ce rayon?
+    const produitExisteEnRayon = allStocksInRayon.some(stock => stock.produitId.toString() === produitId);
+    
     console.log(`   StockRayons dans ce rayon: ${allStocksInRayon.length}`);
-    const quantiteTotalRayonActuelle = allStocksInRayon.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
-    const quantiteTotalRayonApreAjout = quantiteTotalRayonActuelle + parseFloat(quantite);
+    console.log(`   Produit existe déjà en rayon?: ${produitExisteEnRayon}`);
     
-    console.log(`   Stock actuellement dans rayon: ${quantiteTotalRayonActuelle}`);
-    console.log(`   À ajouter: ${quantite}`);
-    console.log(`   Total après ajout: ${quantiteTotalRayonApreAjout}`);
-    console.log(`   Capacité max rayon: ${rayon.capaciteMax}`);
+    // Nombre d'articles ACTUELS
+    const nombreArticlesActuel = allStocksInRayon.length;
     
-    if (quantiteTotalRayonApreAjout > rayon.capaciteMax) {
+    // Si c'est un NOUVEAU produit pour ce rayon, on ajoute 1 article
+    // Si c'est un produit EXISTANT, on ajoute 0 article (juste la quantité)
+    const nombreArticlesApreAjout = produitExisteEnRayon ? nombreArticlesActuel : nombreArticlesActuel + 1;
+    
+    console.log(`   Nombre d'articles actuels: ${nombreArticlesActuel}`);
+    console.log(`   Nombre d'articles après ajout: ${nombreArticlesApreAjout}`);
+    console.log(`   Capacité max rayon (en articles): ${rayon.capaciteMax}`);
+    
+    if (nombreArticlesApreAjout > rayon.capaciteMax) {
       console.error(`❌ VALIDATION 2 ÉCHOUÉE - Capacité rayon dépassée - ARRÊT`);
       return res.status(400).json({
         error: '❌ Capacité du rayon dépassée',
-        details: `Capacité totale rayon: ${rayon.capaciteMax} ${rayon.uniteMesure || 'unités'}, Stock total actuel: ${quantiteTotalRayonActuelle}, À ajouter: ${quantite}, Total après: ${quantiteTotalRayonApreAjout}`,
+        details: `Capacité rayon: ${rayon.capaciteMax} articles, Actuels: ${nombreArticlesActuel}, Après: ${nombreArticlesApreAjout}`,
         capaciteRayon: rayon.capaciteMax,
-        stockTotalActuel: quantiteTotalRayonActuelle,
-        quantiteAjout: quantite,
-        quantiteTotaleApreAjout: quantiteTotalRayonApreAjout
+        articlesActuels: nombreArticlesActuel,
+        articlesApreAjout: nombreArticlesApreAjout
       });
     }
     console.log(`✅ VALIDATION 2 OK - Capacité rayon respectée`);
