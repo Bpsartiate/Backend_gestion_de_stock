@@ -237,7 +237,71 @@
           </div>
         </div>
 
-        <!-- ========== SECTION 5: TABLE MOUVEMENTS ========== -->
+        <!-- ========== SECTION 5: ALERTES DÉTAILLÉES ========== -->
+        <h6 class="text-uppercase text-muted fw-bold mb-3">
+          <i class="fas fa-exclamation-circle me-2"></i>Alertes & État
+        </h6>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-3 text-center">
+                <i class="fas fa-cube" style="font-size: 24px; color: #0dcaf0;"></i>
+                <p class="mt-2 mb-1 small text-muted">Stock actuel</p>
+                <h5 id="premiumAlertStockActuel" class="mb-0">0</h5>
+                <small class="text-muted" id="premiumAlertStockStatus">--</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-3 text-center">
+                <i class="fas fa-arrow-down" style="font-size: 24px; color: #ffc107;"></i>
+                <p class="mt-2 mb-1 small text-muted">Seuil alerte</p>
+                <h5 id="premiumAlertSeuilAlerte" class="mb-0">0</h5>
+                <small class="text-muted">Minimum</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-3 text-center">
+                <i class="fas fa-warning" style="font-size: 24px;" id="premiumAlertIcon"></i>
+                <p class="mt-2 mb-1 small text-muted">Alerte stock</p>
+                <h5 id="premiumAlertLabel" class="mb-0">OK</h5>
+                <small class="text-muted" id="premiumAlertDescription">--</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-3 text-center">
+                <i class="fas fa-hourglass" style="font-size: 24px; color: #dc3545;"></i>
+                <p class="mt-2 mb-1 small text-muted">Péremption</p>
+                <h5 id="premiumAlertPeremption" class="mb-0">--</h5>
+                <small class="text-muted" id="premiumAlertPeremptionStatus">N/A</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== SECTION 6: RÉCEPTIONS RÉCENTES ========== -->
+        <h6 class="text-uppercase text-muted fw-bold mb-3">
+          <i class="fas fa-inbox me-2"></i>Réceptions récentes
+        </h6>
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body">
+            <div id="premiumReceptionsContainer" class="accordion" role="tablist">
+              <!-- Les réceptions s'ajouteront ici dynamiquement -->
+              <div class="text-center text-muted py-4">
+                <i class="fas fa-spinner fa-spin me-2"></i>Chargement réceptions...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== SECTION 7: TABLE MOUVEMENTS ========== -->
         <h6 class="text-uppercase text-muted fw-bold mb-3">
           <i class="fas fa-arrows-alt-v me-2"></i>Mouvements de stock
         </h6>
@@ -251,16 +315,45 @@
                   <th><i class="fas fa-exchange-alt"></i> Type</th>
                   <th><i class="fas fa-cube"></i> Quantité</th>
                   <th><i class="fas fa-info-circle"></i> Détails</th>
+                  <th><i class="fas fa-user"></i> Utilisateur</th>
                 </tr>
               </thead>
               <tbody id="premiumMovementsTable">
                 <tr>
-                  <td colspan="4" class="text-center text-muted py-4">
+                  <td colspan="5" class="text-center text-muted py-4">
                     <i class="fas fa-spinner fa-spin me-2"></i>Chargement...
                   </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- ========== SECTION 8: ENREGISTREMENT & AUDIT ========== -->
+        <h6 class="text-uppercase text-muted fw-bold mb-3">
+          <i class="fas fa-file-alt me-2"></i>Enregistrement & Audit
+        </h6>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <div class="card border-0 bg-light">
+              <div class="card-body p-3">
+                <small class="text-muted d-block mb-2">✏️ Créé par</small>
+                <strong id="premiumAuditCreatedBy" class="d-block mb-3">--</strong>
+                <small class="text-muted d-block mb-2">📅 Date création</small>
+                <strong id="premiumAuditCreatedAt" class="d-block">--</strong>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-0 bg-light">
+              <div class="card-body p-3">
+                <small class="text-muted d-block mb-2">🔄 Modifié par</small>
+                <strong id="premiumAuditUpdatedBy" class="d-block mb-3">--</strong>
+                <small class="text-muted d-block mb-2">📅 Dernière modification</small>
+                <strong id="premiumAuditUpdatedAt" class="d-block">--</strong>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -300,12 +393,34 @@ async function openProductDetailPremium(produitId) {
   try {
     let produit = null;
     
-    // Chercher dans le cache
-    if (CACHE_PRODUITS && Array.isArray(CACHE_PRODUITS)) {
+    // 🎯 APPELER LE NOUVEL ENDPOINT ENRICHI avec tous les includes
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/api/protected/produits/${produitId}?include=mouvements,receptions,alertes,enregistrement`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        produit = data.data || data;
+        console.log('✅ Endpoint enrichi utilisé:', data);
+        console.log('📊 Mouvements:', produit.mouvements);
+        console.log('📬 Réceptions:', produit.receptions);
+        console.log('📋 Audit:', produit.audit);
+      }
+    } catch (apiErr) {
+      console.warn('⚠️ Endpoint enrichi non disponible, fallback au cache');
+    }
+
+    // Fallback: chercher dans le cache
+    if (!produit && CACHE_PRODUITS && Array.isArray(CACHE_PRODUITS)) {
       produit = CACHE_PRODUITS.find(p => p._id === produitId);
     }
-    
-    // Si pas trouvé, appeler l'API
+
+    // Fallback: API classique
     if (!produit) {
       try {
         produit = await API.get(API_CONFIG.ENDPOINTS.PRODUIT, { produitId });
@@ -319,18 +434,32 @@ async function openProductDetailPremium(produitId) {
       return;
     }
 
-    // Remplir les champs
+    // ============ REMPLIR LES CHAMPS ============
+    
+    // Infos basiques
     document.getElementById('premiumProductId').value = produitId;
     document.getElementById('premiumProductName').textContent = produit.designation || '--';
     document.getElementById('premiumProductRef').textContent = produit.reference || '--';
-    document.getElementById('premiumProductCategory').textContent = produit.typeProduitsId?.nomType || '--';
-    document.getElementById('premiumProductSupplier').textContent = produit.fournisseur || '--';
-    document.getElementById('premiumProductBrand').textContent = produit.marque || '--';
-    document.getElementById('premiumPricePurchase').textContent = `${produit.prixAchat || 0}€`;
+    document.getElementById('premiumProductCategory').textContent = produit.typeProduitId?.nomType || '--';
+    
+    // Fournisseur: vient de la dernière réception ou '--'
+    const supplier = (produit.receptions && produit.receptions.length > 0) 
+      ? produit.receptions[0].fournisseur 
+      : '--';
+    document.getElementById('premiumProductSupplier').textContent = supplier;
+    
+    document.getElementById('premiumProductBrand').textContent = produit.champsDynamiques?.marque || '--';
+    
+    // Prix d'achat: depuis réception ou depuis produit
+    const pricePurchase = (produit.receptions && produit.receptions.length > 0) 
+      ? produit.receptions[0].prixAchat || 0
+      : 0;
+    document.getElementById('premiumPricePurchase').textContent = `${pricePurchase}€`;
+    
     document.getElementById('premiumPriceSale').textContent = `${produit.prixUnitaire || 0}€`;
     document.getElementById('premiumLocation').textContent = produit.rayonId?.nomRayon || '--';
 
-    // KPIs
+    // KPIs de stock
     document.getElementById('premiumStockCurrent').textContent = produit.quantiteActuelle || 0;
     document.getElementById('premiumStockMin').textContent = produit.seuilAlerte || 0;
     document.getElementById('premiumStockValue').textContent = `${((produit.quantiteActuelle || 0) * (produit.prixUnitaire || 0)).toFixed(2)}€`;
@@ -349,17 +478,54 @@ async function openProductDetailPremium(produitId) {
     }
 
     // Caractéristiques
-    document.getElementById('premiumSize').textContent = produit.taille || '--';
-    document.getElementById('premiumColor').textContent = produit.couleur || '--';
-    document.getElementById('premiumQuality').textContent = produit.qualite || '--';
-    document.getElementById('premiumUnit').textContent = produit.unitePrincipale || '--';
-    document.getElementById('premiumCondition').textContent = produit.etat || '--';
-    document.getElementById('premiumDateAdded').textContent = new Date(produit.dateEntree).toLocaleDateString('fr-FR');
+    document.getElementById('premiumSize').textContent = produit.champsDynamiques?.taille || '--';
+    document.getElementById('premiumColor').textContent = produit.champsDynamiques?.couleur || '--';
+    document.getElementById('premiumQuality').textContent = produit.champsDynamiques?.qualite || '--';
+    document.getElementById('premiumUnit').textContent = produit.typeProduitId?.unitePrincipale || '--';
+    document.getElementById('premiumCondition').textContent = produit.etat || 'Neuf';
+    document.getElementById('premiumDateAdded').textContent = produit.dateEntree 
+      ? new Date(produit.dateEntree).toLocaleDateString('fr-FR') 
+      : '--';
 
     // Stats ventes (mock pour l'instant)
     document.getElementById('premiumMonthlySales').textContent = Math.floor(Math.random() * 100);
     document.getElementById('premiumOngoingOrders').textContent = Math.floor(Math.random() * 10);
     document.getElementById('premiumRotationRate').textContent = (Math.random() * 5).toFixed(1);
+
+    // ============ ALERTES DÉTAILLÉES ============
+    if (produit.alertes) {
+      document.getElementById('premiumAlertStockActuel').textContent = produit.quantiteActuelle || 0;
+      document.getElementById('premiumAlertSeuilAlerte').textContent = produit.seuilAlerte || 10;
+      document.getElementById('premiumAlertsCount').textContent = 
+        (produit.alertes.stockBas ? 1 : 0) + 
+        (produit.alertes.rupture ? 1 : 0) + 
+        (produit.alertes.peremption ? 1 : 0);
+
+      // Mise à jour icône et label alerte
+      const alertIcon = document.getElementById('premiumAlertIcon');
+      const alertLabel = document.getElementById('premiumAlertLabel');
+      const alertDesc = document.getElementById('premiumAlertDescription');
+
+      if (produit.alertes.rupture) {
+        alertIcon.className = 'fas fa-times-circle';
+        alertIcon.style.color = '#dc3545';
+        alertLabel.className = 'mb-0 text-danger';
+        alertLabel.textContent = '🔴 Rupture';
+        alertDesc.textContent = 'Stock épuisé!';
+      } else if (produit.alertes.stockBas) {
+        alertIcon.className = 'fas fa-exclamation-triangle';
+        alertIcon.style.color = '#ffc107';
+        alertLabel.className = 'mb-0 text-warning';
+        alertLabel.textContent = '⚠️ Stock bas';
+        alertDesc.textContent = 'Seuil d\'alerte atteint';
+      } else {
+        alertIcon.className = 'fas fa-check-circle';
+        alertIcon.style.color = '#28a745';
+        alertLabel.className = 'mb-0 text-success';
+        alertLabel.textContent = '✅ OK';
+        alertDesc.textContent = 'Stock normal';
+      }
+    }
 
     // Photo
     const photoImg = document.getElementById('premiumProductImage');
@@ -374,8 +540,15 @@ async function openProductDetailPremium(produitId) {
       placeholder.style.display = 'block';
     }
 
-    // Charger les mouvements
-    await loadPremiumMovements(produitId);
+    // ============ CHARGER MOUVEMENTS, RÉCEPTIONS, AUDIT ============
+    console.log('✅ Produit complet reçu:', produit);
+    console.log('📊 Mouvements:', produit.mouvements);
+    console.log('📬 Réceptions:', produit.receptions);
+    console.log('📋 Audit:', produit.audit);
+    
+    await loadPremiumMovements(produit.mouvements || []);
+    await loadPremiumReceptions(produit.receptions || []);
+    await loadPremiumAudit(produit.audit || {});
 
     // Ouvrir le modal
     const modal = new bootstrap.Modal(document.getElementById('modalProductDetailPremium'));
@@ -393,34 +566,121 @@ async function openProductDetailPremium(produitId) {
   }
 }
 
-// Charger les mouvements de stock
-async function loadPremiumMovements(produitId) {
+// ============ CHARGER RÉCEPTIONS ============
+async function loadPremiumReceptions(receptions) {
+  const container = document.getElementById('premiumReceptionsContainer');
+  
+  if (!receptions || receptions.length === 0) {
+    container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-inbox"></i> Aucune réception</div>';
+    return;
+  }
+
+  let html = '';
+  receptions.forEach((reception, idx) => {
+    const dateReception = new Date(reception.dateReception).toLocaleDateString('fr-FR');
+    const datePeremption = reception.datePeremption ? new Date(reception.datePeremption).toLocaleDateString('fr-FR') : 'N/A';
+    const statutColor = reception.statut === 'stocke' ? 'success' : reception.statut === 'controle' ? 'warning' : 'danger';
+    const jours = reception.datePeremption 
+      ? Math.floor((new Date(reception.datePeremption) - new Date()) / (1000 * 60 * 60 * 24))
+      : null;
+    
+    html += `
+      <div class="accordion-item border-0 border-bottom mb-2">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed p-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${idx}">
+            <div class="w-100">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>📦 ${reception.quantite} unités</strong>
+                  <small class="text-muted ms-2">• ${dateReception}</small>
+                </div>
+                <span class="badge bg-${statutColor}">${reception.statut}</span>
+              </div>
+              <small class="text-muted d-block mt-1">🏢 ${reception.fournisseur || 'Fournisseur non spécifié'}</small>
+            </div>
+          </button>
+        </h2>
+        <div id="collapse${idx}" class="accordion-collapse collapse" data-bs-parent="#premiumReceptionsContainer">
+          <div class="accordion-body p-4 bg-light">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <small class="text-muted d-block">Prix achat unitaire</small>
+                  <strong>${(reception.prixAchat || 0).toFixed(2)}€</strong>
+                </div>
+                <div class="mb-3">
+                  <small class="text-muted d-block">Prix total</small>
+                  <strong class="text-success">${(reception.prixTotal || 0).toFixed(2)}€</strong>
+                </div>
+                <div class="mb-3">
+                  <small class="text-muted d-block">Lot/Série</small>
+                  <strong>${reception.lotNumber || 'N/A'}</strong>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <small class="text-muted d-block">Date fabrication</small>
+                  <strong>${reception.dateFabrication ? new Date(reception.dateFabrication).toLocaleDateString('fr-FR') : 'N/A'}</strong>
+                </div>
+                <div class="mb-3">
+                  <small class="text-muted d-block">Date péremption</small>
+                  <strong class="${jours !== null && jours < 0 ? 'text-danger' : jours !== null && jours < 30 ? 'text-warning' : ''}">${datePeremption}</strong>
+                  ${jours !== null && jours < 0 ? '<span class="badge bg-danger ms-2">PÉRIMÉ</span>' : ''}
+                  ${jours !== null && jours >= 0 && jours < 30 ? `<span class="badge bg-warning ms-2">${jours} jours</span>` : ''}
+                </div>
+                <div>
+                  <small class="text-muted d-block">Enregistré par</small>
+                  <strong>${reception.utilisateurId?.prenom || '--'} ${reception.utilisateurId?.nom || '--'}</strong>
+                </div>
+              </div>
+            </div>
+            ${reception.photoUrl ? `
+              <div class="mt-3">
+                <small class="text-muted d-block mb-2">📷 Photo réception</small>
+                <img src="${reception.photoUrl}" alt="Photo" style="max-width: 200px; max-height: 200px; border-radius: 4px; cursor: pointer;" onclick="showImageLightboxFromUrl('${reception.photoUrl}')">
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// ============ CHARGER MOUVEMENTS ============
+async function loadPremiumMovements(mouvements) {
   try {
     const tbody = document.getElementById('premiumMovementsTable');
     
-    // Mock data - Remplacer avec l'appel API réel
-    const mouvements = [
-      { date: new Date().toLocaleDateString(), type: 'Entrée', quantite: 50, details: 'Réception fournisseur ABC' },
-      { date: new Date(Date.now() - 86400000).toLocaleDateString(), type: 'Sortie', quantite: 10, details: 'Vente client XYZ' },
-      { date: new Date(Date.now() - 172800000).toLocaleDateString(), type: 'Entrée', quantite: 100, details: 'Réception fournisseur DEF' }
-    ];
-
-    if (mouvements.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Aucun mouvement</td></tr>';
+    if (!mouvements || mouvements.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-inbox"></i> Aucun mouvement</td></tr>';
       return;
     }
 
     let html = '';
-    mouvements.forEach(m => {
-      const couleur = m.type === 'Entrée' ? 'success' : 'danger';
-      const icon = m.type === 'Entrée' ? 'arrow-down' : 'arrow-up';
+    mouvements.slice(0, 20).forEach(m => {
+      const date = new Date(m.dateDocument).toLocaleDateString('fr-FR');
+      const type = m.type || 'Inconnu';
+      const couleur = type === 'RECEPTION' || type === 'entree' ? 'success' : 'danger';
+      const icon = type === 'RECEPTION' || type === 'entree' ? 'arrow-down' : 'arrow-up';
+      
+      // Détermine la description : observations, puis fournisseur, puis numéroDocument
+      const details = m.observations || m.fournisseur || m.numeroDocument || '--';
+      
+      // Récupère le nom de l'utilisateur
+      const utilisateur = m.utilisateurId?.prenom && m.utilisateurId?.nom 
+        ? `${m.utilisateurId.prenom} ${m.utilisateurId.nom}`
+        : m.utilisateurId?.prenom || '--';
       
       html += `
         <tr>
-          <td><small class="text-muted">${m.date}</small></td>
-          <td><span class="badge bg-${couleur}"><i class="fas fa-${icon} me-1"></i>${m.type}</span></td>
-          <td><strong>${m.quantite}</strong></td>
-          <td><small>${m.details}</small></td>
+          <td><small class="text-muted">${date}</small></td>
+          <td><span class="badge bg-${couleur}"><i class="fas fa-${icon} me-1"></i>${type}</span></td>
+          <td><strong>${m.quantite || 0}</strong></td>
+          <td><small>${details}</small></td>
+          <td><small class="text-muted">${utilisateur}</small></td>
         </tr>
       `;
     });
@@ -428,8 +688,65 @@ async function loadPremiumMovements(produitId) {
     tbody.innerHTML = html;
 
   } catch (err) {
-    console.warn('Erreur chargement mouvements:', err);
-    document.getElementById('premiumMovementsTable').innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Erreur chargement</td></tr>';
+    console.warn('❌ Erreur chargement mouvements:', err);
+    document.getElementById('premiumMovementsTable').innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Erreur chargement</td></tr>';
+  }
+}
+
+// ============ CHARGER AUDIT ============
+async function loadPremiumAudit(audit) {
+  try {
+    console.log('DEBUG - Audit reçu:', audit);
+    
+    if (!audit) {
+      document.getElementById('premiumAuditCreatedBy').textContent = '(Inconnu)';
+      document.getElementById('premiumAuditUpdatedBy').textContent = '(Aucune modification)';
+      return;
+    }
+    
+    // Créé par
+    const createdBy = audit.createdBy || {};
+    let createdByName = '(Inconnu)';
+    
+    if (createdBy && (createdBy._id || createdBy.prenom || createdBy.nom)) {
+      const prenom = (createdBy.prenom || '').trim();
+      const nom = (createdBy.nom || '').trim();
+      createdByName = `${prenom} ${nom}`.trim() || '(Inconnu)';
+    }
+    
+    const createdAt = audit.createdAt 
+      ? new Date(audit.createdAt).toLocaleDateString('fr-FR') 
+      : '--';
+    
+    document.getElementById('premiumAuditCreatedBy').textContent = createdByName;
+    document.getElementById('premiumAuditCreatedAt').textContent = createdAt;
+    
+    // Modifié par
+    const updatedBy = audit.updatedBy || {};
+    let updatedByName = '(Aucune modification)';
+    let updatedAtText = '(Aucune modification)';
+    
+    if (updatedBy && (updatedBy._id || updatedBy.prenom || updatedBy.nom)) {
+      const prenom = (updatedBy.prenom || '').trim();
+      const nom = (updatedBy.nom || '').trim();
+      updatedByName = `${prenom} ${nom}`.trim() || '(Système)';
+      updatedAtText = audit.updatedAt 
+        ? new Date(audit.updatedAt).toLocaleDateString('fr-FR') 
+        : '--';
+    }
+    
+    document.getElementById('premiumAuditUpdatedBy').textContent = updatedByName;
+    document.getElementById('premiumAuditUpdatedAt').textContent = updatedAtText;
+    
+    // Afficher les logs d'activité si disponibles
+    if (audit.logs && audit.logs.length > 0) {
+      console.log('✅ Activity logs disponibles:', audit.logs.length, 'logs');
+    }
+
+  } catch (err) {
+    console.warn('⚠️ Erreur chargement audit:', err);
+    document.getElementById('premiumAuditCreatedBy').textContent = '(Erreur)';
+    document.getElementById('premiumAuditUpdatedBy').textContent = '(Erreur)';
   }
 }
 
@@ -441,6 +758,16 @@ function ouvrirImageLightbox() {
     return;
   }
   document.getElementById('lightboxImage').src = src;
+  new bootstrap.Modal(document.getElementById('imageLightbox')).show();
+}
+
+// Ouvrir lightbox pour image URL (réceptions)
+function showImageLightboxFromUrl(url) {
+  if (!url) {
+    showToast('Aucune image disponible', 'info');
+    return;
+  }
+  document.getElementById('lightboxImage').src = url;
   new bootstrap.Modal(document.getElementById('imageLightbox')).show();
 }
 

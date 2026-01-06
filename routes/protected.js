@@ -2170,7 +2170,7 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
       .filter(Boolean)
       .map(i => i.toLowerCase());
 
-    // 1️⃣ RÉCUPÉRER LE PRODUIT - Base
+    // 1️⃣ RÉCUPÉRER LE PRODUIT - Base (avec tous les champs y compris champsDynamiques)
     let query = Produit.findById(produitId)
       .populate('magasinId', '_id nomMagasin')
       .populate({
@@ -2226,8 +2226,9 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
     // 📈 MOUVEMENTS DE STOCK
     if (includes.includes('mouvements')) {
       const mouvements = await StockMovement.find({ produitId: produitId })
-        .select('date type quantite details rayon')
-        .sort({ date: -1 })
+        .populate('utilisateurId', 'prenom nom email')
+        .select('dateDocument type quantite observations utilisateurId prixUnitaire numeroDocument fournisseur')
+        .sort({ dateDocument: -1 })
         .limit(50);
 
       response.mouvements = mouvements;
@@ -2254,20 +2255,49 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
       response.ventes = [];
     }
 
-    // 📋 AUDIT / ENREGISTREMENT
+    // 📋 AUDIT / ENREGISTREMENT avec ACTIVITY LOGS
     if (includes.includes('enregistrement')) {
-      // Récupérer l'utilisateur qui a créé le produit
+      // Récupérer l'historique d'audit depuis auditLog (triée par date)
+      let auditLogs = [];
+      try {
+        auditLogs = await AuditLog.find({ 
+          entityId: produitId, 
+          entityType: 'Produit' 
+        })
+          .populate('utilisateurId', 'prenom nom email')
+          .sort({ createdAt: -1 })
+          .limit(50);
+      } catch (auditErr) {
+        console.warn('⚠️ Erreur récupération audit logs:', auditErr);
+      }
+
       let createdByUser = null;
-      if (produit.createdBy) {
-        createdByUser = await Utilisateur.findById(produit.createdBy)
-          .select('prenom nom email');
+      let updatedByUser = null;
+
+      // Le plus ancien log = création
+      if (auditLogs.length > 0) {
+        const oldestLog = auditLogs[auditLogs.length - 1];
+        createdByUser = oldestLog.utilisateurId || { prenom: 'Système', nom: '' };
+      }
+
+      // Le plus récent log = dernière modification
+      if (auditLogs.length > 0) {
+        const newestLog = auditLogs[0];
+        updatedByUser = newestLog.utilisateurId || { prenom: 'Système', nom: '' };
       }
 
       response.audit = {
         createdAt: produit.createdAt,
         updatedAt: produit.updatedAt,
-        createdBy: createdByUser,
-        version: produit.__v || 0
+        createdBy: createdByUser || { prenom: 'Inconnu', nom: '' },
+        updatedBy: updatedByUser || { prenom: 'Inconnu', nom: '' },
+        logs: auditLogs.map(log => ({
+          action: log.action,
+          utilisateur: log.utilisateurId,
+          description: log.description,
+          createdAt: log.createdAt,
+          changes: log.changes
+        }))
       };
     }
 
