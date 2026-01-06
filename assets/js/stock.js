@@ -628,6 +628,17 @@ style.innerHTML = `
     }
   }
 
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
   .categorie-item {
     transition: all 0.2s ease;
     padding: 0.75rem 1rem !important;
@@ -913,8 +924,14 @@ async function addProduct() {
     const modal = bootstrap.Modal.getInstance(document.getElementById('modalProduit'));
     modal.hide();
 
-    // Recharger la liste
+    // Recharger la liste des produits
     await loadProduits();
+    
+    // ⚡ IMPORTANT: Recharger aussi les rayons si le modal est ouvert
+    // Cela met à jour l'occupation et le nombre d'articles du rayon
+    if (typeof loadRayonsModal === 'function') {
+      loadRayonsModal();
+    }
 
   } catch (err) {
     showToast('❌ Erreur: ' + err.message, 'danger');
@@ -1106,64 +1123,89 @@ async function deleteProduct(produitId) {
   const produit = CACHE_PRODUITS?.find(p => p._id === produitId);
   const designation = produit?.designation || 'ce produit';
 
-  // Demander confirmation
+  // Créer un overlay avec un vrai style - pas de modal-backdrop Bootstrap
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  `;
+
+  // Créer le contenu du modal
   const confirmBox = document.createElement('div');
-  confirmBox.className = 'modal-backdrop show';
-  confirmBox.style.display = 'flex';
-  confirmBox.style.justifyContent = 'center';
-  confirmBox.style.alignItems = 'center';
-  confirmBox.style.zIndex = '9999';
+  confirmBox.style.cssText = `
+    background: white;
+    border: 2px solid #dc3545;
+    border-radius: 8px;
+    max-width: 400px;
+    padding: 0;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  `;
   confirmBox.innerHTML = `
-    <div class="card" style="max-width: 400px; border: 2px solid #dc3545;">
-      <div class="card-body">
-        <h5 class="card-title text-danger">
-          <i class="fas fa-exclamation-triangle me-2"></i>Confirmation de suppression
-        </h5>
-        <p class="card-text">
-          Êtes-vous sûr de vouloir supprimer <strong>"${designation}"</strong>?
-        </p>
-        <p class="card-text text-muted small">
-          <i class="fas fa-info-circle me-1"></i>Cette action:
-          <ul class="mt-2">
-            <li>Supprimera tous les stocks du produit</li>
-            <li>Supprimera toutes les réceptions associées</li>
-            <li>Ne peut pas être annulée</li>
-          </ul>
-        </p>
-        <div class="input-group mb-3 mt-3">
-          <span class="input-group-text">Raison *</span>
-          <input type="text" class="form-control" id="deleteReason" placeholder="Raison obligatoire" required />
-          <small class="text-danger" id="reasonError" style="display:none; width:100%; margin-top:5px;">
-            <i class="fas fa-exclamation-circle me-1"></i>La raison est obligatoire
-          </small>
-        </div>
-        <div class="d-flex gap-2 justify-content-end">
-          <button class="btn btn-secondary btn-sm" onclick="this.parentElement.parentElement.parentElement.style.display='none'">
-            Annuler
-          </button>
-          <button class="btn btn-danger btn-sm" id="confirmDeleteBtn" disabled>
-            <i class="fas fa-trash me-1"></i>Supprimer
-          </button>
-        </div>
+    <div style="padding: 20px;">
+      <h5 style="color: #dc3545; margin-bottom: 15px;">
+        <i class="fas fa-exclamation-triangle me-2"></i>Confirmation de suppression
+      </h5>
+      <p style="margin-bottom: 10px;">
+        Êtes-vous sûr de vouloir supprimer <strong>"${designation}"</strong>?
+      </p>
+      <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+        <i class="fas fa-info-circle me-1"></i>Cette action:
+        <ul style="margin-top: 8px; padding-left: 20px;">
+          <li>Supprimera tous les stocks du produit</li>
+          <li>Supprimera toutes les réceptions associées</li>
+          <li>Ne peut pas être annulée</li>
+        </ul>
+      </p>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Raison *</label>
+        <input type="text" id="deleteReason" placeholder="Raison obligatoire" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;" required />
+        <small style="color: #dc3545; display: none; margin-top: 5px;" id="reasonError">
+          <i class="fas fa-exclamation-circle me-1"></i>La raison est obligatoire
+        </small>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn btn-secondary btn-sm" id="cancelBtn">Annuler</button>
+        <button class="btn btn-danger btn-sm" id="confirmDeleteBtn" disabled style="opacity: 0.5; cursor: not-allowed;">
+          <i class="fas fa-trash me-1"></i>Supprimer
+        </button>
       </div>
     </div>
   `;
 
-  document.body.appendChild(confirmBox);
+  overlay.appendChild(confirmBox);
+  document.body.appendChild(overlay);
 
   // Gérer le champ raison - valider en temps réel
   const reasonInput = document.getElementById('deleteReason');
   const confirmBtn = document.getElementById('confirmDeleteBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
   const reasonError = document.getElementById('reasonError');
 
   reasonInput.addEventListener('input', () => {
     if (reasonInput.value.trim().length > 0) {
       confirmBtn.disabled = false;
+      confirmBtn.style.opacity = '1';
+      confirmBtn.style.cursor = 'pointer';
       reasonError.style.display = 'none';
     } else {
       confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '0.5';
+      confirmBtn.style.cursor = 'not-allowed';
       reasonError.style.display = 'block';
     }
+  });
+
+  // Bouton annuler
+  cancelBtn.addEventListener('click', () => {
+    overlay.remove();
   });
 
   // Gérer le clic sur "Supprimer"
@@ -1177,21 +1219,81 @@ async function deleteProduct(produitId) {
       return;
     }
 
-    confirmBox.remove();
+    overlay.remove();
 
     try {
-      // Afficher un spinner pendant la suppression
-      const spinner = document.createElement('div');
-      spinner.className = 'spinner-border text-danger';
-      spinner.style.position = 'fixed';
-      spinner.style.top = '50%';
-      spinner.style.left = '50%';
-      spinner.style.transform = 'translate(-50%, -50%)';
-      spinner.style.zIndex = '10000';
-      document.body.appendChild(spinner);
+      // ⚡ Créer un overlay de chargement amélioré avec étapes
+      const loadingOverlay = document.createElement('div');
+      loadingOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      `;
+
+      const loadingBox = document.createElement('div');
+      loadingBox.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 40px 30px;
+        text-align: center;
+        max-width: 350px;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+      `;
+      loadingBox.innerHTML = `
+        <div style="margin-bottom: 20px;">
+          <div style="
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #dc3545;
+            border-radius: 50%;
+            margin: 0 auto;
+            animation: spin 1s linear infinite;
+          "></div>
+        </div>
+        <h5 style="margin-bottom: 10px; color: #333;">
+          <i class="fas fa-trash-alt me-2" style="color: #dc3545;"></i>Suppression en cours...
+        </h5>
+        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">
+          "${designation}" est en cours de suppression
+        </p>
+        <div style="
+          display: flex;
+          justify-content: space-around;
+          gap: 10px;
+          font-size: 12px;
+          color: #999;
+        ">
+          <div>
+            <i class="fas fa-spinner fa-spin me-1"></i>
+            <span>Produit</span>
+          </div>
+          <div>
+            <i class="fas fa-spinner fa-spin me-1"></i>
+            <span>Données</span>
+          </div>
+          <div>
+            <i class="fas fa-spinner fa-spin me-1"></i>
+            <span>Table</span>
+          </div>
+        </div>
+      `;
+
+      loadingOverlay.appendChild(loadingBox);
+      document.body.appendChild(loadingOverlay);
 
       console.log(`🗑️ Suppression du produit: ${produitId}`);
       console.log(`   Raison: ${raison}`);
+
+      // Ajouter un délai minimum pour que l'user voit le spinner
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const response = await fetch(
         `${API_CONFIG.BASE_URL}/api/protected/produits/${produitId}`,
@@ -1213,14 +1315,49 @@ async function deleteProduct(produitId) {
       const result = await response.json();
       console.log('✅ Produit supprimé:', result);
 
-      // Retirer le spinner
-      spinner.remove();
+      // Mettre à jour le message à "Actualisation de la table..."
+      const steps = loadingBox.querySelector('div:last-child').querySelectorAll('div');
+      steps[0].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Produit</span>';
+      steps[1].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Données</span>';
+
+      // Recharger la table
+      await loadProduits(false);
+
+      // Marquer la dernière étape
+      steps[2].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Table</span>';
+
+      // Attendre un peu avant de fermer l'overlay
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Fermer l'overlay avec une animation de succès
+      loadingBox.innerHTML = `
+        <div style="margin-bottom: 20px; animation: scaleIn 0.5s ease-out;">
+          <div style="
+            width: 60px;
+            height: 60px;
+            background-color: #28a745;
+            border-radius: 50%;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 30px;
+          ">
+            <i class="fas fa-check"></i>
+          </div>
+        </div>
+        <h5 style="margin-bottom: 10px; color: #28a745;">Supprimé avec succès!</h5>
+        <p style="color: #666; font-size: 14px; margin: 0;">
+          "${designation}" a été supprimé
+        </p>
+      `;
+
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      loadingOverlay.remove();
 
       // Afficher le toast de succès
       showToast(`✅ ${designation} supprimé avec succès`, 'success');
-
-      // Recharger la table
-      await loadProduits(true);
 
       // Fermer les modales si ouvertes
       const modals = document.querySelectorAll('[role="dialog"]');
@@ -1231,15 +1368,18 @@ async function deleteProduct(produitId) {
 
     } catch (err) {
       console.error('❌ Erreur suppression produit:', err);
-      confirmBox.remove();
+      // Supprimer le spinner d'erreur
+      const spinner = document.querySelector('.spinner-border');
+      if (spinner) spinner.remove();
+      // Afficher le toast d'erreur
       showToast(`❌ Erreur: ${err.message}`, 'danger');
     }
   });
 
-  // Fermer si on clique en dehors
-  confirmBox.addEventListener('click', (e) => {
-    if (e.target === confirmBox) {
-      confirmBox.remove();
+  // Fermer si on clique en dehors du modal (sur l'overlay)
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
     }
   });
 

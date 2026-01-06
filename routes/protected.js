@@ -2054,6 +2054,27 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
 
     await produit.save();
 
+    // ⚡ CRÉER UN STOCK RAYON pour enregistrer que ce produit est dans ce rayon
+    // Le StockRayon lie un produit à un rayon spécifique
+    const StockRayon = require('../models/stockRayon'); // À adapter si le modèle a un autre nom
+    try {
+      const stockRayon = new StockRayon({
+        magasinId,
+        produitId: produit._id,
+        rayonId,
+        quantiteDisponible: quantiteEntree || 0,
+        quantiteReservee: 0,
+        emplacementDetaille: '',
+        dateAjout: new Date(),
+        statut: 'ACTIF'
+      });
+      await stockRayon.save();
+      console.log(`✅ StockRayon créé pour produit ${produit.reference} dans rayon ${rayonId}`);
+    } catch (stockErr) {
+      console.error('⚠️ Erreur création StockRayon (non bloquant):', stockErr.message);
+      // Ne pas bloquer la création du produit si le StockRayon échoue
+    }
+
     // Créer un mouvement de stock pour la réception
     if (quantiteEntree && quantiteEntree > 0) {
       const movement = new StockMovement({
