@@ -2142,23 +2142,8 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
       // Ne pas bloquer la création du produit si le StockRayon échoue
     }
 
-    // Créer un mouvement de stock pour la réception
-    if (quantiteEntree && quantiteEntree > 0) {
-      // ⚠️ Récupérer le fournisseur depuis le body s'il est fourni
-      const movement = new StockMovement({
-        magasinId,
-        produitId: produit._id,
-        type: 'RECEPTION',
-        quantite: quantiteEntree,
-        utilisateurId: requester.id,
-        prixUnitaire,
-        fournisseur: req.body.fournisseur || 'Non spécifié', // Ajouter le fournisseur
-        numeroDocument: `REC-${produit._id.toString().slice(-8)}`,
-        dateDocument: dateEntree || new Date(),
-        observations: `Produit créé avec réception initiale`
-      });
-      await movement.save();
-    }
+    // ⚠️ NOTE: Le mouvement RECEPTION est créé automatiquement par le LOT créé par le frontend
+    // Donc on ne crée PAS un mouvement supplémentaire ici pour éviter la duplication
 
     try {
       const activity = new Activity({
