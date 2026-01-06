@@ -3621,14 +3621,13 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       produitId,
       magasinId,
       rayonId,
-      type: 'RECEPTION',  // 👈 RECEPTION en majuscules sans accent (comme défini dans l'enum)
+      type: 'RECEPTION',
       quantite,
-      quantiteEntree: quantite,
-      quantiteSortie: 0,
-      reference: reception._id,
-      description: `Réception - Fournisseur: ${fournisseur || 'Non spécifié'}, Lot: ${lotNumber || ''}`,
+      fournisseur: fournisseur || 'Non spécifié',
       utilisateurId: req.user.id,
-      dateCreation: new Date()
+      numeroDocument: lotNumber || `LOT-${Date.now()}`,
+      observations: `Réception ${fournisseur || 'Non spécifié'}`,
+      dateDocument: dateReception || new Date()
     });
 
     await stockMovement.save();
