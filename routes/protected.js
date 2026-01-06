@@ -2603,18 +2603,10 @@ router.delete('/produits/:produitId', authMiddleware, async (req, res) => {
     const movementsDeleteResult = await StockMovement.deleteMany({ produitId });
     console.log(`✅ ${movementsDeleteResult.deletedCount} Mouvement(s) supprimé(s)`);
 
-    // ⚠️ ÉTAPE 4: SOFT DELETE du produit
-    console.log('🔍 Soft delete du produit...');
-    produit.estSupprime = true;
-    produit.status = 0;
-    produit.dateSuppression = new Date();
-    produit.supprimePar = requester.id;
-    produit.raison = raison || 'Suppression standard';
-    produit.quantiteActuelle = 0; // Reset la quantité
-    produit.quantiteSortie = 0;
-    
-    await produit.save();
-    console.log(`✅ Produit marqué comme supprimé`);
+    // ⚠️ ÉTAPE 4: SUPPRIMER définitivement le produit de la base de données
+    console.log('🔍 Suppression définitive du produit de la base de données...');
+    const produitDeleteResult = await Produit.deleteOne({ _id: produitId });
+    console.log(`✅ Produit supprimé définitivement de la BD`);
 
     // ⚠️ ÉTAPE 5: Log d'audit COMPLET via AuditService
     await AuditService.log({
@@ -2629,21 +2621,17 @@ router.delete('/produits/:produitId', authMiddleware, async (req, res) => {
         nom: magasin.nom
       },
       entityType: 'Produit',
-      entityId: produit._id,
+      entityId: produitId,
       entityName: produit.designation,
-      description: `Produit '${produit.designation}' supprimé`,
+      description: `Produit '${produit.designation}' supprimé définitivement`,
       raison: raison || 'Suppression standard',
       changes: {
         before: {
-          estSupprime: false,
-          status: 1,
+          reference: produit.reference,
+          designation: produit.designation,
           quantiteActuelle: produit.quantiteActuelle
         },
-        after: {
-          estSupprime: true,
-          status: 0,
-          quantiteActuelle: 0
-        }
+        after: null
       },
       statut: 'SUCCESS'
     });
@@ -2656,13 +2644,12 @@ router.delete('/produits/:produitId', authMiddleware, async (req, res) => {
       success: true,
       message: `Produit '${produit.designation}' supprimé avec succès`,
       suppression: {
-        produitId: produit._id,
+        produitId: produitId,
         designation: produit.designation,
         stockRayonsSupprimés: stockRayonsDeleteResult.deletedCount,
         receptionsSupprimées: receptionsDeleteResult.deletedCount,
         mouvementsSupprimés: movementsDeleteResult.deletedCount,
-        dateSuppression: produit.dateSuppression,
-        raison: produit.raison
+        raison: raison || 'Suppression standard'
       }
     });
   } catch (err) {
