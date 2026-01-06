@@ -394,20 +394,19 @@
                 <!-- tableau avec wrapper responsive -->
                <div id="tableReceptions" style="display: block;">
                 <div class="table-responsive-wrapper">
-                  <div data-list='{"valueNames":["id", "reference", "designation", "categorie", "quantite", "emplacement", "etat", "dateEntree", "actions"],"page":5,"pagination":true}'>
-                      <table class="table responsive table-bordered table-striped">
+                  <table class="table responsive table-bordered table-striped">
                       <thead>
                           <tr>
                           <th style="display:none;">ID</th>
-                          <th class="sort" data-sort="reference">Référence et Désignation</th>
-                          <th class="sort" data-sort="quantite">Quantité</th>
-                          <th class="sort" data-sort="emplacement">Emplacement</th>
-                          <th class="sort" data-sort="etat">État</th>
-                          <th class="sort" data-sort="dateEntree">Date entrée</th>
+                          <th>Référence et Désignation</th>
+                          <th>Quantité</th>
+                          <th>Emplacement</th>
+                          <th>État</th>
+                          <th>Date entrée</th>
                           <th>Actions</th>
                           </tr>
                       </thead>
-                      <tbody class="list">
+                      <tbody id="produitsList">
                           <tr>
                           <td style="display:none;" class="id"></td>
                           <td class="reference" data-label="Référence et Désignation"></td>
@@ -419,12 +418,6 @@
                           </tr>
                       </tbody>
                       </table>
-                      <div class="d-flex justify-content-center mt-3">
-                      <button class="btn btn-sm btn-secondary me-1" type="button" data-list-pagination="prev"><i class="fas fa-chevron-left"></i></button>
-                      <ul class="pagination mb-0"></ul>
-                      <button class="btn btn-sm btn-secondary ms-1" type="button" data-list-pagination="next"><i class="fas fa-chevron-right"></i></button>
-                      </div>
-                  </div>
                 </div>
             </div>
         </div>

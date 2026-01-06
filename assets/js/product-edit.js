@@ -10,16 +10,31 @@ let RAYONS_CACHE_EDIT = [];
 let CHANGEMENTS_PRODUIT = {};
 
 /**
- * Ouvrir la modal d'édition
+ * Ouvrir la modal d'édition de produit
  */
-async function openProductDetailPremium(produitId) {
+async function openProductEditModal(produitId) {
   try {
     console.log(`🔧 Ouverture édition produit: ${produitId}`);
 
-    // Charger les données du produit
+    // ⏳ Attendre 5 secondes avant d'afficher le modal
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log('⏳ Délai de 5 secondes écoulé - Affichage du modal');
+
+    // 🚀 Afficher le modal après le délai
+    const modal = new bootstrap.Modal(document.getElementById('modalEditProduit'));
+    modal.show();
+
+    // Afficher un spinner de chargement dans le formulaire
+    const formContainer = document.getElementById('editProduitForm');
+    if (formContainer) {
+      formContainer.style.opacity = '0.5';
+      formContainer.style.pointerEvents = 'none';
+    }
+
+    // ⏳ Charger les données EN PARALLÈLE EN ARRIÈRE-PLAN
     const produit = await API.get(
-      `${API_CONFIG.BASE_URL}/api/protected/produits/${produitId}`,
-      {}
+      API_CONFIG.ENDPOINTS.PRODUIT,
+      { produitId }
     );
 
     if (!produit) {
@@ -33,25 +48,34 @@ async function openProductDetailPremium(produitId) {
     // Mettre à jour le titre
     document.getElementById('editProduitName').textContent = produit.designation;
 
-    // Charger les types et rayons
-    await chargerDonneesEditProduit();
+    // Charger les types, rayons et onglets EN PARALLÈLE
+    await Promise.all([
+      chargerDonneesEditProduit(),
+      chargerOngletStocks(produitId),
+      chargerOngletReceptions(produitId),
+      chargerOngletHistorique(produitId)
+    ]);
 
     // Remplir les champs
     remplirFormulaireProduit(produit);
 
-    // Charger les onglets
-    await chargerOngletStocks(produitId);
-    await chargerOngletReceptions(produitId);
-    await chargerOngletHistorique(produitId);
+    // Retirer le loader
+    if (formContainer) {
+      formContainer.style.opacity = '1';
+      formContainer.style.pointerEvents = 'auto';
+    }
 
-    // Afficher la modal
-    const modal = new bootstrap.Modal(document.getElementById('modalEditProduit'));
-    modal.show();
-
-    console.log('✅ Modal édition ouverte');
+    console.log('✅ Modal édition chargée');
   } catch (err) {
     console.error('❌ Erreur ouverture édition:', err);
     showToast('❌ Erreur: ' + err.message, 'danger');
+    
+    // Retirer le loader en cas d'erreur
+    const formContainer = document.getElementById('editProduitForm');
+    if (formContainer) {
+      formContainer.style.opacity = '1';
+      formContainer.style.pointerEvents = 'auto';
+    }
   }
 }
 
@@ -62,15 +86,15 @@ async function chargerDonneesEditProduit() {
   try {
     // Charger types de produits
     const types = await API.get(
-      `${API_CONFIG.BASE_URL}/api/protected/magasins/${MAGASIN_ID}/types-produits`,
-      {}
+      '/api/protected/magasins/:magasinId/types-produits',
+      { magasinId: MAGASIN_ID }
     );
     TYPES_CACHE_EDIT = types.categories || types;
 
     // Charger rayons
     const rayons = await API.get(
-      `${API_CONFIG.BASE_URL}/api/protected/magasins/${MAGASIN_ID}/rayons`,
-      {}
+      '/api/protected/magasins/:magasinId/rayons',
+      { magasinId: MAGASIN_ID }
     );
     RAYONS_CACHE_EDIT = rayons;
 
@@ -181,8 +205,8 @@ async function chargerOngletStocks(produitId) {
 
     // Charger les StockRayons
     const stocks = await API.get(
-      `${API_CONFIG.BASE_URL}/api/protected/produits/${produitId}/stocks`,
-      {}
+      `/api/protected/produits/:produitId/stocks`,
+      { produitId }
     );
 
     stocksLoading.style.display = 'none';
@@ -236,7 +260,7 @@ async function chargerOngletReceptions(produitId) {
 
     // Charger les réceptions
     const receptions = await API.get(
-      `${API_CONFIG.BASE_URL}/api/protected/receptions?produitId=${produitId}`,
+      `/api/protected/receptions?produitId=${produitId}&magasinId=${MAGASIN_ID}`,
       {}
     );
 
@@ -298,8 +322,8 @@ async function chargerOngletHistorique(produitId) {
 
     // Charger l'historique (AuditLogs)
     const result = await API.get(
-      `${API_CONFIG.BASE_URL}/api/protected/audit-logs/Produit/${produitId}`,
-      {}
+      `/api/protected/audit-logs/Produit/:produitId`,
+      { produitId }
     );
 
     historiqueLoading.style.display = 'none';

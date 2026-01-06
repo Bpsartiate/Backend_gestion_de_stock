@@ -969,11 +969,18 @@ async function loadProduits(showLoader = true) {
 let LIST_INSTANCE = null;
 
 function afficherTableProduits(produits) {
-  const tbody = document.querySelector('#tableReceptions tbody');
+  // ⚠️ CORRECTION: Cibler le VRAI tbody de la page principale (id="produitsList")
+  const tbody = document.getElementById('produitsList');
   if (!tbody) {
     console.error('❌ tbody non trouvé');
+    console.log('🔍 Éléments trouvés:');
+    console.log('  - #tableReceptions:', document.getElementById('tableReceptions'));
+    console.log('  - #tableReceptions tbody:', document.querySelector('#tableReceptions tbody'));
+    console.log('  - #produitsList:', document.getElementById('produitsList'));
     return;
   }
+
+  console.log('✅ tbody trouvé:', tbody);
 
   // 🔧 SÉCURITÉ: Si ce n'est pas un array, extraire le array
   if (!Array.isArray(produits)) {
@@ -988,19 +995,28 @@ function afficherTableProduits(produits) {
   }
 
   console.log('📋 afficherTableProduits appelé avec', produits.length, 'produits');
+  console.log('📦 Produits à afficher:', produits);
+  
+  // 🧹 NETTOYER COMPLÈTEMENT le tbody - supprimer TOUS les enfants, y compris les templates
+  console.log('🧹 tbody children avant nettoyage:', tbody.children.length);
+  while (tbody.firstChild) {
+    tbody.removeChild(tbody.firstChild);
+  }
+  console.log('🧹 tbody enfants après nettoyage:', tbody.children.length);
+  
   // 🚫 Masquer le spinner et afficher le tableau
   const spinner = document.getElementById('filterSpinner');
-  const table = document.querySelector('#tableReceptions > div');
+  const tableContainer = document.getElementById('tableReceptions');
   const noResults = document.getElementById('noResultsMessage');
   
   if (spinner) spinner.style.display = 'none';
-  if (table) table.style.display = 'block';
+  if (tableContainer) tableContainer.style.display = 'block';
   if (noResults) noResults.style.display = 'none';
 
   // ⚡ Utiliser documentFragment pour performance
   const fragment = document.createDocumentFragment();
 
-  produits.forEach(produit => {
+  produits.forEach((produit, index) => {
     const row = document.createElement('tr');
     
     // Détermine l'état du stock
@@ -1018,6 +1034,7 @@ function afficherTableProduits(produits) {
 
     row.innerHTML = `
       <td style="display:none;" class="id">${produit._id}</td>
+      <td class="reference" style="display:none;">${produit.reference}</td>
       <td class="designation" style="display: flex; align-items: center; gap: 12px;">
         <div style="flex-shrink: 0;">
           ${photoHTML}
@@ -1027,6 +1044,7 @@ function afficherTableProduits(produits) {
           <small class="text-muted">${produit.reference}</small>
         </div>
       </td>
+      <td class="categorie" style="display:none;">${produit.typeProduitId?.nomType || 'N/A'}</td>
       <td class="quantite">
         <strong>${produit.quantiteActuelle}</strong> 
         <small class="text-muted">(seuil: ${produit.seuilAlerte || 10})</small>
@@ -1049,41 +1067,18 @@ function afficherTableProduits(produits) {
       </td>
     `;
     
+    console.log(`  📝 Row ${index + 1} créée pour:`, produit.designation);
     fragment.appendChild(row);
   });
 
-  tbody.innerHTML = '';
+  console.log(`📊 Fragment contient ${produits.length} rows`);
+  
+  console.log(`📤 Ajout du fragment (${produits.length} rows) au tbody`);
   tbody.appendChild(fragment);
 
   console.log('✅ Table mise à jour avec fragment');
-
-  // ⚡ Détruire et recréer List.js pour forcer le refresh
-  if (LIST_INSTANCE) {
-    try {
-      LIST_INSTANCE.destroy();
-      console.log('🔄 List.js détruit');
-    } catch (e) {
-      console.warn('⚠️ Erreur destruction List.js:', e.message);
-    }
-    LIST_INSTANCE = null;
-  }
-
-  // Recréer List.js frais
-  if (typeof List !== 'undefined' && produits.length > 0) {
-    try {
-      const options = {
-        valueNames: ["id", "designation", "quantite", "emplacement", "etat", "dateEntree", "actions"],
-        page: 5,
-        pagination: true
-      };
-      LIST_INSTANCE = new List('tableReceptions', options);
-      console.log('✅ List.js réinitialisé');
-    } catch (err) {
-      console.warn('⚠️ List.js error:', err.message);
-    }
-  } else if (produits.length === 0) {
-    console.log('ℹ️ Aucun produit à afficher');
-  }
+  console.log('📋 Contenu tbody après update:', tbody.innerHTML);
+  console.log('📋 Nombre de tr dans tbody:', tbody.querySelectorAll('tr').length);
 }
 
 // ================================

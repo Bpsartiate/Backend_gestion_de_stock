@@ -1190,7 +1190,11 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
       
       return {
         ...rayon,
-        // STATS DU RAYON
+        // STATS DU RAYON - Retourner AUSSI au niveau root pour le frontend
+        occupation: occupationPourcent,  // % au niveau root
+        articles: nombreArticles,  // Nombre d'articles au niveau root
+        capaciteOccupee: nombreArticles,  // Pour compatibilité frontend
+        alertes: nombreAlertes,  // Nombre d'alertes au niveau root
         stocks: {
           occupation: occupationPourcent,  // %
           articles: `${nombreArticles}/${capaciteMax}`,  // Nombre/Capacité

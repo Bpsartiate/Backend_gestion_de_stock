@@ -587,10 +587,14 @@
     // Donc on compte 1 article = 1 unité, peu importe la quantité en kg
     const capaciteMaxRayon = rayon.capaciteMax || 100;
     
-    // Obtenir le nombre exact de produits depuis les stats du rayon (retourné par l'API)
-    // Format: "1/1" ou "0/100" -> on extrait le premier nombre
+    // Obtenir le nombre EXACT de produits depuis les données du rayon (retourné par l'API)
+    // Maintenant le backend retourne rayon.articles et rayon.stocks.articles
     let nombreProduitsEnRayon = 0;
-    if (rayon.stocks && rayon.stocks.articles) {
+    
+    // Essayer d'abord rayon.articles (données root), puis rayon.stocks.articles (données imbriquées)
+    if (rayon.articles !== undefined && rayon.articles !== null) {
+      nombreProduitsEnRayon = parseInt(rayon.articles) || 0;
+    } else if (rayon.stocks && rayon.stocks.articles) {
       const articlesStr = rayon.stocks.articles; // Format: "1/1"
       const match = articlesStr.match(/(\d+)\//);
       nombreProduitsEnRayon = match ? parseInt(match[1]) : 0;

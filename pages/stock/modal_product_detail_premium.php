@@ -456,20 +456,55 @@ function editerProduitPremium(produitId) {
 
   console.log('✏️ Édition produit:', pId);
   
+  // Afficher un spinner de chargement
+  const loadingOverlay = document.createElement('div');
+  loadingOverlay.id = 'editLoadingOverlay';
+  loadingOverlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+  
+  loadingOverlay.innerHTML = `
+    <div class="text-center">
+      <div class="spinner-border text-white mb-3" role="status" style="width: 60px; height: 60px;">
+        <span class="visually-hidden">Chargement...</span>
+      </div>
+      <p class="text-white fw-bold">Préparation du formulaire d'édition...</p>
+    </div>
+  `;
+  
+  document.body.appendChild(loadingOverlay);
+  
   // Fermer le modal détail
   const detailModal = bootstrap.Modal.getInstance(document.getElementById('modalProductDetailPremium'));
   if (detailModal) {
     detailModal.hide();
   }
   
-  // Rediriger vers la page d'édition (ou ouvrir un modal d'édition)
-  // Pour maintenant, on utilise le modal existant sur la page magasin.php
-  if (typeof openProductEditModal === 'function') {
-    openProductEditModal(pId);
-  } else {
-    showToast('⏳ Redirection vers l\'édition du produit...', 'info');
-    // Optionnel: rediriger vers une page d'édition
-    // window.location.href = `/backend_Stock/pages/stock/magasin.php?edit=${pId}`;
+  // Ouvrir le modal d'édition (depuis product-edit.js)
+  openProductEditModal(pId);
+  
+  // ⏳ Retirer le spinner une fois que le modal edit est complètement affiché
+  const editModal = document.getElementById('modalEditProduit');
+  if (editModal) {
+    editModal.addEventListener('shown.bs.modal', function removeOverlay() {
+      const overlay = document.getElementById('editLoadingOverlay');
+      if (overlay) {
+        overlay.style.transition = 'opacity 0.3s ease-out';
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 300);
+      }
+      // Retirer l'event listener après l'avoir utilisé
+      editModal.removeEventListener('shown.bs.modal', removeOverlay);
+    }, { once: true });
   }
 }
 
