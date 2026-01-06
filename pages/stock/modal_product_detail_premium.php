@@ -570,13 +570,19 @@ async function openProductDetailPremium(produitId) {
 async function loadPremiumReceptions(receptions) {
   const container = document.getElementById('premiumReceptionsContainer');
   
-  if (!receptions || receptions.length === 0) {
+  console.log('📥 Réceptions reçues:', receptions);
+  console.log('📊 Nombre de réceptions:', Array.isArray(receptions) ? receptions.length : 'N/A');
+  
+  if (!receptions || !Array.isArray(receptions) || receptions.length === 0) {
+    console.warn('⚠️ Pas de réceptions disponibles');
     container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-inbox"></i> Aucune réception</div>';
     return;
   }
 
   let html = '';
   receptions.forEach((reception, idx) => {
+    console.log(`Réception ${idx}:`, reception);
+    
     const dateReception = new Date(reception.dateReception).toLocaleDateString('fr-FR');
     const datePeremption = reception.datePeremption ? new Date(reception.datePeremption).toLocaleDateString('fr-FR') : 'N/A';
     const statutColor = reception.statut === 'stocke' ? 'success' : reception.statut === 'controle' ? 'warning' : 'danger';
@@ -700,7 +706,7 @@ async function loadPremiumAudit(audit) {
     
     if (!audit) {
       document.getElementById('premiumAuditCreatedBy').textContent = '(Inconnu)';
-      document.getElementById('premiumAuditUpdatedBy').textContent = '(Aucune modification)';
+      document.getElementById('premiumAuditUpdatedBy').textContent = '(Inconnu)';
       return;
     }
     
@@ -708,39 +714,53 @@ async function loadPremiumAudit(audit) {
     const createdBy = audit.createdBy || {};
     let createdByName = '(Inconnu)';
     
-    if (createdBy && (createdBy._id || createdBy.prenom || createdBy.nom)) {
+    // Construire le nom à partir des parties disponibles
+    if (createdBy) {
       const prenom = (createdBy.prenom || '').trim();
       const nom = (createdBy.nom || '').trim();
-      createdByName = `${prenom} ${nom}`.trim() || '(Inconnu)';
+      
+      if (prenom || nom) {
+        createdByName = `${prenom} ${nom}`.trim();
+      }
     }
     
     const createdAt = audit.createdAt 
       ? new Date(audit.createdAt).toLocaleDateString('fr-FR') 
       : '--';
     
+    console.log('✅ Créé par:', createdByName, '@ ', createdAt);
     document.getElementById('premiumAuditCreatedBy').textContent = createdByName;
     document.getElementById('premiumAuditCreatedAt').textContent = createdAt;
     
     // Modifié par
     const updatedBy = audit.updatedBy || {};
-    let updatedByName = '(Aucune modification)';
-    let updatedAtText = '(Aucune modification)';
+    let updatedByName = '(Inconnu)';
+    let updatedAtText = '--';
     
-    if (updatedBy && (updatedBy._id || updatedBy.prenom || updatedBy.nom)) {
+    // Construire le nom à partir des parties disponibles
+    if (updatedBy) {
       const prenom = (updatedBy.prenom || '').trim();
       const nom = (updatedBy.nom || '').trim();
-      updatedByName = `${prenom} ${nom}`.trim() || '(Système)';
-      updatedAtText = audit.updatedAt 
-        ? new Date(audit.updatedAt).toLocaleDateString('fr-FR') 
-        : '--';
+      
+      if (prenom || nom) {
+        updatedByName = `${prenom} ${nom}`.trim();
+      }
     }
     
+    updatedAtText = audit.updatedAt 
+      ? new Date(audit.updatedAt).toLocaleDateString('fr-FR') 
+      : '--';
+    
+    console.log('✅ Modifié par:', updatedByName, '@ ', updatedAtText);
     document.getElementById('premiumAuditUpdatedBy').textContent = updatedByName;
     document.getElementById('premiumAuditUpdatedAt').textContent = updatedAtText;
     
     // Afficher les logs d'activité si disponibles
     if (audit.logs && audit.logs.length > 0) {
-      console.log('✅ Activity logs disponibles:', audit.logs.length, 'logs');
+      console.log('✅ Activity logs disponibles:', audit.logs.length, 'entries');
+      audit.logs.forEach((log, idx) => {
+        console.log(`  Log ${idx + 1}:`, log.action, '- Utilisateur:', log.utilisateur?.prenom, log.utilisateur?.nom);
+      });
     }
 
   } catch (err) {

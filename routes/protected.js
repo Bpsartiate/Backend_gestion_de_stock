@@ -2267,30 +2267,63 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
           .populate('utilisateurId', 'prenom nom email')
           .sort({ createdAt: -1 })
           .limit(50);
+        
+        console.log(`🔍 [AUDIT] Audit logs trouvés pour produit ${produitId}:`, auditLogs.length);
+        if (auditLogs.length > 0) {
+          console.log(`   - Plus ancien log:`, auditLogs[auditLogs.length - 1]);
+          console.log(`   - Plus récent log:`, auditLogs[0]);
+        }
       } catch (auditErr) {
         console.warn('⚠️ Erreur récupération audit logs:', auditErr);
       }
 
       let createdByUser = null;
       let updatedByUser = null;
+      let createdAtDate = produit.createdAt;
+      let updatedAtDate = produit.updatedAt;
 
-      // Le plus ancien log = création
+      // ✅ Le plus ancien log = création
       if (auditLogs.length > 0) {
         const oldestLog = auditLogs[auditLogs.length - 1];
-        createdByUser = oldestLog.utilisateurId || { prenom: 'Système', nom: '' };
+        console.log(`📝 [AUDIT] oldestLog.utilisateurId:`, oldestLog.utilisateurId);
+        if (oldestLog.utilisateurId && (oldestLog.utilisateurId.prenom || oldestLog.utilisateurId.nom)) {
+          createdByUser = oldestLog.utilisateurId;
+          createdAtDate = oldestLog.createdAt || produit.createdAt;
+          console.log(`✅ [AUDIT] createdByUser assigné:`, createdByUser);
+        } else {
+          console.log(`⚠️ [AUDIT] oldestLog.utilisateurId invalide ou vide`);
+        }
       }
 
-      // Le plus récent log = dernière modification
+      // ✅ Le plus récent log = dernière modification
       if (auditLogs.length > 0) {
         const newestLog = auditLogs[0];
-        updatedByUser = newestLog.utilisateurId || { prenom: 'Système', nom: '' };
+        console.log(`📝 [AUDIT] newestLog.utilisateurId:`, newestLog.utilisateurId);
+        if (newestLog.utilisateurId && (newestLog.utilisateurId.prenom || newestLog.utilisateurId.nom)) {
+          updatedByUser = newestLog.utilisateurId;
+          updatedAtDate = newestLog.createdAt || produit.updatedAt;
+          console.log(`✅ [AUDIT] updatedByUser assigné:`, updatedByUser);
+        } else {
+          console.log(`⚠️ [AUDIT] newestLog.utilisateurId invalide ou vide`);
+        }
+      }
+
+      // Si pas de logs d'audit, utiliser les informations de création du produit
+      if (!createdByUser) {
+        console.log(`⚠️ [AUDIT] Pas de createdByUser, utilisant Système Automatique`);
+        createdByUser = { prenom: 'Système', nom: 'Automatique' };
+      }
+
+      if (!updatedByUser) {
+        console.log(`⚠️ [AUDIT] Pas de updatedByUser, utilisant createdByUser comme fallback`);
+        updatedByUser = createdByUser; // Par défaut, même utilisateur
       }
 
       response.audit = {
-        createdAt: produit.createdAt,
-        updatedAt: produit.updatedAt,
-        createdBy: createdByUser || { prenom: 'Inconnu', nom: '' },
-        updatedBy: updatedByUser || { prenom: 'Inconnu', nom: '' },
+        createdAt: createdAtDate,
+        updatedAt: updatedAtDate,
+        createdBy: createdByUser,
+        updatedBy: updatedByUser,
         logs: auditLogs.map(log => ({
           action: log.action,
           utilisateur: log.utilisateurId,

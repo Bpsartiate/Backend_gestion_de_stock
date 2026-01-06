@@ -32,15 +32,44 @@ async function openProductEditModal(produitId) {
     }
 
     // ⏳ Charger les données EN PARALLÈLE EN ARRIÈRE-PLAN
-    const produit = await API.get(
-      API_CONFIG.ENDPOINTS.PRODUIT,
-      { produitId }
-    );
+    // Appeler l'endpoint enrichi avec include pour récupérer réceptions, mouvements, audit
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const enrichedUrl = `${API_CONFIG.BASE_URL}/api/protected/produits/${produitId}?include=mouvements,receptions,alertes,enregistrement`;
+    
+    let produit = null;
+    
+    try {
+      // Essayer l'endpoint enrichi d'abord
+      const enrichedResponse = await fetch(enrichedUrl, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (enrichedResponse.ok) {
+        const enrichedData = await enrichedResponse.json();
+        produit = enrichedData.data || enrichedData;
+        console.log('✅ Endpoint enrichi utilisé pour édition');
+      }
+    } catch (enrichedErr) {
+      console.warn('⚠️ Endpoint enrichi non disponible, fallback...');
+    }
+    
+    // Fallback: utiliser l'API standard
+    if (!produit) {
+      produit = await API.get(
+        API_CONFIG.ENDPOINTS.PRODUIT,
+        { produitId }
+      );
+    }
 
     if (!produit) {
       showToast('❌ Produit non trouvé', 'danger');
       return;
     }
+
+    console.log('✅ Produit enrichi chargé pour édition:', produit);
+    console.log('📊 Réceptions:', produit.receptions);
+    console.log('📋 Mouvements:', produit.mouvements);
+    console.log('🗓️ Audit logs:', produit.audit?.logs?.length || 0);
 
     PRODUIT_EN_EDITION = produit;
     CHANGEMENTS_PRODUIT = {};
@@ -258,15 +287,12 @@ async function chargerOngletReceptions(produitId) {
     tableReceptionsWrapper.style.display = 'none';
     noReceptions.style.display = 'none';
 
-    // Charger les réceptions
-    const receptions = await API.get(
-      `/api/protected/receptions?produitId=${produitId}&magasinId=${MAGASIN_ID}`,
-      {}
-    );
+    // Utiliser les réceptions du produit enrichi (déjà chargées)
+    let receptions = PRODUIT_EN_EDITION?.receptions || [];
 
     receptionsLoading.style.display = 'none';
 
-    if (!receptions || receptions.length === 0) {
+    if (!receptions || !Array.isArray(receptions) || receptions.length === 0) {
       noReceptions.style.display = 'block';
       return;
     }
@@ -320,22 +346,19 @@ async function chargerOngletHistorique(produitId) {
     historiqueList.style.display = 'none';
     noHistorique.style.display = 'none';
 
-    // Charger l'historique (AuditLogs)
-    const result = await API.get(
-      `/api/protected/audit-logs/Produit/:produitId`,
-      { produitId }
-    );
+    // Utiliser les audit logs du produit enrichi
+    const logs = PRODUIT_EN_EDITION?.audit?.logs || [];
 
     historiqueLoading.style.display = 'none';
 
-    if (!result?.logs || result.logs.length === 0) {
+    if (!logs || !Array.isArray(logs) || logs.length === 0) {
       noHistorique.style.display = 'block';
       return;
     }
 
     // Afficher la timeline
     timelineEvents.innerHTML = '';
-    result.logs.forEach(log => {
+    logs.forEach(log => {
       const date = new Date(log.createdAt).toLocaleString('fr-FR');
       let colorClass = 'info';
       
@@ -345,12 +368,17 @@ async function chargerOngletHistorique(produitId) {
 
       const event = document.createElement('div');
       event.className = `timeline-event ${colorClass}`;
+      const userName = log.utilisateur?.prenom && log.utilisateur?.nom 
+        ? `${log.utilisateur.prenom} ${log.utilisateur.nom}` 
+        : 'Système';
+      const userEmail = log.utilisateur?.email || 'N/A';
+      
       event.innerHTML = `
         <div class="timeline-date">${date}</div>
         <div class="timeline-action">${log.action}</div>
         <div class="timeline-details">
-          <strong>${log.utilisateurNom || 'Système'}</strong> 
-          (${log.utilisateurEmail || 'N/A'})<br>
+          <strong>${userName}</strong> 
+          (${userEmail})<br>
           ${log.description || ''}<br>
           ${log.raison ? `<em>Raison: ${log.raison}</em>` : ''}
         </div>
