@@ -677,6 +677,7 @@ async function loadPremiumMovements(mouvements) {
       
       // 📋 Traduire le type
       const typeMap = {
+        'ENTREE_INITIALE': 'Entrée initiale',
         'RECEPTION': 'Réception',
         'entree': 'Entrée',
         'SORTIE': 'Sortie',
@@ -687,8 +688,8 @@ async function loadPremiumMovements(mouvements) {
         'transfert': 'Transfert'
       };
       const typeAffiche = typeMap[m.type] || m.type || 'Inconnu';
-      const couleur = (m.type === 'RECEPTION' || m.type === 'entree') ? 'success' : 'danger';
-      const icon = (m.type === 'RECEPTION' || m.type === 'entree') ? 'arrow-down' : 'arrow-up';
+      const couleur = (m.type === 'ENTREE_INITIALE' || m.type === 'RECEPTION' || m.type === 'entree') ? 'success' : 'danger';
+      const icon = (m.type === 'ENTREE_INITIALE' || m.type === 'RECEPTION' || m.type === 'entree') ? 'arrow-down' : 'arrow-up';
       
       // 📝 Récupérer les détails dans l'ordre de priorité
       let details = '';

@@ -18,7 +18,7 @@ const stockMovementSchema = new mongoose.Schema({
   // TYPE DE MOUVEMENT
   type: {
     type: String,
-    enum: ['RECEPTION', 'SORTIE', 'TRANSFERT', 'RETOUR', 'INVENTAIRE', 'PERTE'],
+    enum: ['ENTREE_INITIALE', 'RECEPTION', 'SORTIE', 'TRANSFERT', 'RETOUR', 'INVENTAIRE', 'PERTE'],
     required: true,
     index: true
   },

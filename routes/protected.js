@@ -2145,6 +2145,27 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
     // ⚠️ NOTE: Le mouvement RECEPTION est créé automatiquement par le LOT créé par le frontend
     // Donc on ne crée PAS un mouvement supplémentaire ici pour éviter la duplication
 
+    // 🎬 Créer un mouvement de stock pour tracker le stock initial
+    if (quantiteEntree && quantiteEntree > 0) {
+      try {
+        const movement = new StockMovement({
+          magasinId,
+          produitId: produit._id,
+          type: 'ENTREE_INITIALE',
+          quantite: quantiteEntree,
+          utilisateurId: requester.id,
+          prixUnitaire,
+          numeroDocument: `INIT-${produit._id.toString().slice(-8)}`,
+          dateDocument: dateEntree || new Date(),
+          observations: `Entrée initiale du produit`
+        });
+        await movement.save();
+        console.log(`✅ Mouvement entrée initiale créé pour produit ${produit.reference}: ${quantiteEntree} unités`);
+      } catch (movErr) {
+        console.error('⚠️ Erreur création mouvement (non bloquant):', movErr.message);
+      }
+    }
+
     try {
       const activity = new Activity({
         utilisateurId: requester.id,
