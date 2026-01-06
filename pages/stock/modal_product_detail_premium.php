@@ -667,23 +667,50 @@ async function loadPremiumMovements(mouvements) {
 
     let html = '';
     mouvements.slice(0, 20).forEach(m => {
-      const date = new Date(m.dateDocument).toLocaleDateString('fr-FR');
-      const type = m.type || 'Inconnu';
-      const couleur = type === 'RECEPTION' || type === 'entree' ? 'success' : 'danger';
-      const icon = type === 'RECEPTION' || type === 'entree' ? 'arrow-down' : 'arrow-up';
+      // 📅 Format date lisible: "6 janvier 2026"
+      const dateObj = new Date(m.dateDocument);
+      const date = dateObj.toLocaleDateString('fr-FR', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
       
-      // Détermine la description : observations, puis fournisseur, puis numéroDocument
-      const details = m.observations || m.fournisseur || m.numeroDocument || '--';
+      // 📋 Traduire le type
+      const typeMap = {
+        'RECEPTION': 'Réception',
+        'entree': 'Entrée',
+        'SORTIE': 'Sortie',
+        'sortie': 'Sortie',
+        'AJUSTEMENT': 'Ajustement',
+        'ajustement': 'Ajustement',
+        'TRANSFERT': 'Transfert',
+        'transfert': 'Transfert'
+      };
+      const typeAffiche = typeMap[m.type] || m.type || 'Inconnu';
+      const couleur = (m.type === 'RECEPTION' || m.type === 'entree') ? 'success' : 'danger';
+      const icon = (m.type === 'RECEPTION' || m.type === 'entree') ? 'arrow-down' : 'arrow-up';
       
-      // Récupère le nom de l'utilisateur
+      // 📝 Récupérer les détails dans l'ordre de priorité
+      let details = '';
+      if (m.observations) {
+        details = m.observations;
+      } else if (m.fournisseur && m.fournisseur !== 'Non spécifié') {
+        details = `Réception ${m.fournisseur}`;
+      } else if (m.numeroDocument) {
+        details = m.numeroDocument;
+      } else {
+        details = 'N/A';
+      }
+      
+      // 👤 Récupère le nom de l'utilisateur
       const utilisateur = m.utilisateurId?.prenom && m.utilisateurId?.nom 
         ? `${m.utilisateurId.prenom} ${m.utilisateurId.nom}`
         : m.utilisateurId?.prenom || '--';
       
       html += `
         <tr>
-          <td><small class="text-muted">${date}</small></td>
-          <td><span class="badge bg-${couleur}"><i class="fas fa-${icon} me-1"></i>${type}</span></td>
+          <td><small>${date}</small></td>
+          <td><span class="badge bg-${couleur}"><i class="fas fa-${icon} me-1"></i>${typeAffiche}</span></td>
           <td><strong>${m.quantite || 0}</strong></td>
           <td><small>${details}</small></td>
           <td><small class="text-muted">${utilisateur}</small></td>

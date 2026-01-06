@@ -900,21 +900,8 @@ async function addProduct() {
         { magasinId: MAGASIN_ID }
       );
 
-      // Créer le mouvement RECEPTION
-      const movementData = {
-        produitId: product._id,
-        type: 'RECEPTION',
-        quantite: produitData.quantiteEntree,
-        numeroDocument: lotData.numeroDocument,
-        fournisseur: lotData.fournisseur,
-        observations: `Création produit: ${produitData.designation}`
-      };
-
-      await API.post(
-        API_CONFIG.ENDPOINTS.STOCK_MOVEMENTS,
-        movementData,
-        { magasinId: MAGASIN_ID }
-      );
+      // ⚠️ NOTE: Le mouvement RECEPTION est créé automatiquement par le backend
+      // lors de la création du produit, donc on n'a pas besoin de le créer ici
     }
 
     showToast('✅ Produit créé avec succès!', 'success');
@@ -1316,10 +1303,12 @@ async function deleteProduct(produitId) {
       console.log('✅ Produit supprimé:', result);
 
       // Mettre à jour le message à "Actualisation de la table..."
-      const stepsContainer = loadingBox.querySelector('div[style*="display: flex"]');
+      // Chercher le conteneur des étapes (dernier div enfant du loadingBox)
+      const allDivs = loadingBox.querySelectorAll('div');
+      const stepsContainer = allDivs[allDivs.length - 1]; // Dernier div = le conteneur des étapes
       let steps = [];
-      if (stepsContainer) {
-        steps = stepsContainer.querySelectorAll('div');
+      if (stepsContainer && stepsContainer.children.length >= 3) {
+        steps = Array.from(stepsContainer.children);
         if (steps.length >= 3) {
           steps[0].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Produit</span>';
           steps[1].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Données</span>';
