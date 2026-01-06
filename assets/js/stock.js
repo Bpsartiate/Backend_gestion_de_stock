@@ -1316,15 +1316,23 @@ async function deleteProduct(produitId) {
       console.log('✅ Produit supprimé:', result);
 
       // Mettre à jour le message à "Actualisation de la table..."
-      const steps = loadingBox.querySelector('div:last-child').querySelectorAll('div');
-      steps[0].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Produit</span>';
-      steps[1].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Données</span>';
+      const stepsContainer = loadingBox.querySelector('div[style*="display: flex"]');
+      let steps = [];
+      if (stepsContainer) {
+        steps = stepsContainer.querySelectorAll('div');
+        if (steps.length >= 3) {
+          steps[0].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Produit</span>';
+          steps[1].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Données</span>';
+        }
+      }
 
       // Recharger la table
       await loadProduits(false);
 
       // Marquer la dernière étape
-      steps[2].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Table</span>';
+      if (steps.length >= 3) {
+        steps[2].innerHTML = '<i class="fas fa-check me-1" style="color: #28a745;"></i><span>Table</span>';
+      }
 
       // Attendre un peu avant de fermer l'overlay
       await new Promise(resolve => setTimeout(resolve, 800));

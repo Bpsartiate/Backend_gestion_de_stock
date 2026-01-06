@@ -2088,6 +2088,39 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
 
     await produit.save();
 
+    // ⚡ CRÉER UN AUDIT LOG pour tracker la création
+    try {
+      await AuditService.log({
+        action: 'CREATE_PRODUIT',
+        utilisateur: {
+          id: requester.id,
+          nom: requester.prenom && requester.nom ? `${requester.prenom} ${requester.nom}` : requester.email,
+          email: requester.email
+        },
+        magasin: {
+          id: magasinId,
+          nom: magasin.nom_magasin
+        },
+        entityType: 'Produit',
+        entityId: produit._id,
+        entityName: produit.designation,
+        description: `Produit '${designation}' créé`,
+        changes: {
+          before: null,
+          after: {
+            reference: produit.reference,
+            designation: produit.designation,
+            prixUnitaire: produit.prixUnitaire,
+            quantiteEntree: quantiteEntree || 0
+          }
+        },
+        statut: 'SUCCESS'
+      });
+    } catch (auditErr) {
+      console.error('⚠️ Erreur création AuditLog (non bloquant):', auditErr.message);
+      // Ne pas bloquer la création du produit si l'AuditLog échoue
+    }
+
     // ⚡ CRÉER UN STOCK RAYON pour enregistrer que ce produit est dans ce rayon
     // Le StockRayon lie un produit à un rayon spécifique
     const StockRayon = require('../models/stockRayon'); // À adapter si le modèle a un autre nom
