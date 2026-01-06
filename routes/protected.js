@@ -9,6 +9,8 @@ const Magasin = require('../models/magasin');
 const Business = require('../models/business');
 const Affectation = require('../models/affectation');
 const Activity = require('../models/activity');
+const AuditLog = require('../models/auditLog');
+const AuditService = require('../services/auditService');
 const fs = require('fs');
 const path = require('path');
 const cloudinary = require('../services/cloudinary');
@@ -1213,9 +1215,13 @@ router.post('/magasins/:magasinId/rayons', authMiddleware, blockVendeur, async (
     const requester = req.user;
     const { codeRayon, nomRayon, typeRayon, capaciteMax, couleurRayon, iconeRayon, typesProduitsAutorises, description } = req.body;
 
-    console.log('📝 POST /magasins/:magasinId/rayons reçu');
+    console.log('\n🚀 POST /magasins/:magasinId/rayons REÇU');
+    console.log('   magasinId:', magasinId);
+    console.log('   codeRayon:', codeRayon);
+    console.log('   nomRayon:', nomRayon);
+    console.log('   capaciteMax:', capaciteMax, `(type: ${typeof capaciteMax})`);
+    console.log('   typeRayon:', typeRayon);
     console.log('   typesProduitsAutorises:', typesProduitsAutorises);
-    console.log('   Types reçus:', typeof typesProduitsAutorises, Array.isArray(typesProduitsAutorises));
 
     // Vérifier l'accès au magasin
     const magasin = await Magasin.findById(magasinId);
@@ -1718,7 +1724,11 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    const produits = await Produit.find({ magasinId, status: 1 })
+    const produits = await Produit.find({ 
+      magasinId, 
+      status: 1,
+      estSupprime: false  // Filtre pour ne pas afficher les produits supprimés
+    })
       .populate({
         path: 'typeProduitId',
         select: 'nomType unitePrincipale code icone seuilAlerte'
@@ -1750,6 +1760,208 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
     return res.json(produitsAvecAlertes);
   } catch (err) {
     console.error('produits.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// ================================
+// 📋 AUDIT LOGS - TRAÇABILITÉ
+// ================================
+
+// GET /api/protected/audit-logs - Lister les logs d'audit (ADMIN only)
+router.get('/audit-logs', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const requester = req.user;
+    const { magasinId, entityType, action, dateDebut, dateFin, limit = 50, skip = 0 } = req.query;
+
+    // Vérifier que c'est un admin
+    if (requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès refusé - Admin seulement' });
+    }
+
+    console.log('🔍 GET /audit-logs');
+
+    const filters = {};
+    if (magasinId) filters.magasinId = magasinId;
+    if (entityType) filters.entityType = entityType;
+    if (action) filters.action = action;
+    if (dateDebut || dateFin) {
+      filters.dateDebut = dateDebut;
+      filters.dateFin = dateFin;
+    }
+
+    const result = await AuditService.getHistory(
+      filters,
+      parseInt(limit),
+      parseInt(skip)
+    );
+
+    console.log(`✅ ${result.count} audit log(s) trouvé(s)`);
+
+    return res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    console.error('❌ audit-logs.list.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// GET /api/protected/audit-logs/:entityType/:entityId - Historique complet d'une entité
+router.get('/audit-logs/:entityType/:entityId', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const requester = req.user;
+    const { entityType, entityId } = req.params;
+
+    // Vérifier que c'est un admin
+    if (requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès refusé - Admin seulement' });
+    }
+
+    console.log(`🔍 GET /audit-logs/${entityType}/${entityId}`);
+
+    const result = await AuditService.getHistory(
+      { entityType, entityId },
+      200,
+      0
+    );
+
+    console.log(`✅ ${result.count} log(s) pour ${entityType}/${entityId}`);
+
+    return res.json({
+      success: true,
+      entityType,
+      entityId,
+      ...result
+    });
+  } catch (err) {
+    console.error('❌ audit-logs.detail.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// GET /api/protected/magasins/:magasinId/audit-logs - Logs d'audit du magasin
+router.get('/magasins/:magasinId/audit-logs', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+    const { action, entityType, dateDebut, dateFin, limit = 50, skip = 0 } = req.query;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const filters = { magasinId };
+    if (action) filters.action = action;
+    if (entityType) filters.entityType = entityType;
+    if (dateDebut || dateFin) {
+      filters.dateDebut = dateDebut;
+      filters.dateFin = dateFin;
+    }
+
+    const result = await AuditService.getHistory(
+      filters,
+      parseInt(limit),
+      parseInt(skip)
+    );
+
+    console.log(`✅ ${result.count} audit log(s) pour magasin ${magasin.nom}`);
+
+    return res.json({
+      success: true,
+      magasinId,
+      magasinNom: magasin.nom,
+      ...result
+    });
+  } catch (err) {
+    console.error('❌ magasins.audit-logs.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// GET /api/protected/magasins/:magasinId/produits-supprimés - Lister les produits supprimés (ADMIN only)
+router.get('/magasins/:magasinId/produits-supprimes', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+    const requester = req.user;
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    // Vérifier les permissions: Admin seulement
+    if (requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès refusé - Admin seulement' });
+    }
+
+    // Récupérer les produits supprimés
+    const produitsSupprimés = await Produit.find({ 
+      magasinId, 
+      estSupprime: true
+    })
+      .populate('typeProduitId', 'nomType unitePrincipale code')
+      .populate('supprimePar', 'nom prenom email')
+      .sort({ dateSuppression: -1 })
+      .lean();
+
+    console.log(`📋 ${produitsSupprimés.length} produit(s) supprimé(s) trouvé(s)`);
+
+    return res.json({
+      success: true,
+      count: produitsSupprimés.length,
+      produits: produitsSupprimés
+    });
+  } catch (err) {
+    console.error('produits.list-supprimes.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// POST /api/protected/produits/:produitId/restore - Restaurer un produit supprimé (ADMIN only)
+router.post('/produits/:produitId/restore', authMiddleware, blockVendeur, async (req, res) => {
+  try {
+    const { produitId } = req.params;
+    const requester = req.user;
+
+    // Vérifier les permissions: Admin seulement
+    if (requester.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès refusé - Admin seulement' });
+    }
+
+    const produit = await Produit.findById(produitId);
+    if (!produit) {
+      return res.status(404).json({ message: 'Produit non trouvé' });
+    }
+
+    if (!produit.estSupprime) {
+      return res.status(400).json({ message: 'Ce produit n\'est pas supprimé' });
+    }
+
+    // Restaurer le produit
+    console.log(`🔄 Restauration du produit: ${produit.designation}`);
+    produit.estSupprime = false;
+    produit.status = 1;
+    produit.dateSuppression = null;
+    produit.raison = null;
+    produit.supprimePar = null;
+
+    await produit.save();
+    console.log(`✅ Produit restauré: ${produit.designation}`);
+
+    return res.json({
+      success: true,
+      message: `Produit '${produit.designation}' restauré`,
+      produit
+    });
+  } catch (err) {
+    console.error('produits.restore.error', err);
     return res.status(500).json({ message: 'Erreur: ' + err.message });
   }
 });
@@ -1860,12 +2072,13 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
         action: 'CREER_PRODUIT',
         entite: 'Produit',
         entiteId: produit._id,
-        description: `Produit '${designation}' créé avec ${quantiteEntree || 0} unités`,
-        icon: 'fas fa-box'
+        description: `Produit '${designation}' créé`,
+        icon: 'fas fa-plus'
       });
       await activity.save();
     } catch (actErr) {
-      console.error('activity.save.error', actErr);
+      // Ignorer les erreurs d'Activity - ce n'est pas critique
+      console.debug('⚠️ Activity log skipped (non critical)', actErr.message);
     }
 
     return res.status(201).json(produit);
@@ -1875,40 +2088,175 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
   }
 });
 
-// PUT /api/protected/produits/:produitId - Modifier un produit
-router.put('/produits/:produitId', authMiddleware, async (req, res) => {
+// GET /api/protected/produits/:produitId - Récupérer un produit spécifique
+router.get('/produits/:produitId', authMiddleware, async (req, res) => {
   try {
     const { produitId } = req.params;
     const requester = req.user;
-    const { designation, prixUnitaire, etat, seuilAlerte, notes, photoUrl, reference } = req.body;
 
+    // 1. Récupérer le produit
+    const produit = await Produit.findById(produitId)
+      .populate('magasinId', '_id nomMagasin')
+      .populate('typeProduitId', '_id nomType')
+      .populate('rayonId', '_id nomRayon');
+
+    if (!produit) {
+      return res.status(404).json({ message: 'Produit non trouvé' });
+    }
+
+    // 2. Vérifier l'accès
+    const magasin = await Magasin.findById(produit.magasinId._id);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    return res.json(produit);
+  } catch (err) {
+    console.error('❌ GET /produits/:produitId - error:', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
+// GET /api/protected/produits/:produitId/stocks - Récupérer les stocks d'un produit
+router.get('/produits/:produitId/stocks', authMiddleware, async (req, res) => {
+  try {
+    const { produitId } = req.params;
+    const requester = req.user;
+
+    // 1. Vérifier que le produit existe
     const produit = await Produit.findById(produitId);
     if (!produit) {
       return res.status(404).json({ message: 'Produit non trouvé' });
     }
 
+    // 2. Vérifier l'accès
     const magasin = await Magasin.findById(produit.magasinId);
     if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    produit.designation = designation || produit.designation;
-    produit.prixUnitaire = prixUnitaire !== undefined ? prixUnitaire : produit.prixUnitaire;
-    produit.etat = etat || produit.etat;
-    produit.seuilAlerte = seuilAlerte !== undefined ? seuilAlerte : produit.seuilAlerte;
-    produit.notes = notes !== undefined ? notes : produit.notes;
-    produit.photoUrl = photoUrl || produit.photoUrl;
-    produit.reference = reference || produit.reference;
+    // 3. Récupérer les stocks
+    const stocks = await StockRayon.find({ produitId: produitId })
+      .populate('rayonId', '_id nomRayon')
+      .populate('magasinId', '_id nomMagasin');
 
-    await produit.save();
+    return res.json(stocks);
+  } catch (err) {
+    console.error('❌ GET /produits/:produitId/stocks - error:', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
 
+// PUT /api/protected/produits/:produitId - Modifier un produit avec audit trail
+router.put('/produits/:produitId', authMiddleware, async (req, res) => {
+  try {
+    const { produitId } = req.params;
+    const requester = req.user;
+    const { designation, prixUnitaire, etat, seuilAlerte, notes, photoUrl, reference, typeProduitId, rayonId } = req.body;
+
+    // 1. Trouver le produit
+    const produit = await Produit.findById(produitId).lean();
+    if (!produit) {
+      return res.status(404).json({ message: 'Produit non trouvé' });
+    }
+
+    // 2. Vérifier l'accès
+    const magasin = await Magasin.findById(produit.magasinId);
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // 3. Préparer les changements
+    const changements = {};
+    const anciennesProprietes = {};
+    const nouvellesProprietes = {};
+
+    if (designation !== undefined && designation !== produit.designation) {
+      changements.designation = designation;
+      anciennesProprietes.designation = produit.designation;
+      nouvellesProprietes.designation = designation;
+    }
+
+    if (reference !== undefined && reference !== produit.reference) {
+      changements.reference = reference;
+      anciennesProprietes.reference = produit.reference;
+      nouvellesProprietes.reference = reference;
+    }
+
+    if (prixUnitaire !== undefined && prixUnitaire !== produit.prixUnitaire) {
+      changements.prixUnitaire = prixUnitaire;
+      anciennesProprietes.prixUnitaire = produit.prixUnitaire;
+      nouvellesProprietes.prixUnitaire = prixUnitaire;
+    }
+
+    if (etat !== undefined && etat !== produit.etat) {
+      changements.etat = etat;
+      anciennesProprietes.etat = produit.etat;
+      nouvellesProprietes.etat = etat;
+    }
+
+    if (seuilAlerte !== undefined && seuilAlerte !== produit.seuilAlerte) {
+      changements.seuilAlerte = seuilAlerte;
+      anciennesProprietes.seuilAlerte = produit.seuilAlerte;
+      nouvellesProprietes.seuilAlerte = seuilAlerte;
+    }
+
+    if (notes !== undefined && notes !== produit.notes) {
+      changements.notes = notes;
+      anciennesProprietes.notes = produit.notes;
+      nouvellesProprietes.notes = notes;
+    }
+
+    if (photoUrl !== undefined && photoUrl !== produit.photoUrl) {
+      changements.photoUrl = photoUrl;
+      anciennesProprietes.photoUrl = produit.photoUrl;
+      nouvellesProprietes.photoUrl = photoUrl;
+    }
+
+    if (typeProduitId !== undefined && typeProduitId !== produit.typeProduitId?.toString()) {
+      changements.typeProduitId = typeProduitId;
+      anciennesProprietes.typeProduitId = produit.typeProduitId;
+      nouvellesProprietes.typeProduitId = typeProduitId;
+    }
+
+    if (rayonId !== undefined && rayonId !== produit.rayonId?.toString()) {
+      changements.rayonId = rayonId || null;
+      anciennesProprietes.rayonId = produit.rayonId;
+      nouvellesProprietes.rayonId = rayonId || null;
+    }
+
+    // 4. Appliquer les changements
+    const produitUpdated = await Produit.findByIdAndUpdate(
+      produitId,
+      changements,
+      { new: true, runValidators: true }
+    );
+
+    // 5. Créer AuditLog seulement s'il y a eu changements
+    if (Object.keys(changements).length > 0) {
+      AuditService.log({
+        action: 'UPDATE_PRODUIT',
+        userId: requester.id,
+        utilisateurNom: `${requester.prenom} ${requester.nom}`,
+        utilisateurEmail: requester.email,
+        magasinId: produit.magasinId,
+        entityType: 'Produit',
+        entityId: produitId,
+        description: `Produit '${designation || produit.designation}' modifié`,
+        before: anciennesProprietes,
+        after: nouvellesProprietes,
+        statut: 'success'
+      });
+    }
+
+    // 6. Activity log (non-bloquant)
     try {
       const activity = new Activity({
         utilisateurId: requester.id,
         action: 'MODIFIER_PRODUIT',
         entite: 'Produit',
         entiteId: produitId,
-        description: `Produit '${designation}' modifié`,
+        description: `Produit '${designation || produit.designation}' modifié`,
         icon: 'fas fa-edit'
       });
       await activity.save();
@@ -1916,50 +2264,131 @@ router.put('/produits/:produitId', authMiddleware, async (req, res) => {
       console.error('activity.save.error', actErr);
     }
 
-    return res.json(produit);
+    console.log(`✅ PUT /produits/${produitId} - Modifié par ${requester.email} - Changements: ${Object.keys(changements).join(', ')}`);
+
+    return res.json({
+      message: 'Produit modifié avec succès',
+      produit: produitUpdated,
+      changements: changements
+    });
   } catch (err) {
-    console.error('produits.update.error', err);
+    console.error('❌ PUT /produits/:produitId - error:', err);
     return res.status(500).json({ message: 'Erreur: ' + err.message });
   }
 });
 
-// DELETE /api/protected/produits/:produitId - Soft delete un produit
+// DELETE /api/protected/produits/:produitId - Soft delete un produit avec nettoyage des stocks
 router.delete('/produits/:produitId', authMiddleware, async (req, res) => {
   try {
     const { produitId } = req.params;
     const requester = req.user;
+    const { raison } = req.body; // Raison de suppression (optionnel)
 
+    console.log('\n🗑️ === DELETE PRODUIT COMMENCÉ ===');
+    console.log(`   produitId: ${produitId}`);
+    console.log(`   Utilisateur: ${requester.id} (${requester.role})`);
+
+    // Vérifier que le produit existe
     const produit = await Produit.findById(produitId);
     if (!produit) {
+      console.error('❌ Produit non trouvé');
       return res.status(404).json({ message: 'Produit non trouvé' });
     }
 
+    console.log(`✅ Produit trouvé: ${produit.designation}`);
+
+    // Vérifier les permissions
     const magasin = await Magasin.findById(produit.magasinId);
     if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      console.error('❌ Accès refusé');
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    produit.status = 0; // Soft delete
+    console.log('✅ Permissions vérifiées');
+
+    // ⚠️ ÉTAPE 1: Supprimer tous les StockRayons associés à ce produit
+    console.log('🔍 Suppression des StockRayons...');
+    const stockRayonsDeleteResult = await StockRayon.deleteMany({ produitId });
+    console.log(`✅ ${stockRayonsDeleteResult.deletedCount} StockRayon(s) supprimés`);
+
+    // ⚠️ ÉTAPE 2: Supprimer ou archiver les réceptions associées
+    console.log('🔍 Suppression des réceptions...');
+    const receptionsDeleteResult = await Reception.deleteMany({ produitId });
+    console.log(`✅ ${receptionsDeleteResult.deletedCount} Réception(s) supprimée(s)`);
+
+    // ⚠️ ÉTAPE 3: Supprimer les mouvements de stock associés
+    console.log('🔍 Suppression des mouvements de stock...');
+    const movementsDeleteResult = await StockMovement.deleteMany({ produitId });
+    console.log(`✅ ${movementsDeleteResult.deletedCount} Mouvement(s) supprimé(s)`);
+
+    // ⚠️ ÉTAPE 4: SOFT DELETE du produit
+    console.log('🔍 Soft delete du produit...');
+    produit.estSupprime = true;
+    produit.status = 0;
+    produit.dateSuppression = new Date();
+    produit.supprimePar = requester.id;
+    produit.raison = raison || 'Suppression standard';
+    produit.quantiteActuelle = 0; // Reset la quantité
+    produit.quantiteSortie = 0;
+    
     await produit.save();
+    console.log(`✅ Produit marqué comme supprimé`);
 
-    try {
-      const activity = new Activity({
-        utilisateurId: requester.id,
-        action: 'SUPPRIMER_PRODUIT',
-        entite: 'Produit',
-        entiteId: produitId,
-        description: `Produit '${produit.designation}' supprimé`,
-        icon: 'fas fa-trash'
-      });
-      await activity.save();
-    } catch (actErr) {
-      console.error('activity.save.error', actErr);
-    }
+    // ⚠️ ÉTAPE 5: Log d'audit COMPLET via AuditService
+    await AuditService.log({
+      action: 'DELETE_PRODUIT',
+      utilisateur: {
+        id: requester.id,
+        nom: requester.nom + ' ' + requester.prenom,
+        email: requester.email
+      },
+      magasin: {
+        id: magasin._id,
+        nom: magasin.nom
+      },
+      entityType: 'Produit',
+      entityId: produit._id,
+      entityName: produit.designation,
+      description: `Produit '${produit.designation}' supprimé`,
+      raison: raison || 'Suppression standard',
+      changes: {
+        before: {
+          estSupprime: false,
+          status: 1,
+          quantiteActuelle: produit.quantiteActuelle
+        },
+        after: {
+          estSupprime: true,
+          status: 0,
+          quantiteActuelle: 0
+        }
+      },
+      statut: 'SUCCESS'
+    });
 
-    return res.json({ message: 'Produit supprimé' });
+    console.log('✅ AuditLog créé');
+
+    console.log('✅ === DELETE PRODUIT COMPLÉTÉ ===\n');
+
+    return res.json({
+      success: true,
+      message: `Produit '${produit.designation}' supprimé avec succès`,
+      suppression: {
+        produitId: produit._id,
+        designation: produit.designation,
+        stockRayonsSupprimés: stockRayonsDeleteResult.deletedCount,
+        receptionsSupprimées: receptionsDeleteResult.deletedCount,
+        mouvementsSupprimés: movementsDeleteResult.deletedCount,
+        dateSuppression: produit.dateSuppression,
+        raison: produit.raison
+      }
+    });
   } catch (err) {
-    console.error('produits.delete.error', err);
-    return res.status(500).json({ message: 'Erreur: ' + err.message });
+    console.error('❌ produits.delete.error', err);
+    return res.status(500).json({
+      message: 'Erreur lors de la suppression du produit',
+      error: err.message
+    });
   }
 });
 

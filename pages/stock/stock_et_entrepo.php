@@ -8,6 +8,8 @@
   ?>
     <!-- Modal pour ajouter produit -->
     <?php include_once "add_prod.php"; ?>
+    <!-- Modal pour éditer produit (Premium) -->
+    <?php include_once "edit_prod.php"; ?>
     <!-- Modal pour la réception -->
     <?php include_once "modal_reception.php"; ?>
 <style>
@@ -479,7 +481,9 @@
 
 <!-- 📦 Stock Management System Script -->
 <script src="<?php echo BASE_URL; ?>assets/js/stock.js"></script>
-<!-- 📥 RÉCEPTION SYSTEM SCRIPT -->
+<!-- � Product Edit System Script -->
+<script src="<?php echo BASE_URL; ?>assets/js/product-edit.js"></script>
+<!-- �📥 RÉCEPTION SYSTEM SCRIPT -->
 <script src="<?php echo BASE_URL; ?>assets/js/reception.js"></script>
 <!-- 📊 RÉCEPTION HISTORY SYSTEM SCRIPT -->
 <script src="<?php echo BASE_URL; ?>assets/js/reception-history.js"></script>

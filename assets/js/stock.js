@@ -1106,8 +1106,150 @@ function registerMovement(produitId, designation) {
 // 🗑️ SUPPRIMER PRODUIT
 // ================================
 
-function deleteProduct(produitId) {
-  openProductDetailPremium(produitId);
+async function deleteProduct(produitId) {
+  // Chercher le produit dans la liste
+  const produit = CACHE_PRODUITS?.find(p => p._id === produitId);
+  const designation = produit?.designation || 'ce produit';
+
+  // Demander confirmation
+  const confirmBox = document.createElement('div');
+  confirmBox.className = 'modal-backdrop show';
+  confirmBox.style.display = 'flex';
+  confirmBox.style.justifyContent = 'center';
+  confirmBox.style.alignItems = 'center';
+  confirmBox.style.zIndex = '9999';
+  confirmBox.innerHTML = `
+    <div class="card" style="max-width: 400px; border: 2px solid #dc3545;">
+      <div class="card-body">
+        <h5 class="card-title text-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>Confirmation de suppression
+        </h5>
+        <p class="card-text">
+          Êtes-vous sûr de vouloir supprimer <strong>"${designation}"</strong>?
+        </p>
+        <p class="card-text text-muted small">
+          <i class="fas fa-info-circle me-1"></i>Cette action:
+          <ul class="mt-2">
+            <li>Supprimera tous les stocks du produit</li>
+            <li>Supprimera toutes les réceptions associées</li>
+            <li>Ne peut pas être annulée</li>
+          </ul>
+        </p>
+        <div class="input-group mb-3 mt-3">
+          <span class="input-group-text">Raison *</span>
+          <input type="text" class="form-control" id="deleteReason" placeholder="Raison obligatoire" required />
+          <small class="text-danger" id="reasonError" style="display:none; width:100%; margin-top:5px;">
+            <i class="fas fa-exclamation-circle me-1"></i>La raison est obligatoire
+          </small>
+        </div>
+        <div class="d-flex gap-2 justify-content-end">
+          <button class="btn btn-secondary btn-sm" onclick="this.parentElement.parentElement.parentElement.style.display='none'">
+            Annuler
+          </button>
+          <button class="btn btn-danger btn-sm" id="confirmDeleteBtn" disabled>
+            <i class="fas fa-trash me-1"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(confirmBox);
+
+  // Gérer le champ raison - valider en temps réel
+  const reasonInput = document.getElementById('deleteReason');
+  const confirmBtn = document.getElementById('confirmDeleteBtn');
+  const reasonError = document.getElementById('reasonError');
+
+  reasonInput.addEventListener('input', () => {
+    if (reasonInput.value.trim().length > 0) {
+      confirmBtn.disabled = false;
+      reasonError.style.display = 'none';
+    } else {
+      confirmBtn.disabled = true;
+      reasonError.style.display = 'block';
+    }
+  });
+
+  // Gérer le clic sur "Supprimer"
+  confirmBtn.addEventListener('click', async () => {
+    const raison = reasonInput.value.trim();
+
+    // Double vérification
+    if (!raison) {
+      reasonError.style.display = 'block';
+      reasonInput.focus();
+      return;
+    }
+
+    confirmBox.remove();
+
+    try {
+      // Afficher un spinner pendant la suppression
+      const spinner = document.createElement('div');
+      spinner.className = 'spinner-border text-danger';
+      spinner.style.position = 'fixed';
+      spinner.style.top = '50%';
+      spinner.style.left = '50%';
+      spinner.style.transform = 'translate(-50%, -50%)';
+      spinner.style.zIndex = '10000';
+      document.body.appendChild(spinner);
+
+      console.log(`🗑️ Suppression du produit: ${produitId}`);
+      console.log(`   Raison: ${raison}`);
+
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/api/protected/produits/${produitId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify({ raison })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erreur lors de la suppression');
+      }
+
+      const result = await response.json();
+      console.log('✅ Produit supprimé:', result);
+
+      // Retirer le spinner
+      spinner.remove();
+
+      // Afficher le toast de succès
+      showToast(`✅ ${designation} supprimé avec succès`, 'success');
+
+      // Recharger la table
+      await loadProduits(true);
+
+      // Fermer les modales si ouvertes
+      const modals = document.querySelectorAll('[role="dialog"]');
+      modals.forEach(modal => {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) bsModal.hide();
+      });
+
+    } catch (err) {
+      console.error('❌ Erreur suppression produit:', err);
+      confirmBox.remove();
+      showToast(`❌ Erreur: ${err.message}`, 'danger');
+    }
+  });
+
+  // Fermer si on clique en dehors
+  confirmBox.addEventListener('click', (e) => {
+    if (e.target === confirmBox) {
+      confirmBox.remove();
+    }
+  });
+
+  // Focus auto sur le champ raison
+  setTimeout(() => reasonInput.focus(), 100);
 }
 
 // ================================

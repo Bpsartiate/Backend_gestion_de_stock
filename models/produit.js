@@ -117,6 +117,19 @@ const produitSchema = new mongoose.Schema({
     default: 1 // 1 = Actif, 0 = Inactif/Supprimé
   },
 
+  // SOFT DELETE
+  estSupprime: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  dateSuppression: Date,
+  raison: String, // Raison de la suppression
+  supprimePar: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Utilisateur'
+  },
+
   // AUDIT
   createdAt: {
     type: Date,

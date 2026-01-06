@@ -1437,12 +1437,20 @@
 
       const codeRayon = document.getElementById('formConfigRayon').querySelector('input[name="codeRayon"]').value.trim().toUpperCase();
       const nomRayon = document.getElementById('formConfigRayon').querySelector('input[name="nomRayon"]').value.trim();
-      const capaciteMax = parseInt(document.getElementById('formConfigRayon').querySelector('input[name="capaciteMax"]').value) || 1000;
+      const capaciteMaxInput = document.getElementById('formConfigRayon').querySelector('input[name="capaciteMax"]').value;
+      const capaciteMax = parseInt(capaciteMaxInput) || 1000;
       const typeRayon = document.getElementById('formConfigRayon').querySelector('select[name="typeRayon"]').value;
       const status = parseInt(document.getElementById('formConfigRayon').querySelector('select[name="status"]').value) || 1;
       const couleurRayon = document.getElementById('formConfigRayon').querySelector('input[name="couleurRayon"]').value;
       const iconeRayon = document.getElementById('formConfigRayon').querySelector('select[name="iconeRayon"]').value;
       const description = document.getElementById('formConfigRayon').querySelector('textarea[name="description"]').value.trim();
+      
+      // DEBUG: Log les valeurs
+      console.log('🔍 DEBUG saveRayon:');
+      console.log(`   capaciteMaxInput (brut): "${capaciteMaxInput}" (type: ${typeof capaciteMaxInput})`);
+      console.log(`   capaciteMax (parsé): ${capaciteMax}`);
+      console.log(`   codeRayon: ${codeRayon}`);
+      console.log(`   nomRayon: ${nomRayon}`);
 
       // Validation
       if (!codeRayon || !nomRayon) {
@@ -1486,6 +1494,9 @@
         description,
         typesProduitsAutorises
       };
+
+      console.log('📤 rayonData à envoyer:');
+      console.log('   ', JSON.stringify(rayonData, null, 2));
 
       try {
         const isNew = currentEditingRayonId === null;
