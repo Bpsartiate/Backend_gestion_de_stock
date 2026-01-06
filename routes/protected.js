@@ -1455,15 +1455,38 @@ router.get('/magasins/:magasinId/types-produits', authMiddleware, async (req, re
       // 1. Obtenir tous les produits de ce type dans ce magasin
       const produits = await Produit.find({ 
         magasinId, 
-        typeProduitId: type._id 
-      }).select('_id quantiteActuelle prixUnitaire seuilAlerte');
+        typeProduitId: type._id,
+        estSupprime: false
+      })
+        .select('_id designation reference quantiteActuelle prixUnitaire seuilAlerte photoUrl')
+        .populate({
+          path: 'rayonId',
+          select: 'nomRayon codeRayon'
+        })
+        .lean();
       
-      // 2. Calculer les stats
+      // 2. Récupérer les alertes pour chaque produit
+      const produitsAvecAlertes = await Promise.all(produits.map(async (produit) => {
+        const alertes = await AlerteStock.find({
+          produitId: produit._id,
+          statut: 'ACTIVE'
+        })
+          .select('type severite message')
+          .lean();
+        
+        return {
+          ...produit,
+          alertes: alertes || [],
+          nombreAlertes: alertes?.length || 0
+        };
+      }));
+      
+      // 3. Calculer les stats
       const enStock = produits.reduce((sum, p) => sum + (p.quantiteActuelle || 0), 0);
       const valeurTotale = produits.reduce((sum, p) => sum + ((p.quantiteActuelle || 0) * (p.prixUnitaire || 0)), 0);
       const nombreArticles = produits.length;
       
-      // 3. Compter les alertes (produits avec quantité <= seuilAlerte)
+      // 4. Compter les alertes (produits avec quantité <= seuilAlerte)
       const nombreAlertes = produits.filter(p => {
         const seuil = p.seuilAlerte || 10;
         return (p.quantiteActuelle || 0) <= seuil;
@@ -1471,6 +1494,8 @@ router.get('/magasins/:magasinId/types-produits', authMiddleware, async (req, re
       
       return {
         ...type,
+        // PRODUITS DU TYPE
+        produits: produitsAvecAlertes,
         // STATS DU TYPE DE PRODUIT
         stats: {
           enStock: enStock.toFixed(2),      // Quantité totale en stock
@@ -1744,7 +1769,7 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
     })
       .populate({
         path: 'typeProduitId',
-        select: 'nomType unitePrincipale code icone seuilAlerte'
+        select: 'nomType unitePrincipale code icone seuilAlerte capaciteMax'
       })
       .populate({
         path: 'rayonId',

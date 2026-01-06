@@ -196,6 +196,8 @@ function setupReceptionListeners() {
   // Recalculer le total quand quantité ou prix change
   if (quantiteInput) {
     quantiteInput.addEventListener('input', updateRecapitulatif);
+    // ⚡ NOUVELLE: Vérifier capacité type en temps réel
+    quantiteInput.addEventListener('input', verifierCapaciteTypeReception);
   }
 
   if (prixInput) {
@@ -310,6 +312,9 @@ function onProduitSelected() {
 
   // Mettre à jour récapitulatif
   updateRecapitulatif();
+  
+  // ⚡ NOUVELLE: Vérifier capacité type immédiatement
+  verifierCapaciteTypeReception();
 }
 
 // ================================
@@ -463,6 +468,115 @@ function verificarRayonPleinReception(rayonId) {
 }
 
 // ================================
+// ⚡ VÉRIFIER CAPACITÉ TYPE EN TEMPS RÉEL
+// ================================
+
+function verifierCapaciteTypeReception() {
+  const produitSelect = document.getElementById('produitReception');
+  const quantiteInput = document.getElementById('quantiteReception');
+  const alerte = document.getElementById('alerteCapaciteTypeReception');
+  const messageSpan = document.getElementById('messageCapaciteTypeReception');
+  
+  if (!alerte || !messageSpan) {
+    console.warn('⚠️ Éléments alerte capacité type non trouvés');
+    return;
+  }
+  
+  const produitId = produitSelect?.value;
+  const quantite = parseFloat(quantiteInput?.value) || 0;
+  
+  // Si pas de produit sélectionné ou quantité 0, cacher l'alerte
+  if (!produitId || quantite <= 0) {
+    alerte.style.display = 'none';
+    return;
+  }
+  
+  // Trouver le produit sélectionné
+  const produit = PRODUITS_RECEPTION.find(p => p._id === produitId);
+  if (!produit) {
+    alerte.style.display = 'none';
+    return;
+  }
+  
+  // 🔍 DEBUG: Afficher TOUS les champs du produit
+  console.log('🔍 PRODUIT COMPLET:', produit);
+  console.log('🔍 Champs disponibles:', Object.keys(produit));
+  
+  // 🔍 DEBUG: Afficher les valeurs spécifiques
+  console.log('🔍 VALUES:', {
+    capaciteMax: produit.capaciteMax,
+    capacite: produit.capacite,
+    capaciteType: produit.capaciteType,
+    quantiteActuelle: produit.quantiteActuelle,
+    quantite: produit.quantite,
+    quantiteDisponible: produit.quantiteDisponible,
+    uniteMesure: produit.uniteMesure,
+    typeUnite: produit.typeUnite,
+    designation: produit.designation,
+    typeProduitId: produit.typeProduitId,
+    '_id': produit._id
+  });
+  
+  // ⚡ Récupérer la capacité du TYPE (populé depuis le backend)
+  let capaciteTypeMax = 0;
+  
+  // Si typeProduitId est un objet (bien populé par le backend)
+  if (typeof produit.typeProduitId === 'object' && produit.typeProduitId?.capaciteMax) {
+    capaciteTypeMax = produit.typeProduitId.capaciteMax;
+    console.log(`✅ CapaciteMax obtenue du TypeProduit: ${capaciteTypeMax} ${produit.typeProduitId.unitePrincipale}`);
+  } else if (produit.capaciteMax) {
+    // Fallback si c'est directement dans le produit
+    capaciteTypeMax = produit.capaciteMax;
+    console.log(`✅ CapaciteMax obtenue du produit directement: ${capaciteTypeMax}`);
+  } else {
+    console.warn(`⚠️ AUCUNE capaciteMax trouvée pour ${produit.designation}`);
+  }
+  
+  const quantiteActuelleProduit = produit.quantiteActuelle || 0;
+  const quantiteApreAjout = quantiteActuelleProduit + quantite;
+  
+  console.log(`🔍 Vérification capacité type ${produit.designation}:`, {
+    capaciteTypeMax,
+    quantiteActuelle: quantiteActuelleProduit,
+    quantiteAjout: quantite,
+    quantiteApreAjout,
+    unitePrincipale: produit.typeProduitId?.unitePrincipale
+  });
+  
+  // Vérifier si on dépasse la capacité
+  if (quantiteApreAjout > capaciteTypeMax) {
+    alerte.style.display = 'block';
+    alerte.classList.remove('alert-warning');
+    alerte.classList.add('alert-danger');
+    
+    const depassement = (quantiteApreAjout - capaciteTypeMax).toFixed(2);
+    messageSpan.innerHTML = `
+      <strong>❌ DÉPASSEMENT!</strong> 
+      Capacité max: <strong>${capaciteTypeMax}</strong> ${produit.uniteMesure || 'unités'},
+      Actuel: <strong>${quantiteActuelleProduit}</strong>,
+      À ajouter: <strong>${quantite}</strong>,
+      Total: <strong>${quantiteApreAjout}</strong>
+      → Dépassement de <strong>${depassement}</strong> ${produit.uniteMesure || 'unités'} ⛔
+    `;
+    console.warn(`❌ CAPACITÉ DÉPASSÉE - Type: ${produit.designation}`);
+  } else if (quantiteApreAjout > capaciteTypeMax * 0.8) {
+    // Alerte jaune si au-delà de 80%
+    alerte.style.display = 'block';
+    alerte.classList.remove('alert-danger');
+    alerte.classList.add('alert-warning');
+    
+    const pourcentage = Math.round((quantiteApreAjout / capaciteTypeMax) * 100);
+    messageSpan.innerHTML = `
+      <strong>⚠️ ATTENTION:</strong> 
+      Vous atteindrez <strong>${pourcentage}%</strong> de la capacité max 
+      (${quantiteApreAjout}/${capaciteTypeMax} ${produit.uniteMesure || 'unités'})
+    `;
+  } else {
+    alerte.style.display = 'none';
+  }
+}
+
+// ================================
 // 📤 SOUMETTRE LA RÉCEPTION
 // ================================
 
@@ -502,6 +616,38 @@ async function submitReception(e) {
       });
       showToast('❌ Veuillez remplir tous les champs requis (quantité, rayon, prix)', 'danger');
       return;
+    }
+
+    // ⚡ VALIDATION: Vérifier capacité type avant soumission
+    const produit = PRODUITS_RECEPTION.find(p => p._id === produitId);
+    if (produit) {
+      // Récupérer capacité du type
+      let capaciteTypeMax = 0;
+      if (typeof produit.typeProduitId === 'object' && produit.typeProduitId?.capaciteMax) {
+        capaciteTypeMax = produit.typeProduitId.capaciteMax;
+      } else if (produit.capaciteMax) {
+        capaciteTypeMax = produit.capaciteMax;
+      }
+      
+      // Si capacité max est définie, vérifier qu'on ne dépasse pas
+      if (capaciteTypeMax > 0) {
+        const quantiteActuelleProduit = produit.quantiteActuelle || 0;
+        const quantiteApreAjout = quantiteActuelleProduit + quantite;
+        
+        if (quantiteApreAjout > capaciteTypeMax) {
+          const depassement = (quantiteApreAjout - capaciteTypeMax).toFixed(2);
+          const uniteMesure = produit.typeProduitId?.unitePrincipale || produit.typeUnite || 'unités';
+          console.error(`❌ CAPACITÉ TYPE DÉPASSÉE - ${produit.designation}`, {
+            capaciteMax: capaciteTypeMax,
+            quantiteActuelle: quantiteActuelleProduit,
+            quantiteAjout: quantite,
+            quantiteApreAjout,
+            depassement
+          });
+          showToast(`❌ IMPOSSIBLE! Capacité max du type "${produit.designation}" (${capaciteTypeMax} ${uniteMesure}) serait dépassée de ${depassement} ${uniteMesure}`, 'danger');
+          return;
+        }
+      }
     }
 
     // Collecter les champs dynamiques

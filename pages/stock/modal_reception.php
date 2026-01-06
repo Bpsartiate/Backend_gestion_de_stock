@@ -76,6 +76,17 @@
                 </div>
               </div>
 
+              <!-- ⚡ ALERTE CAPACITÉ TYPE EN TEMPS RÉEL -->
+              <div id="alerteCapaciteTypeReception" class="alert alert-danger mb-4 py-3 px-4" style="display: none;">
+                <div class="d-flex align-items-start gap-2">
+                  <i class="fas fa-exclamation-circle fa-lg" style="margin-top: 2px; flex-shrink: 0;"></i>
+                  <div>
+                    <strong>⚠️ Alerte Capacité Type:</strong><br>
+                    <span id="messageCapaciteTypeReception"></span>
+                  </div>
+                </div>
+              </div>
+
               <!-- 4. CHAMPS DYNAMIQUES (selon type produit sélectionné) -->
               <div id="champsDynamiquesReception" class="mb-4 p-3 border rounded-3 bg-light">
                 <div class="text-center text-muted py-4">

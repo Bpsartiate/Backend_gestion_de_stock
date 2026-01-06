@@ -1,0 +1,284 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Gestion de Stock",
+    "description": "API pour gérer le stock en temps réel - Optimisée pour mobile",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Support API",
+      "url": "https://backend-gestion-de-stock.onrender.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://backend-gestion-de-stock.onrender.com/api/protected",
+      "description": "Production API"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Produit": {
+        "type": "object",
+        "required": ["_id", "designation", "reference"],
+        "properties": {
+          "_id": { "type": "string", "example": "6567abc123" },
+          "designation": { "type": "string", "example": "Poulet" },
+          "reference": { "type": "string", "example": "M23324" },
+          "quantiteActuelle": { "type": "number", "example": 50 },
+          "prixUnitaire": { "type": "number", "example": 15000 },
+          "seuilAlerte": { "type": "number", "example": 20 },
+          "etat": { "type": "string", "enum": ["Neuf", "Bon état", "Usagé", "Endommagé"] },
+          "typeProduitId": { "$ref": "#/components/schemas/TypeProduit" },
+          "rayonId": { "$ref": "#/components/schemas/Rayon" }
+        }
+      },
+      "TypeProduit": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "nomType": { "type": "string", "example": "Viande" },
+          "code": { "type": "string", "example": "V123" },
+          "unitePrincipale": { "type": "string", "enum": ["kg", "pièces", "litres", "mètres", "grammes", "ml", "boîtes"] },
+          "capaciteMax": { "type": "number", "example": 100 },
+          "seuilAlerte": { "type": "number", "example": 10 },
+          "icone": { "type": "string", "example": "🍖" },
+          "produits": { "type": "array", "items": { "$ref": "#/components/schemas/Produit" } },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "enStock": { "type": "string", "example": "150.50" },
+              "articles": { "type": "integer", "example": 3 },
+              "alertes": { "type": "integer", "example": 1 },
+              "valeur": { "type": "string", "example": "2500000.00" }
+            }
+          }
+        }
+      },
+      "Rayon": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "nomRayon": { "type": "string", "example": "Rayon Froid" },
+          "capaciteMax": { "type": "number", "example": 1000 },
+          "occupation": { "type": "number", "example": 150 },
+          "articles": { "type": "integer", "example": 3 },
+          "capaciteOccupee": { "type": "string", "example": "150kg" },
+          "alertes": { "type": "integer", "example": 1 },
+          "etat": { "type": "string", "enum": ["Normal", "Presque plein", "Plein"] }
+        }
+      },
+      "Reception": {
+        "type": "object",
+        "required": ["produitId", "magasinId", "rayonId", "quantite", "prixAchat", "photoFile"],
+        "properties": {
+          "produitId": { "type": "string", "format": "ObjectId" },
+          "magasinId": { "type": "string", "format": "ObjectId" },
+          "rayonId": { "type": "string", "format": "ObjectId" },
+          "quantite": { "type": "number", "minimum": 0.01 },
+          "prixAchat": { "type": "number", "minimum": 0 },
+          "photoFile": { "type": "string", "format": "binary", "description": "Image file" },
+          "fournisseur": { "type": "string" },
+          "dateReception": { "type": "string", "format": "date-time" },
+          "datePeremption": { "type": "string", "format": "date-time" },
+          "lotNumber": { "type": "string" }
+        }
+      },
+      "Mouvement": {
+        "type": "object",
+        "required": ["produitId", "rayonId", "typeMouvement", "quantite"],
+        "properties": {
+          "produitId": { "type": "string", "format": "ObjectId" },
+          "rayonId": { "type": "string", "format": "ObjectId" },
+          "typeMouvement": { "type": "string", "enum": ["entree", "sortie"] },
+          "quantite": { "type": "number", "minimum": 0.01 },
+          "raison": { "type": "string", "example": "Vente" },
+          "dateOperation": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": "string" },
+          "status": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "paths": {
+    "/magasins/{magasinId}/produits": {
+      "get": {
+        "summary": "Lister tous les produits",
+        "tags": ["Produits"],
+        "parameters": [
+          {
+            "name": "magasinId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "ObjectId" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des produits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Produit" }
+                }
+              }
+            }
+          },
+          "401": { "description": "Non authentifié" },
+          "403": { "description": "Accès refusé" }
+        }
+      }
+    },
+    "/receptions": {
+      "post": {
+        "summary": "Enregistrer une réception de stock",
+        "tags": ["Réceptions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/Reception" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Réception enregistrée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "reception": { "$ref": "#/components/schemas/Reception" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erreur de validation",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": { "description": "Non authentifié" }
+        }
+      }
+    },
+    "/magasins/{magasinId}/mouvements": {
+      "post": {
+        "summary": "Enregistrer un mouvement de stock",
+        "tags": ["Mouvements"],
+        "parameters": [
+          {
+            "name": "magasinId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "ObjectId" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Mouvement" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mouvement enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "mouvement": { "$ref": "#/components/schemas/Mouvement" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Erreur de validation" },
+          "401": { "description": "Non authentifié" }
+        }
+      }
+    },
+    "/magasins/{magasinId}/types-produits": {
+      "get": {
+        "summary": "Lister les types de produits avec stats",
+        "tags": ["Types Produits"],
+        "parameters": [
+          {
+            "name": "magasinId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "ObjectId" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste complète avec stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TypeProduit" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/magasins/{magasinId}/rayons": {
+      "get": {
+        "summary": "Lister les rayons avec occupation",
+        "tags": ["Rayons"],
+        "parameters": [
+          {
+            "name": "magasinId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "ObjectId" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des rayons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Rayon" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

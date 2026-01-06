@@ -1,0 +1,278 @@
+{
+  "info": {
+    "_postman_id": "stock-api-mobile",
+    "name": "📱 Gestion de Stock - API Mobile",
+    "description": "Collection complète pour tester l'API de gestion de stock sur mobile",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔐 AUTHENTIFICATION",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('token', jsonData.token);",
+                  "    pm.environment.set('magasinId', jsonData.user.magasinId);",
+                  "    console.log('✅ Token sauvegardé');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"utilisateur@example.com\",\n  \"password\": \"mot_de_passe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 PRODUITS",
+      "item": [
+        {
+          "name": "Lister tous les produits",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/magasins/{{magasinId}}/produits",
+              "host": ["{{baseUrl}}"],
+              "path": ["magasins", "{{magasinId}}", "produits"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📥 RÉCEPTIONS",
+      "item": [
+        {
+          "name": "Ajouter une réception",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    console.log('✅ Réception enregistrée');",
+                  "    console.log(pm.response.json());",
+                  "} else {",
+                  "    console.log('❌ Erreur:', pm.response.json());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "produitId",
+                  "value": "REMPLACER_PAR_PRODUIT_ID",
+                  "type": "text"
+                },
+                {
+                  "key": "magasinId",
+                  "value": "{{magasinId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "rayonId",
+                  "value": "REMPLACER_PAR_RAYON_ID",
+                  "type": "text"
+                },
+                {
+                  "key": "quantite",
+                  "value": "50",
+                  "type": "text"
+                },
+                {
+                  "key": "prixAchat",
+                  "value": "15000",
+                  "type": "text"
+                },
+                {
+                  "key": "fournisseur",
+                  "value": "Fournisseur ABC",
+                  "type": "text"
+                },
+                {
+                  "key": "photoFile",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/receptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["receptions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📤 MOUVEMENTS",
+      "item": [
+        {
+          "name": "Enregistrer une sortie",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"produitId\": \"REMPLACER_PAR_PRODUIT_ID\",\n  \"rayonId\": \"REMPLACER_PAR_RAYON_ID\",\n  \"typeMouvement\": \"sortie\",\n  \"quantite\": 10,\n  \"raison\": \"Vente\",\n  \"dateOperation\": \"2025-01-06T10:30:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/magasins/{{magasinId}}/mouvements",
+              "host": ["{{baseUrl}}"],
+              "path": ["magasins", "{{magasinId}}", "mouvements"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 TYPES PRODUITS",
+      "item": [
+        {
+          "name": "Lister types avec stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/magasins/{{magasinId}}/types-produits",
+              "host": ["{{baseUrl}}"],
+              "path": ["magasins", "{{magasinId}}", "types-produits"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏪 RAYONS",
+      "item": [
+        {
+          "name": "Lister rayons avec occupation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/magasins/{{magasinId}}/rayons",
+              "host": ["{{baseUrl}}"],
+              "path": ["magasins", "{{magasinId}}", "rayons"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Configuration globale"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://backend-gestion-de-stock.onrender.com/api/protected",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "magasinId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
