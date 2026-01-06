@@ -176,8 +176,9 @@
             </div>
             <div class="modal-footer bg-light">
               <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-              <button type="submit" class="btn btn-success px-4">
-                <i class="fas fa-check me-2"></i>Enregistrer Réception
+              <button type="submit" id="btnSubmitReception" class="btn btn-success px-4">
+                <span id="iconSubmit"><i class="fas fa-check me-2"></i></span>
+                <span id="textSubmit">Enregistrer Réception</span>
               </button>
             </div>
           </form>

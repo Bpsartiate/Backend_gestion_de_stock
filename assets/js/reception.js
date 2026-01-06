@@ -559,6 +559,15 @@ function verifierCapaciteTypeReception() {
       → Dépassement de <strong>${depassement}</strong> ${produit.uniteMesure || 'unités'} ⛔
     `;
     console.warn(`❌ CAPACITÉ DÉPASSÉE - Type: ${produit.designation}`);
+    
+    // ⚡ DÉSACTIVER LE BOUTON SUBMIT
+    const btnSubmit = document.getElementById('btnSubmitReception');
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.style.opacity = '0.5';
+      btnSubmit.style.cursor = 'not-allowed';
+      btnSubmit.title = '❌ Capacité dépassée - impossible d\'enregistrer';
+    }
   } else if (quantiteApreAjout > capaciteTypeMax * 0.8) {
     // Alerte jaune si au-delà de 80%
     alerte.style.display = 'block';
@@ -571,8 +580,26 @@ function verifierCapaciteTypeReception() {
       Vous atteindrez <strong>${pourcentage}%</strong> de la capacité max 
       (${quantiteApreAjout}/${capaciteTypeMax} ${produit.uniteMesure || 'unités'})
     `;
+    
+    // ✅ RÉACTIVER LE BOUTON
+    const btnSubmit = document.getElementById('btnSubmitReception');
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.style.opacity = '1';
+      btnSubmit.style.cursor = 'pointer';
+      btnSubmit.title = '';
+    }
   } else {
     alerte.style.display = 'none';
+    
+    // ✅ RÉACTIVER LE BOUTON
+    const btnSubmit = document.getElementById('btnSubmitReception');
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.style.opacity = '1';
+      btnSubmit.style.cursor = 'pointer';
+      btnSubmit.title = '';
+    }
   }
 }
 
@@ -590,6 +617,15 @@ async function submitReception(e) {
       form.classList.add('was-validated');
       return;
     }
+
+    // 📱 AFFICHER LE LOADING
+    const btnSubmit = document.getElementById('btnSubmitReception');
+    const iconSubmit = document.getElementById('iconSubmit');
+    const textSubmit = document.getElementById('textSubmit');
+    
+    btnSubmit.disabled = true;
+    iconSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>';
+    textSubmit.textContent = 'Enregistrement...';
 
     // Collecter les données
     const produitId = document.getElementById('produitReception').value;
@@ -615,6 +651,11 @@ async function submitReception(e) {
         MAGASIN_ID: MAGASIN_ID
       });
       showToast('❌ Veuillez remplir tous les champs requis (quantité, rayon, prix)', 'danger');
+      
+      // 📱 RESTAURER LE BOUTON
+      btnSubmit.disabled = false;
+      iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
+      textSubmit.textContent = 'Enregistrer Réception';
       return;
     }
 
@@ -645,6 +686,14 @@ async function submitReception(e) {
             depassement
           });
           showToast(`❌ IMPOSSIBLE! Capacité max du type "${produit.designation}" (${capaciteTypeMax} ${uniteMesure}) serait dépassée de ${depassement} ${uniteMesure}`, 'danger');
+          
+          // 📱 RESTAURER LE BOUTON
+          const btnSubmit = document.getElementById('btnSubmitReception');
+          const iconSubmit = document.getElementById('iconSubmit');
+          const textSubmit = document.getElementById('textSubmit');
+          btnSubmit.disabled = false;
+          iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
+          textSubmit.textContent = 'Enregistrer Réception';
           return;
         }
       }
@@ -765,6 +814,14 @@ async function submitReception(e) {
     form.reset();
     form.classList.remove('was-validated');
     document.getElementById('dateReception').valueAsDate = new Date();
+    
+    // 📱 RESTAURER LE BOUTON
+    const btnSubmit2 = document.getElementById('btnSubmitReception');
+    const iconSubmit2 = document.getElementById('iconSubmit');
+    const textSubmit2 = document.getElementById('textSubmit');
+    btnSubmit2.disabled = false;
+    iconSubmit2.innerHTML = '<i class="fas fa-check me-2"></i>';
+    textSubmit2.textContent = 'Enregistrer Réception';
 
     // Recharger les produits et la table
     CACHE_PRODUITS = null;
@@ -777,6 +834,14 @@ async function submitReception(e) {
   } catch (err) {
     console.error('❌ Erreur enregistrement réception:', err);
     showToast('❌ Erreur: ' + err.message, 'danger');
+    
+    // 📱 RESTAURER LE BOUTON EN CAS D'ERREUR
+    const btnSubmit3 = document.getElementById('btnSubmitReception');
+    const iconSubmit3 = document.getElementById('iconSubmit');
+    const textSubmit3 = document.getElementById('textSubmit');
+    btnSubmit3.disabled = false;
+    iconSubmit3.innerHTML = '<i class="fas fa-check me-2"></i>';
+    textSubmit3.textContent = 'Enregistrer Réception';
   }
 }
 

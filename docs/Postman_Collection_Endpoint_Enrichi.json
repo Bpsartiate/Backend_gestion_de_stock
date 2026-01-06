@@ -1,0 +1,229 @@
+{
+  "info": {
+    "_postman_id": "produit-enrichi-collection",
+    "name": "Endpoint Produit Enrichi - Pattern INCLUDE",
+    "description": "Collection complète pour tester le nouvel endpoint GET /produits/:id avec includes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1️⃣ GET Basique - Données simples",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/protected/produits/{{produitId}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "protected", "produits", "{{produitId}}"]
+        },
+        "description": "✅ Requête légère pour liste/mobile\n\nRetourne:\n- Infos basiques (nom, ref, prix, quantité)\n- Stock stats\n- Status label/color\n\nTaille: ~1-2 KB"
+      },
+      "response": []
+    },
+    {
+      "name": "2️⃣ GET + Réceptions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/protected/produits/{{produitId}}?include=receptions",
+          "host": ["{{base_url}}"],
+          "path": ["api", "protected", "produits", "{{produitId}}"],
+          "query": [
+            {
+              "key": "include",
+              "value": "receptions"
+            }
+          ]
+        },
+        "description": "Ajoute: Historique des 20 dernières réceptions\n- dateReception\n- quantite\n- fournisseur\n- prixAchat, prixTotal\n- photoUrl\n- dateFabrication, datePeremption, lotNumber\n- utilisateurId (qui a enregistré)\n- statut\n\nTaille: +5-10 KB"
+      },
+      "response": []
+    },
+    {
+      "name": "3️⃣ GET + Mouvements",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/protected/produits/{{produitId}}?include=mouvements",
+          "host": ["{{base_url}}"],
+          "path": ["api", "protected", "produits", "{{produitId}}"],
+          "query": [
+            {
+              "key": "include",
+              "value": "mouvements"
+            }
+          ]
+        },
+        "description": "Ajoute: Historique des 50 derniers mouvements de stock\n- date\n- type (entree/sortie)\n- quantite\n- details\n- rayon\n\nTaille: +2-5 KB"
+      },
+      "response": []
+    },
+    {
+      "name": "4️⃣ GET + Alertes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/protected/produits/{{produitId}}?include=alertes",
+          "host": ["{{base_url}}"],
+          "path": ["api", "protected", "produits", "{{produitId}}"],
+          "query": [
+            {
+              "key": "include",
+              "value": "alertes"
+            }
+          ]
+        },
+        "description": "Ajoute: Alertes en temps réel\n- stockBas (boolean)\n- rupture (boolean)\n- peremption (boolean)\n- niveau (ok/warning/critique)\n\nTaille: +0.5 KB"
+      },
+      "response": []
+    },
+    {
+      "name": "5️⃣ GET + Enregistrement",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/protected/produits/{{produitId}}?include=enregistrement",
+          "host": ["{{base_url}}"],
+          "path": ["api", "protected", "produits", "{{produitId}}"],
+          "query": [
+            {
+              "key": "include",
+              "value": "enregistrement"
+            }
+          ]
+        },
+        "description": "Ajoute: Informations d'audit\n- createdAt\n- updatedAt\n- createdBy (objet utilisateur)\n- version\n\nTaille: +1 KB"
+      },
+      "response": []
+    },
+    {
+      "name": "6️⃣ GET COMPLET - Tous les includes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/protected/produits/{{produitId}}?include=mouvements,receptions,alertes,ventes,enregistrement",
+          "host": ["{{base_url}}"],
+          "path": ["api", "protected", "produits", "{{produitId}}"],
+          "query": [
+            {
+              "key": "include",
+              "value": "mouvements,receptions,alertes,ventes,enregistrement"
+            }
+          ]
+        },
+        "description": "Retourne TOUT:\n- Données basiques\n- Mouvements (50 derniers)\n- Réceptions (20 dernières)\n- Alertes (temps réel)\n- Ventes (futur)\n- Enregistrement (audit)\n\nTaille: ~20-50 KB\n\n⚠️ À utiliser uniquement pour écran dashboard complet"
+      },
+      "response": []
+    },
+    {
+      "name": "7️⃣ GET Mobile - Écran Détail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/protected/produits/{{produitId}}?include=receptions,alertes,enregistrement",
+          "host": ["{{base_url}}"],
+          "path": ["api", "protected", "produits", "{{produitId}}"],
+          "query": [
+            {
+              "key": "include",
+              "value": "receptions,alertes,enregistrement"
+            }
+          ]
+        },
+        "description": "✅ RECOMMANDÉ pour écran détail mobile\n\nRetourne:\n- Données basiques\n- Réceptions (historique entrées)\n- Alertes (état stock)\n- Enregistrement (qui/quand créé)\n\nSans mouvements complets (trop lourd)\nTaille: ~10-15 KB"
+      },
+      "response": []
+    },
+    {
+      "name": "8️⃣ GET Web - Tableau de bord",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/protected/produits/{{produitId}}?include=mouvements,receptions,alertes,enregistrement",
+          "host": ["{{base_url}}"],
+          "path": ["api", "protected", "produits", "{{produitId}}"],
+          "query": [
+            {
+              "key": "include",
+              "value": "mouvements,receptions,alertes,enregistrement"
+            }
+          ]
+        },
+        "description": "✅ RECOMMANDÉ pour tableau de bord web\n\nRetourne:\n- Données basiques\n- Mouvements (50 derniers) - Graphique historique\n- Réceptions (20 dernières) - Tableau entrées\n- Alertes (état temps réel)\n- Enregistrement (audit trail)\n\nSans ventes (futur)\nTaille: ~15-20 KB"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://votre-api.com",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "votre_token_jwt",
+      "type": "string"
+    },
+    {
+      "key": "produitId",
+      "value": "507f1f77bcf86cd799439011",
+      "type": "string"
+    }
+  ]
+}

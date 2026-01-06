@@ -2148,31 +2148,150 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
 });
 
 // GET /api/protected/produits/:produitId - Récupérer un produit spécifique
+// ====================================================================
+// 📱 ENDPOINT MOBILE COMPLET - GET /produits/:produitId?include=...
+// Pattern "INCLUDE" pour requêtes flexibles et optimisées
+// ====================================================================
+// Usage:
+//   GET /api/protected/produits/:id                    → Données basiques
+//   GET /api/protected/produits/:id?include=mouvements → Avec mouvements
+//   GET /api/protected/produits/:id?include=mouvements,receptions,alertes,enregistrement
+// ====================================================================
 router.get('/produits/:produitId', authMiddleware, async (req, res) => {
   try {
     const { produitId } = req.params;
+    const { include = '' } = req.query; // "mouvements,receptions,alertes,ventes,enregistrement"
     const requester = req.user;
 
-    // 1. Récupérer le produit
-    const produit = await Produit.findById(produitId)
+    // Parse les includes demandés
+    const includes = include
+      .split(',')
+      .map(i => i.trim())
+      .filter(Boolean)
+      .map(i => i.toLowerCase());
+
+    // 1️⃣ RÉCUPÉRER LE PRODUIT - Base
+    let query = Produit.findById(produitId)
       .populate('magasinId', '_id nomMagasin')
-      .populate('typeProduitId', '_id nomType')
-      .populate('rayonId', '_id nomRayon');
+      .populate({
+        path: 'typeProduitId',
+        select: '_id nomType unitePrincipale capaciteMax'
+      })
+      .populate({
+        path: 'rayonId',
+        select: '_id nomRayon codeRayon typeRayon capaciteMax quantiteActuelle iconeRayon description'
+      });
+
+    const produit = await query;
 
     if (!produit) {
-      return res.status(404).json({ message: 'Produit non trouvé' });
+      return res.status(404).json({ success: false, error: 'Produit non trouvé' });
     }
 
-    // 2. Vérifier l'accès
+    // 2️⃣ VÉRIFIER L'ACCÈS
     const magasin = await Magasin.findById(produit.magasinId._id);
     if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
-      return res.status(403).json({ message: 'Accès refusé' });
+      return res.status(403).json({ success: false, error: 'Accès refusé' });
     }
 
-    return res.json(produit);
+    // 3️⃣ CONSTRUCTION DE LA RÉPONSE ENRICHIE
+    const response = produit.toObject();
+
+    // 📦 AJOUTER LES DONNÉES OPTIONNELLES SELON "INCLUDE"
+
+    // 🔴 ALERTES EN TEMPS RÉEL
+    if (includes.includes('alertes')) {
+      const alerteStock = produit.quantiteActuelle <= (produit.seuilAlerte || 10);
+      const alertePeremption = false; // À implémenter si vous avez datePeremption
+      const alerteRupture = produit.quantiteActuelle <= 0;
+
+      response.alertes = {
+        stockBas: alerteStock,
+        rupture: alerteRupture,
+        peremption: alertePeremption,
+        niveau: alerteRupture ? 'critique' : alerteStock ? 'warning' : 'ok'
+      };
+    }
+
+    // 📊 STATS DE STOCK CALCULÉES
+    response.stockStats = {
+      quantiteActuelle: produit.quantiteActuelle,
+      seuilAlerte: produit.seuilAlerte || 10,
+      valeurEnStock: (produit.quantiteActuelle || 0) * (produit.prixUnitaire || 0),
+      tauxOccupation: produit.typeProduitsId?.capaciteMax
+        ? ((produit.quantiteActuelle || 0) / produit.typeProduitsId.capaciteMax) * 100
+        : 0
+    };
+
+    // 📈 MOUVEMENTS DE STOCK
+    if (includes.includes('mouvements')) {
+      const mouvements = await StockMovement.find({ produitId: produitId })
+        .select('date type quantite details rayon')
+        .sort({ date: -1 })
+        .limit(50);
+
+      response.mouvements = mouvements;
+    }
+
+    // 📬 RÉCEPTIONS (Historique des entrées)
+    if (includes.includes('receptions')) {
+      const receptions = await Reception.find({ produitId: produitId })
+        .populate('utilisateurId', 'prenom nom email')
+        .populate('rayonId', 'nomRayon codeRayon')
+        .select(
+          'dateReception quantite fournisseur prixAchat prixTotal photoUrl ' +
+          'dateFabrication datePeremption lotNumber statut utilisateurId rayonId createdAt updatedAt'
+        )
+        .sort({ dateReception: -1 })
+        .limit(20);
+
+      response.receptions = receptions;
+    }
+
+    // 🛍️ VENTES (À implémenter quand module vente existera)
+    if (includes.includes('ventes')) {
+      // Placeholder pour futures ventes
+      response.ventes = [];
+    }
+
+    // 📋 AUDIT / ENREGISTREMENT
+    if (includes.includes('enregistrement')) {
+      // Récupérer l'utilisateur qui a créé le produit
+      let createdByUser = null;
+      if (produit.createdBy) {
+        createdByUser = await Utilisateur.findById(produit.createdBy)
+          .select('prenom nom email');
+      }
+
+      response.audit = {
+        createdAt: produit.createdAt,
+        updatedAt: produit.updatedAt,
+        createdBy: createdByUser,
+        version: produit.__v || 0
+      };
+    }
+
+    // 4️⃣ ENRICHISSEMENT SUPPLÉMENTAIRE - Toujours inclus
+    response.statusLabel = 
+      produit.quantiteActuelle <= 0 ? 'Rupture' :
+      produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'Stock faible' : 'En stock';
+
+    response.statusColor =
+      produit.quantiteActuelle <= 0 ? 'danger' :
+      produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'warning' : 'success';
+
+    return res.json({
+      success: true,
+      data: response,
+      included: includes
+    });
+
   } catch (err) {
     console.error('❌ GET /produits/:produitId - error:', err);
-    return res.status(500).json({ message: 'Erreur: ' + err.message });
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur: ' + err.message
+    });
   }
 });
 
