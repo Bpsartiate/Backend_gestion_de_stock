@@ -1,0 +1,745 @@
+{
+  "info": {
+    "name": "Stock Management Mobile API",
+    "description": "Collection complète des APIs pour l'application mobile de gestion de stock",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔐 AUTHENTIFICATION",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"gestionnaire@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/login",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📦 MAGASINS",
+      "item": [
+        {
+          "name": "Lister les magasins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "⚙️ CONFIGURATION MAGASIN",
+      "item": [
+        {
+          "name": "Charger rayons du magasin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/rayons",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "rayons"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Charger types de produits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/types-produits",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "types-produits"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Charger stock config",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/stock-config",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "stock-config"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📋 PRODUITS",
+      "item": [
+        {
+          "name": "Lister les produits du magasin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/produits",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "produits"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Voir détails d'un produit (avec includes)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/produits/{{PRODUIT_ID}}?include=mouvements,receptions,alertes,enregistrement",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "produits",
+                "{{PRODUIT_ID}}"
+              ],
+              "query": [
+                {
+                  "key": "include",
+                  "value": "mouvements,receptions,alertes,enregistrement"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ajouter un produit ✨",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"PROD001\",\n  \"designation\": \"Poulet frais\",\n  \"typeProduitId\": \"694fb31f6161930096064950\",\n  \"rayonId\": \"694fc2edff00de0189ebe6fb\",\n  \"prixUnitaire\": 2500,\n  \"quantiteEntree\": 50,\n  \"seuilAlerte\": 10,\n  \"etat\": \"Neuf\",\n  \"notes\": \"Nouveau produit\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/produits",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "produits"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Modifier un produit ✏️",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"designation\": \"Poulet frais 1kg\",\n  \"reference\": \"PROD001\",\n  \"prixUnitaire\": 2800,\n  \"seuilAlerte\": 15,\n  \"etat\": \"Neuf\",\n  \"notes\": \"Nouveau prix\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/produits/{{PRODUIT_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "produits",
+                "{{PRODUIT_ID}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload photo produit 📸",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "path/to/image.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/upload/produit-image",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "upload",
+                "produit-image"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Voir stocks d'un produit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/produits/{{PRODUIT_ID}}/stocks",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "produits",
+                "{{PRODUIT_ID}}",
+                "stocks"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📥 RÉCEPTIONS",
+      "item": [
+        {
+          "name": "Enregistrer une réception ⭐",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"magasinId\": \"{{MAGASIN_ID}}\",\n  \"produitId\": \"{{PRODUIT_ID}}\",\n  \"rayonId\": \"{{RAYON_ID}}\",\n  \"quantite\": 50,\n  \"fournisseur\": \"Fournisseur XYZ\",\n  \"dateReception\": \"2026-01-07\",\n  \"prixAchat\": 2000,\n  \"prixTotal\": 100000,\n  \"numeroDocument\": \"FAC-001\",\n  \"observations\": \"Livraison conforme\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/receptions",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "receptions"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "💰 VENTES/MOUVEMENTS",
+      "item": [
+        {
+          "name": "Enregistrer une vente (Sortie) 💵",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"SORTIE\",\n  \"quantite\": 5,\n  \"produitId\": \"{{PRODUIT_ID}}\",\n  \"rayonId\": \"{{RAYON_ID}}\",\n  \"observations\": \"Vente client #12345\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/stock-movements",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "stock-movements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lister mouvements du magasin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/stock-movements",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "stock-movements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Voir mouvements d'un produit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/produits/{{PRODUIT_ID}}/mouvements",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "produits",
+                "{{PRODUIT_ID}}",
+                "mouvements"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🚨 ALERTES",
+      "item": [
+        {
+          "name": "Lister alertes du magasin 🔴",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/alertes?statut=ACTIVE",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "alertes"
+              ],
+              "query": [
+                {
+                  "key": "statut",
+                  "value": "ACTIVE"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lister toutes les alertes (avec filtres)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/alertes?statut=ACTIVE&type=STOCK_BAS",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "alertes"
+              ],
+              "query": [
+                {
+                  "key": "statut",
+                  "value": "ACTIVE"
+                },
+                {
+                  "key": "type",
+                  "value": "STOCK_BAS"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Marquer alerte comme résolue ✅",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"RESOLUE\",\n  \"notes\": \"Stock complété le 07/01/2026\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/alertes/{{ALERTE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "alertes",
+                "{{ALERTE_ID}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 AUDIT & TRAÇABILITÉ",
+      "item": [
+        {
+          "name": "Voir audit logs du magasin 🔍",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/audit-logs",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "audit-logs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Voir audit logs avec filtres",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/audit-logs?action=CREATE_PRODUIT&dateDebut=2026-01-01&dateFin=2026-01-31&limit=50",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "magasins",
+                "{{MAGASIN_ID}}",
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "CREATE_PRODUIT"
+                },
+                {
+                  "key": "dateDebut",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "dateFin",
+                  "value": "2026-01-31"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Voir tous les audit logs (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/audit-logs?magasinId={{MAGASIN_ID}}&limit=50",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "magasinId",
+                  "value": "{{MAGASIN_ID}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historique complet d'une entité",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/audit-logs/PRODUIT/{{PRODUIT_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "audit-logs",
+                "PRODUIT",
+                "{{PRODUIT_ID}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "https://backend-gestion-de-stock.onrender.com",
+      "type": "string"
+    },
+    {
+      "key": "TOKEN",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "MAGASIN_ID",
+      "value": "693bf84f9955cef110cae98b",
+      "type": "string"
+    },
+    {
+      "key": "PRODUIT_ID",
+      "value": "695d705f366b025d9f34d1d7",
+      "type": "string"
+    },
+    {
+      "key": "RAYON_ID",
+      "value": "694fc2edff00de0189ebe6fb",
+      "type": "string"
+    },
+    {
+      "key": "ALERTE_ID",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

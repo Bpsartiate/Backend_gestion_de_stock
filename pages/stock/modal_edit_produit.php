@@ -97,14 +97,19 @@
 
               <!-- PHOTO -->
               <div class="mb-3">
-                <label class="form-label">Photo du Produit</label>
-                <div class="row align-items-center">
-                  <div class="col-md-3">
-                    <img id="editPhotoPreview" src="" alt="Photo" class="img-thumbnail" style="max-width: 100%; display:none;" />
-                  </div>
-                  <div class="col-md-9">
-                    <input type="file" class="form-control" id="editPhotoInput" accept="image/*" />
-                    <small class="text-muted">Max 5MB, formats: JPG, PNG</small>
+                <label class="form-label fw-bold">
+                  <i class="fas fa-image me-1"></i>Photo du Produit
+                </label>
+                <input type="file" class="form-control" id="editPhotoInput" accept="image/*" />
+                <small class="text-muted d-block mt-1">📸 Max 5MB, formats: JPG, PNG</small>
+              </div>
+
+              <!-- PRÉVISUALISATION PHOTO EN TEMPS RÉEL -->
+              <div class="mb-4">
+                <div id="editPhotoPreviewContainer" class="text-center">
+                  <div class="bg-light p-4 rounded-3 border-2 border-dashed">
+                    <i class="fas fa-image fa-3x text-muted mb-2 d-block"></i>
+                    <p class="text-muted small">La photo apparaîtra ici</p>
                   </div>
                 </div>
               </div>

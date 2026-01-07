@@ -116,11 +116,13 @@
                   <textarea id="editNotes" class="form-control" rows="3" placeholder="Remarques additionnelles..."></textarea>
                 </div>
 
-                <!-- Aperçu Photo -->
+                <!-- PRÉVISUALISATION PHOTO EN TEMPS RÉEL -->
                 <div class="col-12">
-                  <div class="card bg-light p-3 text-center">
-                    <img id="editPhotoPreview" src="" alt="Photo" style="max-height: 150px; display: none;" />
-                    <p id="noPhotoMsg" class="text-muted mb-0">Aucune photo</p>
+                  <div id="editPhotoPreviewContainer" class="text-center">
+                    <div class="bg-light p-4 rounded-3 border-2 border-dashed">
+                      <i class="fas fa-image fa-3x text-muted mb-2 d-block"></i>
+                      <p class="text-muted small">La photo apparaîtra ici</p>
+                    </div>
                   </div>
                 </div>
 

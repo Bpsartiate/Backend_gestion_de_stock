@@ -179,12 +179,20 @@ function remplirFormulaireProduit(produit) {
   document.getElementById('editEtat').value = produit.etat || 'Neuf';
   document.getElementById('editNotes').value = produit.notes || '';
 
-  // Photo
-  if (produit.photoUrl) {
-    document.getElementById('editPhotoPreview').src = produit.photoUrl;
-    document.getElementById('editPhotoPreview').style.display = 'block';
-  } else {
-    document.getElementById('editPhotoPreview').style.display = 'none';
+  // Photo - afficher la photo existante si elle existe
+  const container = document.getElementById('editPhotoPreviewContainer');
+  if (container && produit.photoUrl) {
+    container.innerHTML = `
+      <div class="position-relative">
+        <img src="${produit.photoUrl}" alt="Photo existante" class="img-fluid rounded-3" style="max-height: 250px; object-fit: contain;">
+        <div class="mt-2">
+          <small class="text-muted d-block">📸 Photo actuelle du produit</small>
+        </div>
+        <button type="button" class="btn btn-sm btn-warning mt-2" onclick="document.getElementById('editPhotoInput').value=''; onEditPhotoSelected({target: {files: []}})">
+          <i class="fas fa-sync"></i> Changer la photo
+        </button>
+      </div>
+    `;
   }
 
   // Écouter les changements
@@ -424,10 +432,10 @@ async function sauvegarderEditProduit() {
     const photoInput = document.getElementById('editPhotoInput');
     if (photoInput.files.length > 0) {
       const formData = new FormData();
-      formData.append('file', photoInput.files[0]);
+      formData.append('image', photoInput.files[0]);
 
       const uploadResponse = await fetch(
-        `${API_CONFIG.BASE_URL}/api/protected/upload-produit-photo`,
+        `${API_CONFIG.BASE_URL}/api/protected/upload/produit-image`,
         {
           method: 'POST',
           headers: {
@@ -481,11 +489,84 @@ async function sauvegarderEditProduit() {
   }
 }
 
+/**
+ * Gérer la sélection de photo pour la prévisualisation en temps réel
+ */
+function onEditPhotoSelected(e) {
+  const file = e.target.files[0];
+  
+  // Chercher le conteneur dans le modal si visible
+  let container = document.getElementById('editPhotoPreviewContainer');
+  
+  // Fallback: chercher dans le modal en cours d'affichage
+  if (!container) {
+    const modal = document.getElementById('modalEditProduit');
+    if (modal) {
+      container = modal.querySelector('#editPhotoPreviewContainer');
+    }
+  }
+  
+  // Si toujours pas trouvé, quitter
+  if (!container) {
+    console.warn('⚠️ editPhotoPreviewContainer non trouvé dans le DOM');
+    return;
+  }
+  
+  if (!file) {
+    container.innerHTML = `
+      <div class="bg-light p-4 rounded-3 border-2 border-dashed">
+        <i class="fas fa-image fa-3x text-muted mb-2 d-block"></i>
+        <p class="text-muted small">La photo apparaîtra ici</p>
+      </div>
+    `;
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    // Rechercher le conteneur à nouveau au moment du callback (au cas où le DOM aurait changé)
+    let currentContainer = document.getElementById('editPhotoPreviewContainer');
+    if (!currentContainer) {
+      const modal = document.getElementById('modalEditProduit');
+      if (modal) {
+        currentContainer = modal.querySelector('#editPhotoPreviewContainer');
+      }
+    }
+    
+    if (!currentContainer) {
+      console.warn('⚠️ editPhotoPreviewContainer non trouvé au moment de l\'affichage');
+      return;
+    }
+    
+    const imgSrc = event.target.result;
+    currentContainer.innerHTML = `
+      <div class="position-relative">
+        <img src="${imgSrc}" alt="Prévisualisation" class="img-fluid rounded-3" style="max-height: 250px; object-fit: contain;">
+        <div class="mt-2">
+          <small class="text-muted d-block">📁 ${file.name}</small>
+          <small class="text-muted d-block">📊 ${(file.size / 1024).toFixed(1)}KB</small>
+        </div>
+        <button type="button" class="btn btn-sm btn-danger mt-2" onclick="document.getElementById('editPhotoInput').value=''; onEditPhotoSelected({target: {files: []}})">
+          <i class="fas fa-trash"></i> Retirer photo
+        </button>
+      </div>
+    `;
+    console.log('📸 Photo sélectionnée:', file.name);
+  };
+  reader.readAsDataURL(file);
+}
+
 // Event Listener pour le bouton Sauvegarder
 document.addEventListener('DOMContentLoaded', () => {
   const btnSave = document.getElementById('btnSaveEditProduit');
   if (btnSave) {
     btnSave.addEventListener('click', sauvegarderEditProduit);
+  }
+
+  // Event Listener pour la sélection de photo
+  const editPhotoInput = document.getElementById('editPhotoInput');
+  if (editPhotoInput) {
+    editPhotoInput.addEventListener('change', onEditPhotoSelected);
   }
 });
 

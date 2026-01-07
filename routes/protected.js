@@ -2063,6 +2063,18 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
       }
     }
 
+    // ⚠️ VÉRIFIER LA CAPACITÉ DU RAYON
+    const protuitsRayon = await Produit.countDocuments({ rayonId });
+    if (rayon.capaciteMax && protuitsRayon >= rayon.capaciteMax) {
+      return res.status(400).json({ 
+        message: `❌ Rayon plein! Capacité max: ${rayon.capaciteMax} produits, actuels: ${protuitsRayon}`,
+        rayonNom: rayon.nomRayon,
+        capaciteMax: rayon.capaciteMax,
+        articles: protuitsRayon,
+        occupation: ((protuitsRayon / rayon.capaciteMax) * 100).toFixed(0) + '%'
+      });
+    }
+
     const produit = new Produit({
       magasinId,
       reference,
