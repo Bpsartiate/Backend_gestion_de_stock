@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/auth');
 const Vente = require('../models/vente');
 const StockMovement = require('../models/activity'); // Pour créer mouvements SORTIE
-const Produit = require('../models/business');
+const Produit = require('../models/produit');  // ✅ CORRIGÉ: utiliser le modèle Produit
 const Magasin = require('../models/magasin');
 const Utilisateur = require('../models/utilisateur');
 
