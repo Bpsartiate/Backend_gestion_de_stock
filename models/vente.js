@@ -27,6 +27,13 @@ const venteSchema = new mongoose.Schema({
         required: true
     },
     
+    // Guichet du magasin
+    guichetId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Guichet',
+        default: null
+    },
+    
     // Client
     client: {
         type: String,

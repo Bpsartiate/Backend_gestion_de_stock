@@ -12,7 +12,9 @@ class VenteManager {
         this.TOKEN = this.getToken();
         this.currentUser = null;
         this.currentMagasin = null;
+        this.currentGuichet = null;  // 🎯 Nouveau: guichet courant
         this.magasins = [];
+        this.guichets = [];  // 🎯 Nouveau: liste des guichets
         this.rayons = [];
         this.produits = [];
         this.panier = [];
@@ -315,15 +317,17 @@ class VenteManager {
     }
 
     /**
-     * Change de magasin et charge rayons/produits
+     * Change de magasin et charge rayons/produits + guichets
      */
     async onMagasinChange(magasinId) {
         if (!magasinId) return;
         
         this.currentMagasin = magasinId;
+        this.currentGuichet = null;  // Réinitialiser le guichet
         console.log(`🏪 Magasin sélectionné: ${magasinId}`);
         
         try {
+            await this.loadGuichets(magasinId);  // 🎯 Charger les guichets du magasin
             await this.loadProduits(magasinId);
         } catch (error) {
             console.error('❌ Erreur changement magasin:', error);
@@ -331,6 +335,33 @@ class VenteManager {
     }
 
 
+
+    /**
+     * 🎯 Charge les guichets d'un magasin
+     */
+    async loadGuichets(magasinId) {
+        try {
+            const response = await fetch(
+                `${this.API_BASE}/api/protected/magasins/${magasinId}/guichets`,
+                { headers: this.authHeaders() }
+            );
+            
+            if (response.ok) {
+                this.guichets = await response.json();
+                // Auto-sélectionner le premier guichet s'il y en a un
+                if (this.guichets.length > 0) {
+                    this.currentGuichet = this.guichets[0]._id;
+                    console.log(`🪟 ${this.guichets.length} guichet(s) chargé(s), sélectionné: ${this.guichets[0].nom_guichet}`);
+                }
+            } else {
+                console.warn(`⚠️ Erreur chargement guichets: ${response.status}`);
+                this.guichets = [];
+            }
+        } catch (error) {
+            console.error('❌ Erreur chargement guichets:', error);
+            this.guichets = [];
+        }
+    }
 
     /**
      * Charge les produits d'un magasin
@@ -869,6 +900,7 @@ class VenteManager {
                         headers: this.authHeaders(),
                         body: JSON.stringify({
                             magasinId,
+                            guichetId: this.currentGuichet || undefined,  // 🎯 Ajouter le guichetId
                             articles,
                             client: client || undefined,
                             modePaiement,
@@ -916,14 +948,30 @@ class VenteManager {
                 return;
             }
 
-            const response = await fetch(
+            console.log(`📊 Chargement historique pour magasin: ${magasinId}`);
+
+            // Essayer d'abord l'endpoint magasin-spécifique
+            let response = await fetch(
                 `${this.API_BASE}/api/protected/magasins/${magasinId}/ventes?limit=50`,
                 { headers: this.authHeaders() }
             );
 
+            // Si l'endpoint magasin n'existe pas, essayer l'endpoint général
+            if (!response.ok) {
+                console.log('⚠️ Endpoint magasin/ventes non disponible, essai endpoint général...');
+                response = await fetch(
+                    `${this.API_BASE}/api/protected/ventes?magasinId=${magasinId}&limit=50`,
+                    { headers: this.authHeaders() }
+                );
+            }
+
             if (response.ok) {
                 const data = await response.json();
-                this.displayVentesHistorique(data.ventes || []);
+                const ventes = data.ventes || data || [];
+                console.log(`✅ ${ventes.length} vente(s) chargée(s)`);
+                this.displayVentesHistorique(ventes);
+            } else {
+                console.error('❌ Erreur réponse:', response.status);
             }
         } catch (error) {
             console.error('❌ Erreur chargement historique:', error);
@@ -936,6 +984,8 @@ class VenteManager {
     displayVentesHistorique(ventes) {
         const tbody = document.getElementById('ventesTableBody');
         
+        console.log('📋 Affichage historique:', ventes);
+        
         if (!ventes || ventes.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Aucune vente enregistrée</td></tr>';
             return;
@@ -943,23 +993,49 @@ class VenteManager {
 
         tbody.innerHTML = ventes.map(vente => {
             const montantUSD = (vente.montantTotalUSD || 0).toFixed(2);
-            const montantFC = vente.montantTotalFC ? vente.montantTotalFC.toFixed(0) : '-';
             const heureLocal = new Date(vente.dateVente).toLocaleTimeString('fr-FR', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            const nbArticles = vente.articles?.length || 0;
-            const statutBadge = vente.statut === 'ANNULÉE' ? 'danger' : (vente.statut === 'REMBOURSÉE' ? 'warning' : 'success');
+            
+            // Récupérer le nom du magasin - les données sont maintenant populées directement
+            const magasinInfo = typeof vente.magasinId === 'object' ? vente.magasinId : this.magasins.find(m => m._id === vente.magasinId);
+            const magasinNom = magasinInfo?.nom_magasin || magasinInfo?.nom || 'Non défini';
+            
+            // Récupérer les noms des produits et quantité totale + photos
+            let produitsHtml = '-';
+            let quantiteTotale = 0;
+            
+            if (vente.articles && vente.articles.length > 0) {
+                const produitsPhotos = vente.articles.map(art => {
+                    quantiteTotale += art.quantite || 0;
+                    // Les données sont maintenant directement populées dans art.produitId
+                    const produit = typeof art.produitId === 'object' ? art.produitId : null;
+                    const photoUrl = produit?.photoUrl || 'assets/img/placeholder.svg';
+                    const nom = produit?.designation || art.nomProduit || 'Produit';
+                    const typeName = produit?.typeProduitId?.nomType ? ` (${produit.typeProduitId.nomType})` : '';
+                    return `<img src="${photoUrl}" alt="${nom}" style="width: 30px; height: 30px; border-radius: 4px; margin-right: 4px; object-fit: cover; vertical-align: middle;" title="${nom}${typeName}">`;
+                }).join('');
+                const produitsNoms = vente.articles.map(art => {
+                    const produit = typeof art.produitId === 'object' ? art.produitId : null;
+                    return produit?.designation || art.nomProduit || 'Produit';
+                }).join(', ');
+                produitsHtml = `<div style="display: flex; align-items: center;">${produitsPhotos}<span>${produitsNoms}</span></div>`;
+            }
+            
+            // Récupérer les infos de l'utilisateur - données populées
+            const utilisateurInfo = typeof vente.utilisateurId === 'object' ? vente.utilisateurId : null;
+            const utilisateurNom = utilisateurInfo ? `${utilisateurInfo.prenom} ${utilisateurInfo.nom}` : 'Système';
 
             return `
                 <tr>
                     <td class="small">${heureLocal}</td>
-                    <td class="small">${vente.client || '-'}</td>
-                    <td><span class="badge bg-info">${nbArticles}</span></td>
-                    <td class="small fw-semibold">${montantUSD} USD${vente.tauxFC ? '<br><small class="text-muted">' + montantFC + ' FC</small>' : ''}</td>
+                    <td class="small">${magasinNom}</td>
+                    <td class="small">${produitsHtml}</td>
+                    <td class="small fw-semibold text-center">${quantiteTotale}</td>
+                    <td class="small fw-semibold">${montantUSD}</td>
                     <td><span class="badge bg-secondary">${vente.modePaiement || 'CASH'}</span></td>
-                    <td class="small text-muted">${vente.utilisateurId?.nom || 'Système'}</td>
-                    <td><span class="badge bg-${statutBadge}">${vente.statut}</span></td>
+                    <td class="small text-muted">${utilisateurNom}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-info" onclick="venteManager.viewDetails('${vente._id}')" title="Détails">
                             <i class="fas fa-eye"></i>

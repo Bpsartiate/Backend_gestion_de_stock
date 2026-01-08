@@ -17,6 +17,7 @@ router.post('/ventes', authMiddleware, async (req, res) => {
         
         const {
             magasinId,
+            guichetId,     // 🎯 Nouveau: guichet
             articles,      // Array d'articles
             client,
             modePaiement,
@@ -60,7 +61,7 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             articlesProcesses.push({
                 produitId: article.produitId,
                 rayonId: article.rayonId,
-                designation: produit.designation,
+                nomProduit: produit.designation,  // Correspond à l'article.designation du frontend
                 quantite: article.quantite,
                 prixUnitaire: article.prixUnitaire,
                 montantUSD: montantUSD,
@@ -73,6 +74,7 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             dateVente: new Date(),
             magasinId,
             utilisateurId: req.user.id,
+            guichetId: guichetId || null,  // 🎯 Ajouter le guichet
             client: client || null,
             articles: articlesProcesses,
             montantTotalUSD,
@@ -113,10 +115,31 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             console.log(`✅ Mouvement créé pour ${article.designation}`);
         }
         
-        // Retourner la vente populée
+        // Retourner la vente complètement populée pour le mobile dev
         const venteComplete = await Vente.findById(vente._id)
-            .populate('magasinId', 'nom')
-            .populate('utilisateurId', 'nom prenom email');
+            .populate({
+                path: 'magasinId',
+                select: '_id nom_magasin nom adresse telephone photoUrl latitude longitude',
+                populate: { path: 'businessId', select: '_id nom_entreprise email' }
+            })
+            .populate({
+                path: 'utilisateurId',
+                select: '_id nom prenom email role photoUrl telephone'
+            })
+            .populate({
+                path: 'guichetId',
+                select: '_id nom_guichet code vendeurPrincipal',
+                populate: { path: 'vendeurPrincipal', select: '_id nom prenom' }
+            })
+            .populate({
+                path: 'articles.produitId',
+                select: '_id designation photoUrl prixUnitaire quantiteActuelle seuilAlerte',
+                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale capaciteMax' }
+            })
+            .populate({
+                path: 'articles.rayonId',
+                select: '_id nomRayon'
+            });
         
         console.log('=== POST /ventes END ===\n');
         
@@ -134,7 +157,7 @@ router.post('/ventes', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/protected/ventes
- * Lister les ventes (avec filtres)
+ * Lister les ventes (avec filtres) - DONNÉES COMPLÈTEMENT POPULÉES pour mobile dev
  */
 router.get('/ventes', authMiddleware, async (req, res) => {
     try {
@@ -145,9 +168,34 @@ router.get('/ventes', authMiddleware, async (req, res) => {
         if (statut) filter.statut = statut;
         
         const ventes = await Vente.find(filter)
-            .populate('magasinId', 'nom')
-            .populate('utilisateurId', 'nom prenom')
-            .populate('articles.produitId', 'designation')
+            .populate({
+                path: 'magasinId',
+                select: '_id nom_magasin nom adresse telephone photoUrl',
+                populate: {
+                    path: 'businessId',
+                    select: '_id nom_entreprise'
+                }
+            })
+            .populate({
+                path: 'utilisateurId',
+                select: '_id nom prenom email role photoUrl telephone'
+            })
+            .populate({
+                path: 'guichetId',
+                select: '_id nom_guichet code vendeurPrincipal'
+            })
+            .populate({
+                path: 'articles.produitId',
+                select: '_id designation photoUrl prixUnitaire quantiteActuelle',
+                populate: {
+                    path: 'typeProduitId',
+                    select: '_id nomType icone unitePrincipale'
+                }
+            })
+            .populate({
+                path: 'articles.rayonId',
+                select: '_id nomRayon'
+            })
             .sort({ dateVente: -1 })
             .skip((page - 1) * limit)
             .limit(parseInt(limit));
@@ -172,15 +220,40 @@ router.get('/ventes', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/protected/ventes/:venteId
- * Détails d'une vente
+ * Détails d'une vente - DONNÉES COMPLÈTEMENT POPULÉES
  */
 router.get('/ventes/:venteId', authMiddleware, async (req, res) => {
     try {
         const vente = await Vente.findById(req.params.venteId)
-            .populate('magasinId')
-            .populate('utilisateurId', 'nom prenom email')
-            .populate('articles.produitId')
-            .populate('articles.rayonId', 'nomRayon');
+            .populate({
+                path: 'magasinId',
+                select: '_id nom_magasin nom adresse telephone photoUrl latitude longitude',
+                populate: {
+                    path: 'businessId',
+                    select: '_id nom_entreprise email'
+                }
+            })
+            .populate({
+                path: 'utilisateurId',
+                select: '_id nom prenom email role photoUrl telephone'
+            })
+            .populate({
+                path: 'guichetId',
+                select: '_id nom_guichet code vendeurPrincipal',
+                populate: { path: 'vendeurPrincipal', select: '_id nom prenom' }
+            })
+            .populate({
+                path: 'articles.produitId',
+                select: '_id designation photoUrl prixUnitaire quantiteActuelle seuilAlerte',
+                populate: {
+                    path: 'typeProduitId',
+                    select: '_id nomType icone unitePrincipale capaciteMax'
+                }
+            })
+            .populate({
+                path: 'articles.rayonId',
+                select: '_id nomRayon'
+            });
         
         if (!vente) {
             return res.status(404).json({ error: 'Vente non trouvée' });
@@ -196,7 +269,7 @@ router.get('/ventes/:venteId', authMiddleware, async (req, res) => {
 
 /**
  * PUT /api/protected/ventes/:venteId
- * Modifier une vente (avant validation)
+ * Modifier une vente (avant validation) - Retour POPULÉ
  */
 router.put('/ventes/:venteId', authMiddleware, async (req, res) => {
     try {
@@ -220,10 +293,29 @@ router.put('/ventes/:venteId', authMiddleware, async (req, res) => {
         
         await vente.save();
         
+        // Retourner la vente populée
+        const ventePopulee = await Vente.findById(vente._id)
+            .populate({
+                path: 'magasinId',
+                select: '_id nom_magasin nom adresse telephone photoUrl',
+                populate: { path: 'businessId', select: '_id nom_entreprise' }
+            })
+            .populate({ path: 'utilisateurId', select: '_id nom prenom email role photoUrl' })
+            .populate({
+                path: 'guichetId',
+                select: '_id nom_guichet code vendeurPrincipal'
+            })
+            .populate({
+                path: 'articles.produitId',
+                select: '_id designation photoUrl prixUnitaire',
+                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale' }
+            })
+            .populate({ path: 'articles.rayonId', select: '_id nomRayon' });
+        
         res.json({
             success: true,
             message: '✅ Vente mise à jour',
-            vente
+            vente: ventePopulee
         });
         
     } catch (error) {
@@ -234,7 +326,7 @@ router.put('/ventes/:venteId', authMiddleware, async (req, res) => {
 
 /**
  * DELETE /api/protected/ventes/:venteId
- * Annuler une vente
+ * Annuler une vente - Retour POPULÉ
  */
 router.delete('/ventes/:venteId', authMiddleware, async (req, res) => {
     try {
@@ -251,10 +343,29 @@ router.delete('/ventes/:venteId', authMiddleware, async (req, res) => {
         
         // TODO: Restaurer le stock si nécessaire
         
+        // Retourner la vente populée
+        const ventePopulee = await Vente.findById(vente._id)
+            .populate({
+                path: 'magasinId',
+                select: '_id nom_magasin nom adresse telephone photoUrl',
+                populate: { path: 'businessId', select: '_id nom_entreprise' }
+            })
+            .populate({ path: 'utilisateurId', select: '_id nom prenom email role photoUrl' })
+            .populate({
+                path: 'guichetId',
+                select: '_id nom_guichet code vendeurPrincipal'
+            })
+            .populate({
+                path: 'articles.produitId',
+                select: '_id designation photoUrl prixUnitaire',
+                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale' }
+            })
+            .populate({ path: 'articles.rayonId', select: '_id nomRayon' });
+        
         res.json({
             success: true,
             message: '✅ Vente annulée',
-            vente
+            vente: ventePopulee
         });
         
     } catch (error) {
@@ -265,7 +376,7 @@ router.delete('/ventes/:venteId', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/protected/magasins/:magasinId/ventes
- * Ventes d'un magasin
+ * Ventes d'un magasin - DONNÉES COMPLÈTEMENT POPULÉES
  */
 router.get('/magasins/:magasinId/ventes', authMiddleware, async (req, res) => {
     try {
@@ -286,11 +397,37 @@ router.get('/magasins/:magasinId/ventes', authMiddleware, async (req, res) => {
         }
         
         const ventes = await Vente.find(filter)
-            .populate('utilisateurId', 'nom prenom')
-            .populate('articles.produitId', 'designation')
+            .populate({
+                path: 'magasinId',
+                select: '_id nom_magasin nom adresse telephone photoUrl',
+                populate: {
+                    path: 'businessId',
+                    select: '_id nom_entreprise'
+                }
+            })
+            .populate({
+                path: 'utilisateurId',
+                select: '_id nom prenom email role photoUrl'
+            })
+            .populate({
+                path: 'guichetId',
+                select: '_id nom_guichet code vendeurPrincipal'
+            })
+            .populate({
+                path: 'articles.produitId',
+                select: '_id designation photoUrl prixUnitaire',
+                populate: {
+                    path: 'typeProduitId',
+                    select: '_id nomType icone unitePrincipale'
+                }
+            })
+            .populate({
+                path: 'articles.rayonId',
+                select: '_id nomRayon'
+            })
             .sort({ dateVente: -1 });
         
-        res.json(ventes);
+        res.json({ ventes });
         
     } catch (error) {
         console.error('❌ GET /magasins/:id/ventes error:', error);
