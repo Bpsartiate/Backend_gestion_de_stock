@@ -100,6 +100,12 @@
                       </a>
                       <!-- more inner pages-->
                     </li>
+                    <li class="nav-item"><a class="nav-link" href="vente.php">
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Ventes & Mouvements</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
                    
                   </ul>
                   <!-- parent pages--><a class="nav-link dropdown-indicator" href="#e-commerce" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="e-commerce">

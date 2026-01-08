@@ -1,0 +1,758 @@
+/**
+ * MODULE VENTE - Gestion des ventes et mouvements de stock
+ * Utilise les APIs backend pour gérer les ventes avec support USD/FC
+ * 
+ * @version 1.0
+ * @author Système de Gestion
+ */
+
+class VenteManager {
+    constructor() {
+        this.API_BASE = window.API_BASE || 'https://backend-gestion-de-stock.onrender.com';
+        this.TOKEN = this.getToken();
+        this.currentUser = null;
+        this.currentMagasin = null;
+        this.magasins = [];
+        this.rayons = [];
+        this.produits = [];
+        this.panier = [];
+        this.init();
+    }
+
+    /**
+     * Récupère le token JWT du localStorage
+     */
+    getToken() {
+        try {
+            if (window.AuthProtection && typeof window.AuthProtection.getToken === 'function') {
+                return window.AuthProtection.getToken();
+            }
+        } catch (e) {}
+        
+        const keys = ['token', 'authToken', 'jwt', 'accessToken', 'userToken'];
+        for (const k of keys) {
+            const v = localStorage.getItem(k);
+            if (v) return v;
+        }
+        return null;
+    }
+
+    /**
+     * En-têtes HTTP avec authentification
+     */
+    authHeaders() {
+        return {
+            'Authorization': `Bearer ${this.TOKEN}`,
+            'Content-Type': 'application/json'
+        };
+    }
+
+    /**
+     * Initialisation du module
+     */
+    async init() {
+        console.log('🛒 Initialisation du module Vente...');
+        try {
+            await this.loadUserInfo();
+            await this.loadMagasins();
+            this.attachEventListeners();
+            await this.loadVentesHistorique();
+            console.log('✅ Module Vente initialisé');
+        } catch (error) {
+            console.error('❌ Erreur initialisation Vente:', error);
+        }
+    }
+
+    /**
+     * Récupère les informations utilisateur
+     */
+    async loadUserInfo() {
+        try {
+            // Décoder le JWT pour obtenir l'ID utilisateur
+            const payload = this.decodeJWT(this.TOKEN);
+            if (!payload) {
+                console.warn('⚠️ Impossible de décoder le token');
+                return;
+            }
+
+            // Chercher l'ID dans différents champs possibles
+            const userId = payload.sub || payload._id || payload.id || payload.userId;
+            if (!userId) {
+                console.warn('⚠️ Aucun ID utilisateur trouvé dans le token');
+                console.log('📋 Payload du token:', payload);
+                return;
+            }
+
+            console.log(`🔑 ID utilisateur trouvé: ${userId}`);
+            const response = await fetch(`${this.API_BASE}/api/protected/profile/${userId}`, {
+                headers: this.authHeaders()
+            });
+            
+            if (response.ok) {
+                this.currentUser = await response.json();
+                if (this.currentUser.magasinId) {
+                    this.currentMagasin = this.currentUser.magasinId;
+                }
+                console.log('👤 Utilisateur chargé:', this.currentUser.nom);
+            } else {
+                console.warn(`⚠️ Erreur chargement profil (${response.status})`);
+            }
+        } catch (error) {
+            console.error('❌ Erreur chargement utilisateur:', error);
+        }
+    }
+
+    /**
+     * Décode un JWT pour extraire le payload
+     */
+    decodeJWT(token) {
+        try {
+            if (!token) {
+                console.error('❌ Token vide');
+                return null;
+            }
+
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                console.error('❌ Format JWT invalide (attendu 3 parties, reçu ' + parts.length + ')');
+                return null;
+            }
+            
+            const payload = parts[1];
+            // Ajouter le padding si nécessaire
+            const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+            const decoded = atob(paddedPayload);
+            const result = JSON.parse(decoded);
+            
+            console.log('✅ JWT décodé avec succès');
+            return result;
+        } catch (e) {
+            console.error('❌ Erreur décodage JWT:', e);
+            console.log('🔍 Token reçu:', token ? token.substring(0, 50) + '...' : 'null');
+            return null;
+        }
+    }
+
+    /**
+     * Charge la liste des magasins selon le rôle utilisateur
+     */
+    async loadMagasins() {
+        try {
+            const userRole = window.USER_ROLE || 'VENDEUR';
+            const userId = window.USER_ID;
+            
+            console.log(`👤 Rôle: ${userRole}, ID: ${userId}`);
+            
+            let endpoint = `${this.API_BASE}/api/protected/magasins`;
+            
+            const response = await fetch(endpoint, {
+                headers: this.authHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            let allMagasins = await response.json();
+            
+            // Filtrer selon le rôle
+            if (userRole === 'ADMIN') {
+                // ADMIN: voir tous les magasins
+                this.magasins = allMagasins;
+                console.log(`👑 ADMIN - Accès à ${this.magasins.length} magasin(s)`);
+            } else if (userRole === 'SUPERVISEUR') {
+                // SUPERVISEUR: voir magasins assignés
+                this.magasins = allMagasins.filter(m => m.superviseurs?.includes(userId));
+                console.log(`👁️ SUPERVISEUR - Accès à ${this.magasins.length} magasin(s)`);
+            } else if (userRole === 'VENDEUR') {
+                // VENDEUR: voir seulement magasin assigné
+                this.magasins = allMagasins.filter(m => m.vendeurs?.includes(userId));
+                console.log(`💰 VENDEUR - Accès à ${this.magasins.length} magasin(s)`);
+                
+                // Auto-sélectionner si un seul magasin
+                if (this.magasins.length === 1) {
+                    this.currentMagasin = this.magasins[0]._id;
+                }
+            }
+            
+            this.displayMagasins();
+            
+            // Mettre à jour le header avec le nom du magasin
+            if (this.magasins.length > 0) {
+                const magasinName = this.magasins[0].nom;
+                const badge = document.getElementById('currentMagasinName');
+                if (badge) badge.textContent = magasinName;
+            }
+            
+            // Charger les données du premier magasin
+            if (this.magasins.length > 0 && !this.currentMagasin) {
+                this.currentMagasin = this.magasins[0]._id;
+                await this.onMagasinChange(this.currentMagasin);
+            } else if (this.currentMagasin) {
+                await this.onMagasinChange(this.currentMagasin);
+            }
+            
+        } catch (error) {
+            console.error('❌ Erreur chargement magasins:', error);
+            alert('❌ Erreur lors du chargement des magasins');
+        }
+    }
+
+    /**
+     * Affiche les magasins dans le select
+     */
+    displayMagasins() {
+        const select = document.getElementById('venteSelectMagasin');
+        select.innerHTML = '<option value="">-- Sélectionner magasin --</option>';
+        
+        this.magasins.forEach(magasin => {
+            const option = document.createElement('option');
+            option.value = magasin._id;
+            option.textContent = magasin.nom;
+            if (this.currentMagasin && magasin._id === this.currentMagasin) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    }
+
+    /**
+     * Change de magasin et charge rayons/produits
+     */
+    async onMagasinChange(magasinId) {
+        if (!magasinId) return;
+        
+        this.currentMagasin = magasinId;
+        console.log(`🏪 Magasin sélectionné: ${magasinId}`);
+        
+        try {
+            await Promise.all([
+                this.loadRayons(magasinId),
+                this.loadProduits(magasinId)
+            ]);
+        } catch (error) {
+            console.error('❌ Erreur changement magasin:', error);
+        }
+    }
+
+    /**
+     * Charge les rayons d'un magasin
+     */
+    async loadRayons(magasinId) {
+        try {
+            const response = await fetch(
+                `${this.API_BASE}/api/protected/magasins/${magasinId}/rayons`,
+                { headers: this.authHeaders() }
+            );
+            
+            if (response.ok) {
+                this.rayons = await response.json();
+                this.displayRayons();
+                console.log(`📍 ${this.rayons.length} rayon(s) chargé(s)`);
+            }
+        } catch (error) {
+            console.error('❌ Erreur chargement rayons:', error);
+        }
+    }
+
+    /**
+     * Affiche les rayons dans le select
+     */
+    displayRayons() {
+        const select = document.getElementById('venteSelectRayon');
+        select.innerHTML = '<option value="">-- Sélectionner rayon --</option>';
+        
+        this.rayons.forEach(rayon => {
+            const option = document.createElement('option');
+            option.value = rayon._id;
+            option.textContent = rayon.nomRayon;
+            select.appendChild(option);
+        });
+    }
+
+    /**
+     * Charge les produits d'un magasin
+     */
+    async loadProduits(magasinId) {
+        try {
+            const response = await fetch(
+                `${this.API_BASE}/api/protected/magasins/${magasinId}/produits`,
+                { headers: this.authHeaders() }
+            );
+            
+            if (response.ok) {
+                this.produits = await response.json();
+                this.displayProduits();
+                console.log(`📦 ${this.produits.length} produit(s) chargé(s)`);
+            }
+        } catch (error) {
+            console.error('❌ Erreur chargement produits:', error);
+        }
+    }
+
+    /**
+     * Affiche la liste des produits
+     */
+    displayProduits() {
+        const liste = document.getElementById('produitsList');
+        
+        if (this.produits.length === 0) {
+            liste.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-inbox fa-2x mb-2 opacity-50"></i>
+                    <p class="small">Aucun produit disponible</p>
+                </div>
+            `;
+            return;
+        }
+
+        liste.innerHTML = this.produits.map(produit => `
+            <button class="list-group-item list-group-item-action border-0 py-3 px-3 cursor-pointer" 
+                    onclick="venteManager.selectProduit('${produit._id}')">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="text-start flex-grow-1">
+                        <h6 class="mb-1 small fw-semibold">${produit.nomProduit}</h6>
+                        <div class="small text-muted">
+                            <span class="badge bg-info">${produit.quantiteActuelle || 0} en stock</span>
+                            <span class="badge bg-secondary">${produit.typeProduitId?.nomType || '-'}</span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="small fw-semibold text-dark">${(produit.prixUnitaire || 0).toFixed(2)} USD</div>
+                        <small class="text-muted">U.</small>
+                    </div>
+                </div>
+            </button>
+        `).join('');
+    }
+
+    /**
+     * Sélectionne un produit
+     */
+    selectProduit(produitId) {
+        const select = document.getElementById('venteSelectProduit');
+        select.value = produitId;
+        select.dispatchEvent(new Event('change'));
+    }
+
+    /**
+     * Événement: changement de produit
+     */
+    onProduitChange(produitId) {
+        if (!produitId) return;
+        
+        const produit = this.produits.find(p => p._id === produitId);
+        if (!produit) return;
+        
+        console.log(`📦 Produit sélectionné: ${produit.nomProduit}`);
+        document.getElementById('venteProduitStock').textContent = produit.quantiteActuelle || 0;
+        document.getElementById('ventePrix').value = (produit.prixUnitaire || 0).toFixed(2);
+        document.getElementById('ventePrixSuggere').textContent = (produit.prixUnitaire || 0).toFixed(2);
+        document.getElementById('venteQuantite').value = 1;
+        this.updateVenteTotalPartiel();
+    }
+
+    /**
+     * Augmente la quantité
+     */
+    increaseQte() {
+        const input = document.getElementById('venteQuantite');
+        input.value = parseInt(input.value || 0) + 1;
+        this.updateVenteTotalPartiel();
+    }
+
+    /**
+     * Diminue la quantité
+     */
+    decreaseQte() {
+        const input = document.getElementById('venteQuantite');
+        const val = parseInt(input.value || 1) - 1;
+        input.value = Math.max(1, val);
+        this.updateVenteTotalPartiel();
+    }
+
+    /**
+     * Met à jour le total partiel de la vente
+     */
+    updateVenteTotalPartiel() {
+        const qty = parseInt(document.getElementById('venteQuantite').value || 0);
+        const prix = parseFloat(document.getElementById('ventePrix').value || 0);
+        const total = qty * prix;
+        const tauxFC = parseFloat(document.getElementById('venteTauxFC').value || 0);
+        
+        document.getElementById('venteTotalPartiel').textContent = total.toFixed(2);
+        
+        if (tauxFC > 0) {
+            const totalFC = total * tauxFC;
+            document.getElementById('venteTotalFC').textContent = totalFC.toFixed(0) + ' FC';
+        } else {
+            document.getElementById('venteTotalFC').textContent = '-';
+        }
+    }
+
+    /**
+     * Ajoute un article au panier
+     */
+    addToPanier() {
+        const produitId = document.getElementById('venteSelectProduit').value;
+        const magasinId = document.getElementById('venteSelectMagasin').value;
+        const quantite = parseInt(document.getElementById('venteQuantite').value || 0);
+        const prix = parseFloat(document.getElementById('ventePrix').value || 0);
+        const observations = document.getElementById('venteObservations').value;
+
+        if (!produitId || !magasinId || quantite < 1) {
+            alert('⚠️ Veuillez sélectionner un produit et une quantité');
+            return;
+        }
+
+        const produit = this.produits.find(p => p._id === produitId);
+        if (!produit) return;
+
+        // Vérification stock
+        if (produit.quantiteActuelle < quantite) {
+            alert(`⚠️ Stock insuffisant! Disponible: ${produit.quantiteActuelle}`);
+            return;
+        }
+
+        // Ajouter au panier
+        this.panier.push({
+            produitId,
+            nomProduit: produit.nomProduit,
+            quantite,
+            prix,
+            total: quantite * prix,
+            observations
+        });
+
+        console.log(`✅ Article ajouté au panier: ${produit.nomProduit} (${quantite})`);
+
+        // Reset formulaire
+        this.displayPanier();
+        document.getElementById('venteQuantite').value = 1;
+        document.getElementById('venteObservations').value = '';
+        this.updateVenteTotalPartiel();
+    }
+
+    /**
+     * Affiche le panier
+     */
+    displayPanier() {
+        const liste = document.getElementById('panieListe');
+        const nbArticles = document.getElementById('paniernbArticles');
+        const total = document.getElementById('panierTotal');
+        const sousTotal = document.getElementById('panierSousTotal');
+        const qteTotale = document.getElementById('panierQteTotale');
+        const btnValider = document.getElementById('btnValiderVente');
+        const tauxFC = parseFloat(document.getElementById('venteTauxFC').value || 0);
+        const panierTotalFCDiv = document.getElementById('panierTotalFCDiv');
+        const panierTotalFC = document.getElementById('panierTotalFC');
+
+        if (this.panier.length === 0) {
+            liste.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-shopping-cart fa-2x mb-2 opacity-50"></i>
+                    <p class="small">Panier vide</p>
+                </div>
+            `;
+            nbArticles.textContent = '(0 articles)';
+            total.textContent = '0.00';
+            sousTotal.textContent = '0.00';
+            qteTotale.textContent = '0';
+            panierTotalFCDiv.style.display = 'none';
+            btnValider.disabled = true;
+            return;
+        }
+
+        const totalMontant = this.panier.reduce((sum, item) => sum + item.total, 0);
+        const totalQuantite = this.panier.reduce((sum, item) => sum + item.quantite, 0);
+
+        liste.innerHTML = this.panier.map((item, idx) => `
+            <div class="panier-item">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1 small fw-semibold">${item.nomProduit}</h6>
+                    <small class="text-muted d-block">${item.quantite} x ${item.prix.toFixed(2)} USD</small>
+                </div>
+                <div class="text-end">
+                    <div class="small fw-semibold text-dark">${item.total.toFixed(2)} USD</div>
+                    <button class="btn btn-sm btn-outline-danger mt-1" onclick="venteManager.removePanierItem(${idx})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        nbArticles.textContent = `(${this.panier.length} articles)`;
+        total.textContent = totalMontant.toFixed(2);
+        sousTotal.textContent = totalMontant.toFixed(2);
+        qteTotale.textContent = totalQuantite;
+
+        // Conversion FC
+        if (tauxFC > 0) {
+            const totalMontantFC = totalMontant * tauxFC;
+            panierTotalFC.textContent = totalMontantFC.toFixed(0) + ' FC';
+            panierTotalFCDiv.style.display = 'flex';
+        } else {
+            panierTotalFCDiv.style.display = 'none';
+        }
+
+        btnValider.disabled = false;
+    }
+
+    /**
+     * Supprime un article du panier
+     */
+    removePanierItem(index) {
+        const nomProduit = this.panier[index].nomProduit;
+        this.panier.splice(index, 1);
+        console.log(`🗑️ Article supprimé: ${nomProduit}`);
+        this.displayPanier();
+    }
+
+    /**
+     * Vide le panier
+     */
+    clearPanier() {
+        if (!confirm('Vider le panier?')) return;
+        this.panier = [];
+        this.displayPanier();
+        console.log('🗑️ Panier vidé');
+    }
+
+    /**
+     * Valide la vente en envoyant au serveur
+     */
+    async validateVente() {
+        if (this.panier.length === 0) {
+            alert('⚠️ Panier vide');
+            return;
+        }
+
+        const magasinId = document.getElementById('venteSelectMagasin').value;
+        const modePaiement = document.getElementById('ventePaiement').value;
+        const client = document.getElementById('venteClient').value;
+        const tauxFC = parseFloat(document.getElementById('venteTauxFC').value || 0);
+
+        console.log('💾 Validation de la vente...');
+        const totalMontant = this.panier.reduce((sum, item) => sum + item.total, 0);
+
+        try {
+            // Préparer les articles
+            const articles = this.panier.map(item => ({
+                produitId: item.produitId,
+                rayonId: item.rayonId || undefined,
+                quantite: item.quantite,
+                prixUnitaire: item.prix,
+                observations: item.observations
+            }));
+
+            // Créer la vente via la nouvelle API
+            const response = await fetch(
+                `${this.API_BASE}/api/protected/ventes`,
+                {
+                    method: 'POST',
+                    headers: this.authHeaders(),
+                    body: JSON.stringify({
+                        magasinId,
+                        articles,
+                        client: client || undefined,
+                        modePaiement,
+                        tauxFC: tauxFC > 0 ? tauxFC : undefined
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Erreur lors de la création de la vente');
+            }
+
+            const result = await response.json();
+            
+            console.log(`✅ Vente créée: ${result.vente._id}`);
+            alert(`✅ Vente enregistrée!\nMontant: ${totalMontant.toFixed(2)} USD${tauxFC > 0 ? ' (' + (totalMontant * tauxFC).toFixed(0) + ' FC)' : ''}`);
+            
+            // Réinitialiser
+            this.panier = [];
+            this.displayPanier();
+            document.getElementById('venteClient').value = '';
+            document.getElementById('venteTauxFC').value = '';
+            await this.loadVentesHistorique();
+            
+            console.log('✅ Vente finalisée');
+        } catch (error) {
+            console.error('❌ Erreur vente:', error);
+            alert('❌ Erreur: ' + error.message);
+        }
+    }
+
+    /**
+     * Charge l'historique des ventes du jour
+     */
+    async loadVentesHistorique() {
+        try {
+            const magasinId = document.getElementById('venteSelectMagasin').value;
+            if (!magasinId) return;
+
+            const response = await fetch(
+                `${this.API_BASE}/api/protected/magasins/${magasinId}/ventes?limit=50`,
+                { headers: this.authHeaders() }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                this.displayVentesHistorique(data.ventes || []);
+            }
+        } catch (error) {
+            console.error('❌ Erreur chargement historique:', error);
+        }
+    }
+
+    /**
+     * Affiche l'historique des ventes
+     */
+    displayVentesHistorique(ventes) {
+        const tbody = document.getElementById('ventesTableBody');
+        
+        if (!ventes || ventes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Aucune vente enregistrée</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = ventes.map(vente => {
+            const montantUSD = (vente.montantTotalUSD || 0).toFixed(2);
+            const montantFC = vente.montantTotalFC ? vente.montantTotalFC.toFixed(0) : '-';
+            const heureLocal = new Date(vente.dateVente).toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            const nbArticles = vente.articles?.length || 0;
+            const statutBadge = vente.statut === 'ANNULÉE' ? 'danger' : (vente.statut === 'REMBOURSÉE' ? 'warning' : 'success');
+
+            return `
+                <tr>
+                    <td class="small">${heureLocal}</td>
+                    <td class="small">${vente.client || '-'}</td>
+                    <td><span class="badge bg-info">${nbArticles}</span></td>
+                    <td class="small fw-semibold">${montantUSD} USD${vente.tauxFC ? '<br><small class="text-muted">' + montantFC + ' FC</small>' : ''}</td>
+                    <td><span class="badge bg-secondary">${vente.modePaiement || 'CASH'}</span></td>
+                    <td class="small text-muted">${vente.utilisateurId?.nom || 'Système'}</td>
+                    <td><span class="badge bg-${statutBadge}">${vente.statut}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" onclick="venteManager.viewDetails('${vente._id}')" title="Détails">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Affiche les détails d'une vente
+     */
+    viewDetails(id) {
+        console.log('📋 Détails vente:', id);
+        alert('Détails vente: ' + id);
+    }
+
+    /**
+     * Actualise les données
+     */
+    async refresh() {
+        console.log('🔄 Actualisation...');
+        const icon = document.getElementById('refreshIcon');
+        icon.classList.add('fa-spin');
+        
+        try {
+            await this.loadVentesHistorique();
+            console.log('✅ Actualisation terminée');
+        } catch (error) {
+            console.error('❌ Erreur actualisation:', error);
+        } finally {
+            icon.classList.remove('fa-spin');
+        }
+    }
+
+    /**
+     * Attache les écouteurs d'événements
+     */
+    attachEventListeners() {
+        // Sélecteur magasin pour ADMIN
+        const adminMagasinSelect = document.getElementById('adminMagasinSelect');
+        if (adminMagasinSelect) {
+            adminMagasinSelect.addEventListener('change', (e) => {
+                const magasinId = e.target.value;
+                if (magasinId) {
+                    this.currentMagasin = magasinId;
+                    const magasinName = this.magasins.find(m => m._id === magasinId)?.nom || 'Magasin';
+                    document.getElementById('currentMagasinName').textContent = magasinName;
+                    this.onMagasinChange(magasinId);
+                    this.loadVentesHistorique();
+                }
+            });
+            // Peupler le sélecteur admin après chargement
+            setTimeout(() => this.populateAdminMagasinSelect(), 500);
+        }
+
+        // Changements de sélection
+        document.getElementById('venteSelectMagasin')?.addEventListener('change', (e) => {
+            this.onMagasinChange(e.target.value);
+            this.loadVentesHistorique();
+        });
+
+        document.getElementById('venteSelectProduit')?.addEventListener('change', (e) => {
+            this.onProduitChange(e.target.value);
+        });
+
+        // Quantité
+        document.getElementById('btnPlusQte')?.addEventListener('click', () => this.increaseQte());
+        document.getElementById('btnMoinsQte')?.addEventListener('click', () => this.decreaseQte());
+        document.getElementById('venteQuantite')?.addEventListener('change', () => this.updateVenteTotalPartiel());
+
+        // Prix et taux
+        document.getElementById('ventePrix')?.addEventListener('change', () => this.updateVenteTotalPartiel());
+        document.getElementById('venteTauxFC')?.addEventListener('change', () => {
+            this.updateVenteTotalPartiel();
+            this.displayPanier();
+        });
+
+        // Panier
+        document.getElementById('btnAjouterPanier')?.addEventListener('click', () => this.addToPanier());
+        document.getElementById('btnViderPanier')?.addEventListener('click', () => this.clearPanier());
+        document.getElementById('btnValiderVente')?.addEventListener('click', () => this.validateVente());
+
+        // Refresh
+        document.getElementById('refreshData')?.addEventListener('click', () => this.refresh());
+
+        console.log('📌 Écouteurs d\'événements attachés');
+    }
+
+    /**
+     * Remplit le sélecteur magasin pour l'admin
+     */
+    populateAdminMagasinSelect() {
+        const select = document.getElementById('adminMagasinSelect');
+        if (!select) return;
+
+        select.innerHTML = '<option value="">Sélectionner magasin...</option>';
+        this.magasins.forEach(magasin => {
+            const option = document.createElement('option');
+            option.value = magasin._id;
+            option.textContent = magasin.nom;
+            select.appendChild(option);
+        });
+
+        // Pré-sélectionner le magasin courant
+        if (this.currentMagasin) {
+            select.value = this.currentMagasin;
+        }
+    }
+}
+
+// Instance globale
+let venteManager;
+
+// Initialiser au chargement du DOM
+document.addEventListener('DOMContentLoaded', () => {
+    venteManager = new VenteManager();
+});

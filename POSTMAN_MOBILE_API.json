@@ -374,6 +374,39 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Modifier une réception 🔧",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"magasinId\": \"{{MAGASIN_ID}}\",\n  \"quantite\": 75,\n  \"fournisseur\": \"Fournisseur ABC\",\n  \"dateReception\": \"2026-01-08\",\n  \"prixAchat\": 2500,\n  \"prixTotal\": 187500,\n  \"statut\": \"Validée\",\n  \"lotNumber\": \"LOT-2026-001\",\n  \"datePeremption\": \"2027-01-07\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/receptions/{{RECEPTION_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "protected",
+                "receptions",
+                "{{RECEPTION_ID}}"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },

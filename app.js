@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const utilisateurRoutes = require('./routes/auth');
 const protectedRoutes = require('./routes/protected');
+const ventesRoutes = require('./routes/ventes');
 const businessRoutes = require('./routes/business'); // routes pour profil entrepris
 const path = require('path');
 
@@ -33,6 +34,7 @@ app.get('/api/test-uploads', (req, res) => {
 
 app.use('/api/auth', utilisateurRoutes);
 app.use('/api/protected', protectedRoutes);
+app.use('/api/protected', ventesRoutes);
 app.use('/api/business', businessRoutes);
 // Activity routes mounted under business path (mergeParams used in router)
 app.use('/api/business/:businessId/activities', require('./routes/activity'));
