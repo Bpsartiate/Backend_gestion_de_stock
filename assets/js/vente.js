@@ -352,6 +352,7 @@ class VenteManager {
                 if (this.guichets.length > 0) {
                     this.currentGuichet = this.guichets[0]._id;
                     console.log(`🪟 ${this.guichets.length} guichet(s) chargé(s), sélectionné: ${this.guichets[0].nom_guichet}`);
+                    this.updateGuichetDisplay();  // 🎯 Mettre à jour l'affichage
                 }
             } else {
                 console.warn(`⚠️ Erreur chargement guichets: ${response.status}`);
@@ -361,6 +362,98 @@ class VenteManager {
             console.error('❌ Erreur chargement guichets:', error);
             this.guichets = [];
         }
+    }
+
+    /**
+     * 🪟 Met à jour l'affichage du guichet sélectionné
+     */
+    updateGuichetDisplay() {
+        const guichetSelected = document.getElementById('guichetSelected');
+        const guichetVendeur = document.getElementById('guichetVendeur');
+        
+        if (!guichetSelected || !guichetVendeur) return;
+        
+        if (this.currentGuichet && this.guichets.length > 0) {
+            const guichet = this.guichets.find(g => g._id === this.currentGuichet);
+            if (guichet) {
+                guichetSelected.textContent = `${guichet.nom_guichet} (${guichet.code || 'N/A'})`;
+                const vendeur = guichet.vendeurPrincipal;
+                if (vendeur) {
+                    guichetVendeur.textContent = `Vendeur: ${vendeur.prenom} ${vendeur.nom}`;
+                } else {
+                    guichetVendeur.textContent = '';
+                }
+            }
+        } else {
+            guichetSelected.textContent = 'Aucun guichet';
+            guichetVendeur.textContent = '';
+        }
+    }
+
+    /**
+     * 🪟 Affiche les guichets dans le modal de sélection
+     */
+    displayGuichets() {
+        const spinner = document.getElementById('guichetsSpinner');
+        const list = document.getElementById('guichetsList');
+        const error = document.getElementById('guichetsError');
+        
+        if (!list) return;
+        
+        // Vérifier qu'un magasin est sélectionné
+        if (!this.currentMagasin) {
+            error.textContent = '⚠️ Veuillez d\'abord sélectionner un magasin';
+            error.style.display = 'block';
+            spinner.style.display = 'none';
+            list.style.display = 'none';
+            return;
+        }
+        
+        error.style.display = 'none';
+        
+        if (!this.guichets || this.guichets.length === 0) {
+            spinner.style.display = 'none';
+            list.innerHTML = '<p class="text-center text-muted py-3">Aucun guichet disponible</p>';
+            list.style.display = 'block';
+            return;
+        }
+        
+        spinner.style.display = 'none';
+        list.innerHTML = this.guichets.map(guichet => `
+            <div class="card mb-2 cursor-pointer ${guichet._id === this.currentGuichet ? 'border-warning border-2' : ''}" 
+                 onclick="venteManager.selectGuichet('${guichet._id}')" 
+                 style="cursor: pointer; transition: all 0.2s ease;">
+                <div class="card-body p-2">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="mb-1 fw-bold">
+                                <i class="fas fa-window-maximize me-2" style="color: #f7931e;"></i>${guichet.nom_guichet}
+                            </h6>
+                            <small class="text-muted">Code: ${guichet.code || 'N/A'}</small>
+                            ${guichet.vendeurPrincipal ? `<br><small class="text-info">Vendeur: <strong>${guichet.vendeurPrincipal.prenom} ${guichet.vendeurPrincipal.nom}</strong></small>` : ''}
+                        </div>
+                        <div>
+                            ${guichet._id === this.currentGuichet ? '<i class="fas fa-check-circle fa-2x text-success"></i>' : '<i class="fas fa-circle fa-2x text-secondary" style="opacity: 0.3;"></i>'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        list.style.display = 'block';
+    }
+
+    /**
+     * 🪟 Sélectionne un guichet
+     */
+    selectGuichet(guichetId) {
+        this.currentGuichet = guichetId;
+        console.log(`🪟 Guichet sélectionné: ${guichetId}`);
+        this.updateGuichetDisplay();
+        this.displayGuichets();  // Rafraîchir l'affichage du modal
+        
+        // Fermer le modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelectGuichet'));
+        if (modal) modal.hide();
     }
 
     /**
@@ -1098,6 +1191,14 @@ class VenteManager {
         if (modalMagasinVente) {
             modalMagasinVente.addEventListener('show.bs.modal', () => {
                 this.displayMagasins();
+            });
+        }
+
+        // 🪟 Modal de sélection guichet - afficher les guichets quand le modal s'ouvre
+        const modalSelectGuichet = document.getElementById('modalSelectGuichet');
+        if (modalSelectGuichet) {
+            modalSelectGuichet.addEventListener('show.bs.modal', () => {
+                this.displayGuichets();
             });
         }
 

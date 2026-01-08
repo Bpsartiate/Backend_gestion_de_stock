@@ -182,7 +182,8 @@ router.get('/ventes', authMiddleware, async (req, res) => {
             })
             .populate({
                 path: 'guichetId',
-                select: '_id nom_guichet code vendeurPrincipal'
+                select: '_id nom_guichet code vendeurPrincipal',
+                populate: { path: 'vendeurPrincipal', select: '_id nom prenom email' }
             })
             .populate({
                 path: 'articles.produitId',

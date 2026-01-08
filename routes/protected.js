@@ -1146,6 +1146,34 @@ router.delete('/affectations/:id', authMiddleware, async (req, res) => {
 // ================================
 
 // GET /api/protected/magasins/:magasinId/rayons - Lister les rayons avec stats
+/**
+ * 🪟 GET /api/protected/magasins/:magasinId/guichets
+ * Récupère les guichets d'un magasin
+ */
+router.get('/magasins/:magasinId/guichets', authMiddleware, async (req, res) => {
+  try {
+    const { magasinId } = req.params;
+
+    // Vérifier que le magasin existe
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    // Récupérer les guichets du magasin
+    const guichets = await Guichet.find({ magasinId })
+      .populate('vendeurPrincipal', '_id nom prenom email')
+      .sort({ nom_guichet: 1 });
+
+    console.log(`🪟 ${guichets.length} guichet(s) trouvé(s) pour magasin ${magasinId}`);
+    
+    res.json(guichets);
+  } catch (error) {
+    console.error('❌ Erreur GET guichets:', error);
+    res.status(500).json({ message: 'Erreur: ' + error.message });
+  }
+});
+
 router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
   try {
     const { magasinId } = req.params;

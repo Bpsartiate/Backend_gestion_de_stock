@@ -2,8 +2,30 @@ const mongoose = require('mongoose');
 
 /**
  * Schema Vente
- * Une vente = 1 document avec panier complet
- * + N mouvements de stock SORTIE liés
+ * 
+ * 🎯 LOGIQUE DES RÔLES:
+ * ─────────────────────────────────────────────────────────────
+ * 
+ * - ADMIN = [ADMIN, VENDEUR] → Peut vendre via n'importe quel guichet
+ * - SUPERVISEUR = [SUPERVISEUR, VENDEUR] → Peut vendre via n'importe quel guichet
+ * - VENDEUR = [VENDEUR] → Vend normalement via son guichet assigné
+ * 
+ * Quand une vente est créée:
+ * 1. utilisateurId = L'ID de l'utilisateur connecté (via JWT) - LA VRAIE PERSONNE QUI A VENDU
+ * 2. guichetId = Le guichet où la vente s'est passée (sélectionné en frontend)
+ * 3. guichet.vendeurPrincipal = Le vendeur normalement assigné au guichet (pour audit)
+ * 
+ * ⚠️ Cas Exception:
+ * Si utilisateurId.role = "SUPERVISEUR" ou "ADMIN" et utilisateurId.id ≠ guichet.vendeurPrincipal.id
+ * → Un SUPERVISEUR/ADMIN a vendu via le guichet d'un autre vendeur (temporaire ou couverture)
+ * 
+ * 🔍 Traçabilité:
+ * - utilisateurId → Qui a vraiment créé la vente (responsabilité)
+ * - guichetId.vendeurPrincipal → Qui gère le guichet (assignation)
+ * - guichetId → Quel point de caisse (localisation)
+ * 
+ * ─────────────────────────────────────────────────────────────
+ * Une vente = 1 document avec panier complet + N mouvements de stock SORTIE liés
  */
 const venteSchema = new mongoose.Schema({
     // Infos vente
@@ -18,20 +40,23 @@ const venteSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Magasin',
         required: true,
-        index: true
+        index: true,
+        description: '✅ Magasin où la vente s\'est passée'
     },
     
     utilisateurId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Utilisateur',
-        required: true
+        required: true,
+        description: '👤 L\'utilisateur qui a VRAIMENT créé la vente (JWT user)\n  - Peut être ADMIN, SUPERVISEUR ou VENDEUR\n  - C\'est la responsabilité de cette personne'
     },
     
-    // Guichet du magasin
+    // Guichet du magasin - 🪟 Logique des guichets
     guichetId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Guichet',
-        default: null
+        default: null,
+        description: '🪟 Guichet (point de caisse) où la vente s\'est passée\n  - Chaque guichet a un vendeurPrincipal assigné\n  - utilisateurId peut être différent de vendeurPrincipal si superviseur/admin vend\n  - Utilisé pour la traçabilité du point de vente'
     },
     
     // Client

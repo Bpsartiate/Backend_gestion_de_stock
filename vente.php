@@ -245,6 +245,20 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                 </h6>
                             </div>
                             <div class="card-body">
+                                <!-- 🪟 Sélection Guichet -->
+                                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #f7931e 0%, #ff6b35 100%); color: white;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small class="fw-semibold" style="opacity: 0.9; font-size: 0.75rem; text-transform: uppercase;">🪟 Guichet Sélectionné</small>
+                                            <div id="guichetSelected" class="fw-bold" style="font-size: 1.1rem;">Chargement...</div>
+                                            <small id="guichetVendeur" style="opacity: 0.85; font-size: 0.8rem;">--</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-light" id="btnChangeGuichet" data-bs-toggle="modal" data-bs-target="#modalSelectGuichet" style="flex-shrink: 0;">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <!-- Produit Selection avec background image en flou -->
                                 <div class="mb-3">
                                     <label class="form-label small fw-semibold">Produit Sélectionné</label>
@@ -485,6 +499,37 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
 
                     <!-- Message d'erreur -->
                     <div id="magasinsErrorVente" style="display: none;" class="alert alert-danger mb-0"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🪟 MODAL SÉLECTION GUICHET VENTE -->
+    <div class="modal fade" id="modalSelectGuichet" tabindex="-1" aria-labelledby="modalSelectGuichetLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-xl border-0">
+                <div class="modal-header" style="background: linear-gradient(135deg, #f7931e 0%, #ff6b35 100%); color: white; border: none;">
+                    <h5 class="modal-title">
+                        <i class="fas fa-window-maximize me-2"></i>Sélectionner un guichet
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Spinner de chargement -->
+                    <div id="guichetsSpinner" class="text-center py-5">
+                        <div class="spinner-border text-warning mb-3" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="text-muted">Chargement des guichets...</p>
+                    </div>
+
+                    <!-- Liste des guichets -->
+                    <div id="guichetsList" style="display: none;">
+                        <!-- Sera rempli par JavaScript -->
+                    </div>
+
+                    <!-- Message d'erreur -->
+                    <div id="guichetsError" style="display: none;" class="alert alert-danger mb-0"></div>
                 </div>
             </div>
         </div>
