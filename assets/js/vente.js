@@ -52,6 +52,21 @@ class VenteManager {
      */
     async init() {
         console.log('🛒 Initialisation du module Vente...');
+        console.log('📋 TOKEN disponible:', !!this.TOKEN);
+        console.log('📋 localStorage tokens:', {
+            token: !!localStorage.getItem('token'),
+            authToken: !!localStorage.getItem('authToken'),
+            jwt: !!localStorage.getItem('jwt'),
+            accessToken: !!localStorage.getItem('accessToken'),
+            userToken: !!localStorage.getItem('userToken')
+        });
+        
+        if (!this.TOKEN) {
+            console.error('❌ Aucun token JWT trouvé! Impossible de charger les données.');
+            alert('⚠️ Authentification requise. Veuillez vous reconnecter.');
+            return;
+        }
+        
         try {
             await this.loadUserInfo();
             await this.loadMagasins();
@@ -68,31 +83,42 @@ class VenteManager {
      */
     async loadUserInfo() {
         try {
-            // Décoder le JWT pour obtenir l'ID utilisateur
+            // Décoder le JWT pour obtenir l'ID utilisateur ET le rôle
             const payload = this.decodeJWT(this.TOKEN);
             if (!payload) {
                 console.warn('⚠️ Impossible de décoder le token');
                 return;
             }
 
+            console.log('📋 Payload complet du token:', payload);
+
             // Chercher l'ID dans différents champs possibles
             const userId = payload.sub || payload._id || payload.id || payload.userId;
+            
+            // Chercher le rôle dans différents champs possibles
+            let userRole = payload.role || payload.userRole || payload.type || window.USER_ROLE || 'VENDEUR';
+            
+            // Normaliser le rôle en majuscules
+            userRole = userRole.toUpperCase();
+            
             if (!userId) {
                 console.warn('⚠️ Aucun ID utilisateur trouvé dans le token');
-                console.log('📋 Payload du token:', payload);
                 return;
             }
 
             console.log(`🔑 ID utilisateur trouvé: ${userId}`);
+            console.log(`👥 Rôle trouvé: ${userRole}`);
+            
+            // Stocker pour utilisation dans loadMagasins
+            window.USER_ROLE = userRole;
+            window.USER_ID = userId;
+            
             const response = await fetch(`${this.API_BASE}/api/protected/profile/${userId}`, {
                 headers: this.authHeaders()
             });
             
             if (response.ok) {
                 this.currentUser = await response.json();
-                if (this.currentUser.magasinId) {
-                    this.currentMagasin = this.currentUser.magasinId;
-                }
                 console.log('👤 Utilisateur chargé:', this.currentUser.nom);
             } else {
                 console.warn(`⚠️ Erreur chargement profil (${response.status})`);
@@ -138,10 +164,11 @@ class VenteManager {
      */
     async loadMagasins() {
         try {
+            // Utiliser le rôle mis à jour par loadUserInfo()
             const userRole = window.USER_ROLE || 'VENDEUR';
             const userId = window.USER_ID;
             
-            console.log(`👤 Rôle: ${userRole}, ID: ${userId}`);
+            console.log(`👤 Rôle utilisateur: ${userRole}, ID: ${userId}`);
             
             let endpoint = `${this.API_BASE}/api/protected/magasins`;
             
@@ -154,6 +181,7 @@ class VenteManager {
             }
             
             let allMagasins = await response.json();
+            console.log(`📦 ${allMagasins.length} magasin(s) total(aux)`);
             
             // Filtrer selon le rôle
             if (userRole === 'ADMIN') {
@@ -161,7 +189,7 @@ class VenteManager {
                 this.magasins = allMagasins;
                 console.log(`👑 ADMIN - Accès à ${this.magasins.length} magasin(s)`);
             } else if (userRole === 'SUPERVISEUR') {
-                // SUPERVISEUR: voir magasins assignés
+                // SUPERVISEUR: voir magasins assignés aux superviseurs
                 this.magasins = allMagasins.filter(m => m.superviseurs?.includes(userId));
                 console.log(`👁️ SUPERVISEUR - Accès à ${this.magasins.length} magasin(s)`);
             } else if (userRole === 'VENDEUR') {
@@ -199,21 +227,91 @@ class VenteManager {
     }
 
     /**
-     * Affiche les magasins dans le select
+     * Affiche les magasins dans le modal
      */
     displayMagasins() {
-        const select = document.getElementById('venteSelectMagasin');
-        select.innerHTML = '<option value="">-- Sélectionner magasin --</option>';
+        const listDiv = document.getElementById('magasinsListVente');
+        const spinnerDiv = document.getElementById('magasinsSpinnerVente');
+        const errorDiv = document.getElementById('magasinsErrorVente');
         
-        this.magasins.forEach(magasin => {
-            const option = document.createElement('option');
-            option.value = magasin._id;
-            option.textContent = magasin.nom;
-            if (this.currentMagasin && magasin._id === this.currentMagasin) {
-                option.selected = true;
+        if (!listDiv) {
+            console.warn('⚠️ Élément magasinsListVente non trouvé');
+            return;
+        }
+
+        // Masquer le spinner et l'erreur
+        if (spinnerDiv) spinnerDiv.style.display = 'none';
+        if (errorDiv) errorDiv.style.display = 'none';
+
+        console.log('🏪 Magasins reçus:', this.magasins);
+        
+        // Remplir la liste des magasins
+        listDiv.innerHTML = this.magasins.map((magasin, idx) => {
+            // Logger la structure complète du premier magasin pour déboguer
+            if (idx === 0) {
+                console.log('🔍 Structure du magasin 0:', magasin);
+                console.log('   Keys disponibles:', Object.keys(magasin));
             }
-            select.appendChild(option);
-        });
+            
+            // Chercher le nom dans différents champs - nom_magasin est le champ réel!
+            let nomMagasin = 'Magasin sans nom';
+            if (magasin.nom_magasin) nomMagasin = magasin.nom_magasin;
+            else if (magasin.nom) nomMagasin = magasin.nom;
+            else if (magasin.name) nomMagasin = magasin.name;
+            else if (magasin.label) nomMagasin = magasin.label;
+            else if (magasin.title) nomMagasin = magasin.title;
+            
+            const adresseMagasin = magasin.adresse || magasin.address || magasin.localisation || magasin.city || 'Localisation non disponible';
+            const isSelected = this.currentMagasin && magasin._id === this.currentMagasin;
+            
+            console.log(`🏪 Mag ${idx}: ID=${magasin._id}, nom="${nomMagasin}", adresse="${adresseMagasin}"`);
+            
+            return `
+                <button type="button" class="btn btn-light w-100 text-start mb-2 p-3 border ${isSelected ? 'border-primary bg-primary bg-opacity-10' : ''}"
+                        onclick="venteManager.selectMagasinModal('${magasin._id}', '${nomMagasin}')">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="mb-1 fw-semibold">${nomMagasin}</h6>
+                            <small class="text-muted">${adresseMagasin}</small>
+                        </div>
+                        ${isSelected ? '<i class="fas fa-check-circle text-primary fs-5"></i>' : '<i class="fas fa-store text-muted"></i>'}
+                    </div>
+                </button>
+            `;
+        }).join('');
+
+        listDiv.style.display = 'block';
+    }
+
+    /**
+     * Sélectionne un magasin depuis le modal
+     */
+    selectMagasinModal(magasinId, magasinNom) {
+        this.currentMagasin = magasinId;
+        
+        // Mettre à jour le label du bouton
+        const btnLabel = document.getElementById('magasinActuelTextVente');
+        if (btnLabel) {
+            btnLabel.textContent = magasinNom;
+        }
+        
+        // Mettre à jour le badge du header
+        const badgeLabel = document.getElementById('currentMagasinName');
+        if (badgeLabel) {
+            badgeLabel.textContent = magasinNom;
+        }
+
+        // Charger les produits
+        this.onMagasinChange(magasinId);
+
+        // Fermer le modal
+        const modal = document.getElementById('modalSelectMagasinVente');
+        if (modal) {
+            const modalInstance = bootstrap.Modal.getInstance(modal);
+            if (modalInstance) modalInstance.hide();
+        }
+
+        console.log(`🏪 Magasin sélectionné: ${magasinNom}`);
     }
 
     /**
@@ -226,49 +324,13 @@ class VenteManager {
         console.log(`🏪 Magasin sélectionné: ${magasinId}`);
         
         try {
-            await Promise.all([
-                this.loadRayons(magasinId),
-                this.loadProduits(magasinId)
-            ]);
+            await this.loadProduits(magasinId);
         } catch (error) {
             console.error('❌ Erreur changement magasin:', error);
         }
     }
 
-    /**
-     * Charge les rayons d'un magasin
-     */
-    async loadRayons(magasinId) {
-        try {
-            const response = await fetch(
-                `${this.API_BASE}/api/protected/magasins/${magasinId}/rayons`,
-                { headers: this.authHeaders() }
-            );
-            
-            if (response.ok) {
-                this.rayons = await response.json();
-                this.displayRayons();
-                console.log(`📍 ${this.rayons.length} rayon(s) chargé(s)`);
-            }
-        } catch (error) {
-            console.error('❌ Erreur chargement rayons:', error);
-        }
-    }
 
-    /**
-     * Affiche les rayons dans le select
-     */
-    displayRayons() {
-        const select = document.getElementById('venteSelectRayon');
-        select.innerHTML = '<option value="">-- Sélectionner rayon --</option>';
-        
-        this.rayons.forEach(rayon => {
-            const option = document.createElement('option');
-            option.value = rayon._id;
-            option.textContent = rayon.nomRayon;
-            select.appendChild(option);
-        });
-    }
 
     /**
      * Charge les produits d'un magasin
@@ -291,13 +353,18 @@ class VenteManager {
     }
 
     /**
-     * Affiche la liste des produits
+     * Affiche la liste élégante des produits
      */
     displayProduits() {
-        const liste = document.getElementById('produitsList');
+        const grid = document.getElementById('produitsGridView');
+        
+        if (!grid) {
+            console.warn('⚠️ Élément produitsGridView non trouvé');
+            return;
+        }
         
         if (this.produits.length === 0) {
-            liste.innerHTML = `
+            grid.innerHTML = `
                 <div class="text-center text-muted py-5">
                     <i class="fas fa-inbox fa-2x mb-2 opacity-50"></i>
                     <p class="small">Aucun produit disponible</p>
@@ -306,33 +373,202 @@ class VenteManager {
             return;
         }
 
-        liste.innerHTML = this.produits.map(produit => `
-            <button class="list-group-item list-group-item-action border-0 py-3 px-3 cursor-pointer" 
-                    onclick="venteManager.selectProduit('${produit._id}')">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="text-start flex-grow-1">
-                        <h6 class="mb-1 small fw-semibold">${produit.nomProduit}</h6>
-                        <div class="small text-muted">
-                            <span class="badge bg-info">${produit.quantiteActuelle || 0} en stock</span>
-                            <span class="badge bg-secondary">${produit.typeProduitId?.nomType || '-'}</span>
-                        </div>
+        grid.innerHTML = this.produits.map((produit, index) => {
+            // Nom du produit - champ: designation
+            const nomProduit = produit.designation || 
+                              produit.nomProduit || 
+                              produit.nom || 
+                              produit.name || 
+                              `Produit ${index + 1}`;
+            
+            // Image - champ: photoUrl
+            let imageSrc = produit.photoUrl || 
+                          produit.imageProduit || 
+                          produit.image || 
+                          'assets/img/placeholder.svg';
+            
+            // Rayon - champ: rayonId.nomRayon
+            let rayonNom = 'Non défini';
+            if (produit.rayonId?.nomRayon) {
+                rayonNom = produit.rayonId.nomRayon;
+            } else if (produit.rayonId?.nom) {
+                rayonNom = produit.rayonId.nom;
+            } else if (typeof produit.rayon === 'string') {
+                rayonNom = produit.rayon;
+            }
+            
+            // Type de produit - champ: typeProduitId (objet imbriqué)
+            let typeNom = '';
+            let typeIcone = '📦';
+            let unitePrincipale = '';
+            if (produit.typeProduitId) {
+                typeNom = produit.typeProduitId.nomType || 'Type';
+                typeIcone = produit.typeProduitId.icone || '📦';
+                unitePrincipale = produit.typeProduitId.unitePrincipale || '';
+            }
+            
+            // Quantité
+            const quantite = produit.quantiteActuelle || 0;
+            
+            // Prix
+            const prix = produit.prixUnitaire || 0;
+            
+            console.log(`📦 Prod ${index + 1}: nom="${nomProduit}", type="${typeNom}" (${typeIcone}), rayon="${rayonNom}", unité="${unitePrincipale}", prix=${prix}, qty=${quantite}`);
+            
+            return `
+            <div class="d-flex align-items-center gap-2 p-2 border-bottom cursor-pointer transition-all"
+                 style="cursor: pointer; transition: background-color 0.2s, transform 0.2s; min-height: 70px;"
+                 onmouseenter="this.style.backgroundColor='#f8f9fa'; this.style.transform='translateX(3px)';"
+                 onmouseleave="this.style.backgroundColor='transparent'; this.style.transform='translateX(0)';"
+                 onclick="venteManager.selectProduit('${produit._id}')">
+                
+                <!-- Image Compacte -->
+                <div style="flex-shrink: 0; position: relative;">
+                    <img src="${imageSrc}" 
+                         alt="${nomProduit}"
+                         style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #e0e0e0;"
+                         onerror="this.src='assets/img/placeholder.svg'">
+                    <span class="badge badge-sm bg-success" style="position: absolute; bottom: -8px; right: -8px; font-size: 0.65rem; padding: 3px 5px;">
+                        ${quantite}
+                    </span>
+                </div>
+                
+                <!-- Infos Compactées -->
+                <div class="flex-grow-1 min-width-0" style="overflow: hidden;">
+                    <div class="fw-semibold text-dark" style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${nomProduit}
                     </div>
-                    <div class="text-end">
-                        <div class="small fw-semibold text-dark">${(produit.prixUnitaire || 0).toFixed(2)} USD</div>
-                        <small class="text-muted">U.</small>
+                    <div class="small text-muted" style="font-size: 0.65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${typeIcone} ${typeNom} ${unitePrincipale ? '· ' + unitePrincipale : ''} ${rayonNom ? '· ' + rayonNom : ''}
                     </div>
                 </div>
-            </button>
-        `).join('');
+                
+                <!-- Prix & Chevron -->
+                <div class="text-end flex-shrink-0" style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                    <div style="font-weight: 600; color: #0d6efd; font-size: 0.95rem;">
+                        ${prix.toFixed(2)}
+                    </div>
+                    <i class="fas fa-chevron-right" style="opacity: 0.4; font-size: 0.85rem;"></i>
+                </div>
+            </div>
+        `; }).join('');
     }
 
     /**
-     * Sélectionne un produit
+     * Sélectionne un produit et affiche les détails
      */
     selectProduit(produitId) {
+        const produit = this.produits.find(p => p._id === produitId);
+        if (!produit) {
+            console.error('❌ Produit non trouvé');
+            return;
+        }
+
+        this.currentProduit = produit;
+        const nomProduit = produit.designation || produit.nomProduit || produit.nom || 'Sans nom';
+        console.log(`📦 Produit sélectionné: ${nomProduit}`);
+
+        // Remplir le select caché pour compatibilité
         const select = document.getElementById('venteSelectProduit');
-        select.value = produitId;
-        select.dispatchEvent(new Event('change'));
+        if (select) {
+            select.value = produitId;
+        }
+
+        // Afficher les détails du produit sélectionné
+        this.displaySelectedProduit();
+        
+        // Initialiser la quantité et le prix
+        document.getElementById('venteQuantite').value = 1;
+        document.getElementById('ventePrix').value = (produit.prixUnitaire || 0).toFixed(2);
+        document.getElementById('ventePrixSuggere').textContent = (produit.prixUnitaire || 0).toFixed(2);
+        
+        this.updateVenteTotalPartiel();
+    }
+
+    /**
+     * Affiche les détails du produit sélectionné dans le panel 2
+     */
+    displaySelectedProduit() {
+        const alertBox = document.getElementById('venteProduitSelected');
+        if (!alertBox || !this.currentProduit) return;
+
+        const produit = this.currentProduit;
+        const nomProduit = produit.designation || produit.nomProduit || produit.nom || 'Sans nom';
+        const rayonNom = produit.rayonId?.nomRayon || produit.rayonId?.nom || 'Non défini';
+        const quantite = produit.quantiteActuelle || 0;
+        const imageSrc = produit.photoUrl || 'assets/img/placeholder.svg';
+        
+        // Type de produit - champ: typeProduitId (objet imbriqué)
+        let typeNom = 'Non défini';
+        let typeIcone = '📦';
+        let unitePrincipale = '';
+        if (produit.typeProduitId) {
+            typeNom = produit.typeProduitId.nomType || 'Non défini';
+            typeIcone = produit.typeProduitId.icone || '📦';
+            unitePrincipale = produit.typeProduitId.unitePrincipale || '';
+        }
+        
+        // Récupérer le magasin sélectionné du sélecteur ou de currentMagasin
+        let magasinNom = 'Non défini';
+        if (this.currentMagasin) {
+            const magasinInfo = this.magasins.find(m => m._id === this.currentMagasin);
+            // Chercher le nom avec la bonne structure (nom_magasin est le champ réel)
+            if (magasinInfo) {
+                magasinNom = magasinInfo.nom_magasin || magasinInfo.nom || magasinInfo.name || 'Non défini';
+            }
+        }
+        
+        console.log(`📦 Affichage produit: ${nomProduit}, Type: ${typeNom} (${typeIcone}), Unité: ${unitePrincipale}, Magasin: ${magasinNom}, Rayon: ${rayonNom}`);
+        
+        // Mettre à jour l'image de fond
+        const bgImg = document.getElementById('venteProduitBgImage');
+        if (bgImg) bgImg.src = imageSrc;
+        
+        // Mettre à jour les infos avec vérification null
+        const nomEl = document.getElementById('venteProduitNom');
+        if (nomEl) nomEl.textContent = nomProduit;
+        
+        const magasinEl = document.getElementById('venteProduitMagasin');
+        if (magasinEl) magasinEl.textContent = magasinNom;
+        
+        const rayonEl = document.getElementById('venteProduitRayon');
+        if (rayonEl) rayonEl.textContent = rayonNom;
+        
+        const stockEl = document.getElementById('venteProduitStock');
+        if (stockEl) stockEl.textContent = quantite;
+        
+        // Ajouter le type et l'unité si disponibles
+        const typeLabel = document.getElementById('venteProduitType');
+        if (typeLabel) {
+            typeLabel.innerHTML = `${typeIcone} ${typeNom}`;
+            typeLabel.style.display = 'block';
+        }
+        
+        const uniteLabel = document.getElementById('venteProduitUnite');
+        if (uniteLabel && unitePrincipale) {
+            uniteLabel.textContent = unitePrincipale;
+            uniteLabel.style.display = 'block';
+        }
+        
+        alertBox.style.display = 'flex';
+    }
+
+    /**
+     * Efface la sélection du produit
+     */
+    clearSelection() {
+        this.currentProduit = null;
+        const alertBox = document.getElementById('venteProduitSelected');
+        if (alertBox) {
+            alertBox.style.display = 'none';
+            // Ne pas vider le innerHTML - on en aura besoin pour le prochain produit
+        }
+        const select = document.getElementById('venteSelectProduit');
+        if (select) {
+            select.value = '';
+        }
+        document.getElementById('venteQuantite').value = 1;
+        document.getElementById('ventePrix').value = '';
     }
 
     /**
@@ -394,19 +630,24 @@ class VenteManager {
      * Ajoute un article au panier
      */
     addToPanier() {
-        const produitId = document.getElementById('venteSelectProduit').value;
-        const magasinId = document.getElementById('venteSelectMagasin').value;
+        const btnAjouter = document.getElementById('btnAjouterPanier');
+        
+        const produitId = this.currentProduit?._id;
+        const magasinId = this.currentMagasin;
         const quantite = parseInt(document.getElementById('venteQuantite').value || 0);
         const prix = parseFloat(document.getElementById('ventePrix').value || 0);
         const observations = document.getElementById('venteObservations').value;
 
         if (!produitId || !magasinId || quantite < 1) {
-            alert('⚠️ Veuillez sélectionner un produit et une quantité');
+            alert('⚠️ Veuillez sélectionner un produit, un magasin et une quantité');
             return;
         }
 
-        const produit = this.produits.find(p => p._id === produitId);
-        if (!produit) return;
+        const produit = this.currentProduit;
+        if (!produit) {
+            alert('⚠️ Produit non trouvé');
+            return;
+        }
 
         // Vérification stock
         if (produit.quantiteActuelle < quantite) {
@@ -414,20 +655,51 @@ class VenteManager {
             return;
         }
 
-        // Ajouter au panier
-        this.panier.push({
+        // Afficher le loading
+        if (btnAjouter) {
+            btnAjouter.disabled = true;
+            const originalHTML = btnAjouter.innerHTML;
+            btnAjouter.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Ajout en cours...';
+
+            setTimeout(() => {
+                btnAjouter.disabled = false;
+                btnAjouter.innerHTML = originalHTML;
+            }, 500);
+        }
+
+        // Récupérer le nom du magasin
+        const magasinInfo = this.magasins.find(m => m._id === magasinId);
+        const nomMagasin = magasinInfo?.nom_magasin || magasinInfo?.nom || 'Magasin inconnu';
+
+        // Ajouter au panier avec tous les détails nécessaires
+        const rayonId = produit.rayonId?._id || produit.rayonId;
+        const panierItem = {
             produitId,
-            nomProduit: produit.nomProduit,
+            nomProduit: produit.designation || produit.nomProduit || 'Produit',
+            nomMagasin: nomMagasin,
+            magasinId: magasinId,
+            rayonId: rayonId,  // Récupérer l'ID du rayon (peut être string ou object._id)
             quantite,
             prix,
             total: quantite * prix,
             observations
-        });
+        };
+        
+        this.panier.push(panierItem);
 
-        console.log(`✅ Article ajouté au panier: ${produit.nomProduit} (${quantite})`);
+        console.log(`✅ Article ajouté au panier:`, {
+            produit: produit.designation,
+            quantite: quantite,
+            magasin: nomMagasin,
+            rayonId: rayonId,
+            rayonIdOriginal: produit.rayonId,
+            prixUnitaire: prix,
+            total: (quantite * prix).toFixed(2)
+        });
 
         // Reset formulaire
         this.displayPanier();
+        this.clearSelection();
         document.getElementById('venteQuantite').value = 1;
         document.getElementById('venteObservations').value = '';
         this.updateVenteTotalPartiel();
@@ -512,76 +784,123 @@ class VenteManager {
      * Vide le panier
      */
     clearPanier() {
+        const btnVider = document.getElementById('btnViderPanier');
+        
         if (!confirm('Vider le panier?')) return;
-        this.panier = [];
-        this.displayPanier();
-        console.log('🗑️ Panier vidé');
+        
+        // Afficher le loading
+        if (btnVider) {
+            btnVider.disabled = true;
+            const originalHTML = btnVider.innerHTML;
+            btnVider.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Suppression...';
+
+            setTimeout(() => {
+                this.panier = [];
+                this.displayPanier();
+                console.log('🗑️ Panier vidé');
+                
+                btnVider.disabled = false;
+                btnVider.innerHTML = originalHTML;
+            }, 500);
+        }
     }
 
     /**
      * Valide la vente en envoyant au serveur
      */
     async validateVente() {
+        const btnValider = document.getElementById('btnValiderVente');
+        
         if (this.panier.length === 0) {
             alert('⚠️ Panier vide');
             return;
         }
 
-        const magasinId = document.getElementById('venteSelectMagasin').value;
-        const modePaiement = document.getElementById('ventePaiement').value;
-        const client = document.getElementById('venteClient').value;
-        const tauxFC = parseFloat(document.getElementById('venteTauxFC').value || 0);
+        if (!this.currentMagasin) {
+            alert('⚠️ Veuillez sélectionner un magasin');
+            return;
+        }
 
-        console.log('💾 Validation de la vente...');
-        const totalMontant = this.panier.reduce((sum, item) => sum + item.total, 0);
+        // Afficher le loading
+        if (btnValider) {
+            btnValider.disabled = true;
+            const originalHTML = btnValider.innerHTML;
+            btnValider.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Traitement...';
 
-        try {
-            // Préparer les articles
-            const articles = this.panier.map(item => ({
-                produitId: item.produitId,
-                rayonId: item.rayonId || undefined,
-                quantite: item.quantite,
-                prixUnitaire: item.prix,
-                observations: item.observations
-            }));
-
-            // Créer la vente via la nouvelle API
-            const response = await fetch(
-                `${this.API_BASE}/api/protected/ventes`,
-                {
-                    method: 'POST',
-                    headers: this.authHeaders(),
-                    body: JSON.stringify({
-                        magasinId,
-                        articles,
-                        client: client || undefined,
-                        modePaiement,
-                        tauxFC: tauxFC > 0 ? tauxFC : undefined
-                    })
+            // Restaurer le bouton à la fin (succès ou erreur)
+            const restoreButton = () => {
+                if (btnValider) {
+                    btnValider.disabled = false;
+                    btnValider.innerHTML = originalHTML;
                 }
-            );
+            };
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Erreur lors de la création de la vente');
+            const magasinId = this.currentMagasin;
+            const modePaiement = document.getElementById('ventePaiement').value;
+            const client = document.getElementById('venteClient').value;
+            const tauxFC = parseFloat(document.getElementById('venteTauxFC').value || 0);
+
+            console.log('💾 Validation de la vente...');
+            const totalMontant = this.panier.reduce((sum, item) => sum + item.total, 0);
+
+            try {
+                // Préparer les articles avec tous les détails nécessaires
+                const articles = this.panier.map(item => ({
+                    produitId: item.produitId,
+                    designation: item.nomProduit,
+                    rayonId: item.rayonId || undefined,
+                    quantite: item.quantite,
+                    prixUnitaire: item.prix,
+                    montant: item.total,
+                    observations: item.observations
+                }));
+
+                console.log('📦 Articles à envoyer:', JSON.stringify(articles, null, 2));
+                console.log('🔍 Détail de chaque article:');
+                articles.forEach((art, idx) => {
+                    console.log(`  [${idx}] produitId=${art.produitId}, rayonId=${art.rayonId}, designation=${art.designation}, qty=${art.quantite}`);
+                });
+
+                // Créer la vente via la nouvelle API
+                const response = await fetch(
+                    `${this.API_BASE}/api/protected/ventes`,
+                    {
+                        method: 'POST',
+                        headers: this.authHeaders(),
+                        body: JSON.stringify({
+                            magasinId,
+                            articles,
+                            client: client || undefined,
+                            modePaiement,
+                            tauxFC: tauxFC > 0 ? tauxFC : undefined
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Erreur lors de la création de la vente');
+                }
+
+                const result = await response.json();
+                
+                console.log(`✅ Vente créée: ${result.vente._id}`);
+                alert(`✅ Vente enregistrée!\nMontant: ${totalMontant.toFixed(2)} USD${tauxFC > 0 ? ' (' + (totalMontant * tauxFC).toFixed(0) + ' FC)' : ''}`);
+                
+                // Réinitialiser
+                this.panier = [];
+                this.displayPanier();
+                document.getElementById('venteClient').value = '';
+                document.getElementById('venteTauxFC').value = '';
+                await this.loadVentesHistorique();
+                
+                console.log('✅ Vente finalisée');
+                restoreButton();
+            } catch (error) {
+                console.error('❌ Erreur vente:', error);
+                alert('❌ Erreur: ' + error.message);
+                restoreButton();
             }
-
-            const result = await response.json();
-            
-            console.log(`✅ Vente créée: ${result.vente._id}`);
-            alert(`✅ Vente enregistrée!\nMontant: ${totalMontant.toFixed(2)} USD${tauxFC > 0 ? ' (' + (totalMontant * tauxFC).toFixed(0) + ' FC)' : ''}`);
-            
-            // Réinitialiser
-            this.panier = [];
-            this.displayPanier();
-            document.getElementById('venteClient').value = '';
-            document.getElementById('venteTauxFC').value = '';
-            await this.loadVentesHistorique();
-            
-            console.log('✅ Vente finalisée');
-        } catch (error) {
-            console.error('❌ Erreur vente:', error);
-            alert('❌ Erreur: ' + error.message);
         }
     }
 
@@ -590,8 +909,12 @@ class VenteManager {
      */
     async loadVentesHistorique() {
         try {
-            const magasinId = document.getElementById('venteSelectMagasin').value;
-            if (!magasinId) return;
+            // Utiliser le magasin sélectionné actuellement au lieu de chercher un select
+            const magasinId = this.currentMagasin;
+            if (!magasinId) {
+                console.log('⚠️ Pas de magasin sélectionné pour charger l\'historique');
+                return;
+            }
 
             const response = await fetch(
                 `${this.API_BASE}/api/protected/magasins/${magasinId}/ventes?limit=50`,
@@ -677,7 +1000,7 @@ class VenteManager {
      * Attache les écouteurs d'événements
      */
     attachEventListeners() {
-        // Sélecteur magasin pour ADMIN
+        // Sélecteur magasin pour ADMIN (deprecated - remplacé par modal)
         const adminMagasinSelect = document.getElementById('adminMagasinSelect');
         if (adminMagasinSelect) {
             adminMagasinSelect.addEventListener('change', (e) => {
@@ -694,7 +1017,15 @@ class VenteManager {
             setTimeout(() => this.populateAdminMagasinSelect(), 500);
         }
 
-        // Changements de sélection
+        // Modal de sélection magasin - afficher les magasins quand le modal s'ouvre
+        const modalMagasinVente = document.getElementById('modalSelectMagasinVente');
+        if (modalMagasinVente) {
+            modalMagasinVente.addEventListener('show.bs.modal', () => {
+                this.displayMagasins();
+            });
+        }
+
+        // Sélecteur magasin deprecated (ancienne version)
         document.getElementById('venteSelectMagasin')?.addEventListener('change', (e) => {
             this.onMagasinChange(e.target.value);
             this.loadVentesHistorique();

@@ -2,11 +2,16 @@
 include_once 'includes/auth-init.php';
 
 // Contrôle d'accès: seuls vendeur, superviseur et admin
-$userRole = $_SESSION['role'] ?? 'guest';
-if (!in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
+// Note: Les rôles peuvent être stockés en session PHP OU en JWT token (localStorage)
+// Si pas de session, on laisse le frontend vérifier via JWT
+$userRole = $_SESSION['role'] ?? null;
+
+// Si on a une session avec un rôle, on vérifie
+if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
     header('Location: index.php?error=access_denied');
     exit();
 }
+// Si pas de session, on continue (le frontend vérifier via JWT)
 ?>
 <!DOCTYPE html>
 <html lang="fr" dir="ltr">
@@ -117,7 +122,7 @@ if (!in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                     <div class="gradient-header text-white p-3 p-md-4 position-relative" style="background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%);">
                         <div class="row align-items-center gx-3">
                             <div class="col-auto d-none d-md-block">
-                                <div class="avatar bg-white-10 rounded-circle d-flex align-items-center justify-content-center" style="width:72px;height:72px;">
+                                <div class="avatar bg-black-10 rounded-circle d-flex align-items-center justify-content-center" style="width:72px;height:72px;">
                                     <i class="fas fa-cash-register fa-2x text-white"></i>
                                 </div>
                             </div>
@@ -127,27 +132,21 @@ if (!in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                     <div class="small text-white-75">Système de gestion des ventes</div>
                                 </div>
                                 <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
-                                    <span class="badge bg-white bg-opacity-15 text-white">
+                                    <span class="badge bg-black bg-opacity-15 text-white">
                                         <i class="fas fa-store me-1"></i> 
                                         <span id="currentMagasinName">-</span>
                                     </span>
-                                    <span class="badge bg-white bg-opacity-15 text-white"><i class="fas fa-shopping-cart me-1"></i> <span id="ventesToday">0</span> ventes</span>
-                                    <span class="badge bg-white bg-opacity-15 text-white"><i class="fas fa-dollar-sign me-1"></i> <span id="totalVentes">0.00</span> USD</span>
+                                    <span class="badge bg-black bg-opacity-15 text-white"><i class="fas fa-shopping-cart me-1"></i> <span id="ventesToday">0</span> ventes</span>
+                                    <span class="badge bg-black bg-opacity-15 text-white"><i class="fas fa-dollar-sign me-1"></i> <span id="totalVentes">0.00</span> USD</span>
                                 </div>
                             </div>
                             <div class="col-auto text-end">
                                 <div class="d-flex align-items-center gap-2">
-                                    <!-- Sélecteur magasin pour ADMIN -->
-                                    <?php if ($userRole === 'ADMIN'): ?>
-                                    <div class="input-group input-group-sm" style="width: 200px;">
-                                        <span class="input-group-text bg-white-10 border-0 text-white">
-                                            <i class="fas fa-store"></i>
-                                        </span>
-                                        <select id="adminMagasinSelect" class="form-select form-select-sm bg-white-10 border-0 text-white" style="max-width: 150px;">
-                                            <option value="">Sélectionner magasin...</option>
-                                        </select>
-                                    </div>
-                                    <?php endif; ?>
+                                    <!-- Sélecteur magasin -->
+                                    <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalSelectMagasinVente">
+                                        <i class="fas fa-store me-1"></i>
+                                        <span id="magasinActuelTextVente">Sélectionner magasin</span>
+                                    </button>
                                     <button class="btn btn-light btn-sm" id="refreshData" title="Actualiser"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
                                 </div>
                             </div>
@@ -219,12 +218,12 @@ if (!in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                         <input id="searchProduits" class="form-control border-start-0 ps-0 bg-transparent" placeholder="Rechercher produit..." style="border: none;">
                                     </div>
                                 </div>
-                                <div class="card-body p-0">
-                                    <div id="produitsList" class="list-group list-group-flush" style="max-height: 65vh; overflow: auto;">
+                                <div class="card-body p-2">
+                                    <div id="produitsGridView" class="d-flex flex-column" style="max-height: 65vh; overflow: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
                                         <div class="d-flex align-items-center justify-content-center" style="height: 400px;">
                                             <div class="text-center">
                                                 <div class="spinner-border spinner-border-sm text-success mb-2" role="status"></div>
-                                                <p class="text-muted small">Chargement...</p>
+                                                <p class="text-muted small">Chargement des produits...</p>
                                             </div>
                                         </div>
                                     </div>
@@ -246,32 +245,59 @@ if (!in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                 </h6>
                             </div>
                             <div class="card-body">
-                                <!-- Magasin Selection -->
+                                <!-- Produit Selection avec background image en flou -->
                                 <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Magasin</label>
-                                    <select id="venteSelectMagasin" class="form-select form-select-sm">
-                                        <option value="">-- Sélectionner magasin --</option>
+                                    <label class="form-label small fw-semibold">Produit Sélectionné</label>
+                                    <div id="venteProduitSelected" class="position-relative rounded overflow-hidden mb-3" style="display: none; height: 300px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                        <!-- Background image en flou -->
+                                        <img id="venteProduitBgImage" src="" alt="" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(1px) brightness(0.35); z-index: 1;">
+                                        
+                                        <!-- Overlay dégradé -->
+                                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(102, 126, 234, 0.85) 0%, rgba(118, 75, 162, 0.85) 100%); z-index: 1.5;"></div>
+                                        
+                                        <!-- Contenu overlay -->
+                                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; display: flex; flex-direction: column; justify-content: space-between; padding: 14px;">
+                                            <!-- Header: Nom + Bouton fermer -->
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div style="flex-grow: 1; min-width: 0;">
+                                                    <h5 class="mb-2 text-white fw-bold" id="venteProduitNom" style="font-size: 1.05rem; word-break: break-word; line-height: 1.3;">-</h5>
+                                                </div>
+                                                <button class="btn btn-sm btn-outline-light ms-2" onclick="venteManager.clearSelection()" style="flex-shrink: 0; opacity: 0.9;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            
+                                            <!-- Infos: 2 colonnes (gauche: Magasin/Type/Rayon, droite: Unité/Stock) -->
+                                            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                                                <!-- Gauche: Magasin, Type, Rayon -->
+                                                <div>
+                                                    <div class="small" style="opacity: 0.8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">🏪 Magasin</div>
+                                                    <div id="venteProduitMagasin" class="fw-semibold" style="font-size: 0.85rem; line-height: 1.2;">-</div>
+                                                    
+                                                    <div class="small" style="opacity: 0.8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px;">🏷️ Type</div>
+                                                    <div id="venteProduitType" class="fw-semibold" style="font-size: 0.85rem;">-</div>
+                                                    
+                                                    <div class="small" style="opacity: 0.8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px;">🏢 Rayon</div>
+                                                    <div id="venteProduitRayon" class="fw-semibold" style="font-size: 0.85rem;">-</div>
+                                                </div>
+                                                
+                                                <!-- Droite: Unité et Stock -->
+                                                <div class="text-end">
+                                                    <div class="small" style="opacity: 0.8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">📏 Unité</div>
+                                                    <div>
+                                                        <span id="venteProduitUnite" class="badge bg-warning fw-bold" style="font-size: 0.6rem; padding: 4px 8px;">-</span>
+                                                    </div>
+                                                    <div class="small" style="opacity: 0.8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px;">📦 Stock</div>
+                                                    <div>
+                                                        <span id="venteProduitStock" class="badge bg-success fw-bold" style="font-size: 0.9rem; padding: 4px 8px;">0</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <select id="venteSelectProduit" class="form-select form-select-sm" style="display: none;">
+                                        <option value="">-- Cliquez sur un produit --</option>
                                     </select>
-                                    <small class="text-muted d-block mt-1" id="venteSelectMagasinHelp"></small>
-                                </div>
-
-                                <!-- Rayon Selection -->
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Rayon</label>
-                                    <select id="venteSelectRayon" class="form-select form-select-sm">
-                                        <option value="">-- Sélectionner rayon --</option>
-                                    </select>
-                                </div>
-
-                                <!-- Produit Selection -->
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Produit</label>
-                                    <select id="venteSelectProduit" class="form-select form-select-sm">
-                                        <option value="">-- Sélectionner produit --</option>
-                                    </select>
-                                    <small class="text-muted d-block mt-1">
-                                        Stock actuel: <span id="venteProduitStock" class="badge bg-info">0</span>
-                                    </small>
                                 </div>
 
                                 <!-- Quantité -->
@@ -432,6 +458,37 @@ if (!in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
             </div>
         </div>
     </main>
+
+    <!-- 🏪 MODAL SÉLECTION MAGASIN VENTE -->
+    <div class="modal fade" id="modalSelectMagasinVente" tabindex="-1" aria-labelledby="modalSelectMagasinVenteLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-xl border-0">
+                <div class="modal-header bg-gradient-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-store me-2"></i>Sélectionner un magasin
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Spinner de chargement -->
+                    <div id="magasinsSpinnerVente" class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="text-muted">Chargement des magasins...</p>
+                    </div>
+
+                    <!-- Liste des magasins -->
+                    <div id="magasinsListVente" style="display: none;">
+                        <!-- Sera rempli par JavaScript -->
+                    </div>
+
+                    <!-- Message d'erreur -->
+                    <div id="magasinsErrorVente" style="display: none;" class="alert alert-danger mb-0"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script src="vendors/popper/popper.min.js"></script>

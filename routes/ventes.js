@@ -47,8 +47,8 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             // Vérifier stock
             if (produit.quantiteActuelle < article.quantite) {
                 return res.status(400).json({
-                    message: `❌ Stock insuffisant pour ${produit.nomProduit}! Disponible: ${produit.quantiteActuelle}`,
-                    produit: produit.nomProduit,
+                    message: `❌ Stock insuffisant pour ${produit.designation}! Disponible: ${produit.quantiteActuelle}`,
+                    produit: produit.designation,
                     disponible: produit.quantiteActuelle,
                     demande: article.quantite
                 });
@@ -60,7 +60,7 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             articlesProcesses.push({
                 produitId: article.produitId,
                 rayonId: article.rayonId,
-                nomProduit: produit.nomProduit,
+                designation: produit.designation,
                 quantite: article.quantite,
                 prixUnitaire: article.prixUnitaire,
                 montantUSD: montantUSD,
@@ -110,7 +110,7 @@ router.post('/ventes', authMiddleware, async (req, res) => {
                 }
             );
             
-            console.log(`✅ Mouvement créé pour ${article.nomProduit}`);
+            console.log(`✅ Mouvement créé pour ${article.designation}`);
         }
         
         // Retourner la vente populée
@@ -147,7 +147,7 @@ router.get('/ventes', authMiddleware, async (req, res) => {
         const ventes = await Vente.find(filter)
             .populate('magasinId', 'nom')
             .populate('utilisateurId', 'nom prenom')
-            .populate('articles.produitId', 'nomProduit')
+            .populate('articles.produitId', 'designation')
             .sort({ dateVente: -1 })
             .skip((page - 1) * limit)
             .limit(parseInt(limit));
@@ -287,7 +287,7 @@ router.get('/magasins/:magasinId/ventes', authMiddleware, async (req, res) => {
         
         const ventes = await Vente.find(filter)
             .populate('utilisateurId', 'nom prenom')
-            .populate('articles.produitId', 'nomProduit')
+            .populate('articles.produitId', 'designation')
             .sort({ dateVente: -1 });
         
         res.json(ventes);
