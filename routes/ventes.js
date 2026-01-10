@@ -253,7 +253,7 @@ router.get('/ventes/:venteId', authMiddleware, async (req, res) => {
             })
             .populate({
                 path: 'articles.rayonId',
-                select: '_id nomRayon'
+                select: '_id nomRayon codeRayon'
             });
         
         if (!vente) {
@@ -311,7 +311,7 @@ router.put('/ventes/:venteId', authMiddleware, async (req, res) => {
                 select: '_id designation photoUrl prixUnitaire',
                 populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale' }
             })
-            .populate({ path: 'articles.rayonId', select: '_id nomRayon' });
+            .populate({ path: 'articles.rayonId', select: '_id nomRayon codeRayon' });
         
         res.json({
             success: true,
@@ -361,7 +361,7 @@ router.delete('/ventes/:venteId', authMiddleware, async (req, res) => {
                 select: '_id designation photoUrl prixUnitaire',
                 populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale' }
             })
-            .populate({ path: 'articles.rayonId', select: '_id nomRayon' });
+            .populate({ path: 'articles.rayonId', select: '_id nomRayon codeRayon' });
         
         res.json({
             success: true,

@@ -1514,8 +1514,11 @@ class VenteManager {
             
             // Code: Display rayon code (codeRayon) instead of product reference
             let codeAffiche = '-';
+            console.log(`📦 Article ${index} - rayonId complet:`, article.rayonId);
+            console.log(`📦 Article ${index} - rayonId keys:`, article.rayonId ? Object.keys(article.rayonId) : 'null');
             if (article.rayonId && typeof article.rayonId === 'object') {
                 codeAffiche = article.rayonId.codeRayon || '-';
+                console.log(`📦 Article ${index} - codeRayon trouvé:`, article.rayonId.codeRayon, '| affichage:', codeAffiche);
             }
             const prixUnitaire = article.prixUnitaire || article.prix || 0;
             const quantite = article.quantite || 0;
