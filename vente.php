@@ -703,7 +703,7 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                             <!-- Client -->
                             <div class="col-md-6">
                                 <small class="text-muted fw-semibold">👥 CLIENT</small>
-                                <p id="venteClient" class="mb-0 fw-semibold">-</p>
+                                <p id="venteClientModal" class="mb-0 fw-semibold">-</p>
                             </div>
 
                             <!-- Quantité -->

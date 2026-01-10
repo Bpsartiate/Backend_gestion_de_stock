@@ -1459,22 +1459,16 @@ class VenteManager {
         const qteTotale = articles.reduce((sum, a) => sum + (a.quantite || 0), 0);
         document.getElementById('venteQteTotale').textContent = `${qteTotale} articles`;
         
-        // Client
+        // Client - Set on MODAL element (venteClientModal), not form input
         console.log('🔍 DEBUG Client - vente.client:', vente.client);
         console.log('🔍 DEBUG Client - vente object keys:', Object.keys(vente));
         const clientNom = vente.client || vente.nomClient || vente.clientNom || 'Client anonyme';
         console.log('🔍 DEBUG Client - Final clientNom:', clientNom);
-        const clientElement = document.getElementById('venteClient');
-        console.log('🔍 DEBUG Client - Element found:', !!clientElement, 'Tag:', clientElement?.tagName);
-        if (clientElement) {
-            // Use .value if it's an input, .textContent for other elements
-            if (clientElement.tagName === 'INPUT') {
-                clientElement.value = clientNom;
-                console.log('🔍 DEBUG Client - Set as INPUT value');
-            } else {
-                clientElement.textContent = clientNom;
-                console.log('🔍 DEBUG Client - Set as textContent, now:', clientElement.textContent);
-            }
+        const clientModalElement = document.getElementById('venteClientModal');
+        console.log('🔍 DEBUG Client - Modal Element found:', !!clientModalElement);
+        if (clientModalElement) {
+            clientModalElement.textContent = clientNom;
+            console.log('🔍 DEBUG Client - Set on modal, now:', clientModalElement.textContent);
         }
 
         // Observations
@@ -1518,8 +1512,11 @@ class VenteManager {
                 rayonNom = typeof produit.rayonId === 'object' ? produit.rayonId.nomRayon || produit.rayonId.nom : produit.rayonId;
             }
             
-            // Code: Use reference field (SKU/product reference from DB)
-            const codeProduit = produit.reference || produit.code || produit.codeBarre || produit.designation || '-';
+            // Code: Display rayon code (codeRayon) instead of product reference
+            let codeAffiche = '-';
+            if (article.rayonId && typeof article.rayonId === 'object') {
+                codeAffiche = article.rayonId.codeRayon || '-';
+            }
             const prixUnitaire = article.prixUnitaire || article.prix || 0;
             const quantite = article.quantite || 0;
             const sousTotal = prixUnitaire * quantite;
@@ -1546,7 +1543,7 @@ class VenteManager {
                                     <i class="fas fa-layer-group me-1"></i>Rayon: ${rayonNom}
                                 </div>
                                 <div class="col-auto">
-                                    <i class="fas fa-barcode me-1"></i>Code: ${codeProduit}
+                                    <i class="fas fa-barcode me-1"></i>Code Rayon: ${codeAffiche}
                                 </div>
                             </div>
                         </div>
