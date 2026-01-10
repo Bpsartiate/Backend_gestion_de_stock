@@ -245,7 +245,7 @@ router.get('/ventes/:venteId', authMiddleware, async (req, res) => {
             })
             .populate({
                 path: 'articles.produitId',
-                select: '_id designation photoUrl prixUnitaire quantiteActuelle seuilAlerte',
+                select: '_id designation reference photoUrl prixUnitaire quantiteActuelle seuilAlerte',
                 populate: {
                     path: 'typeProduitId',
                     select: '_id nomType icone unitePrincipale capaciteMax'

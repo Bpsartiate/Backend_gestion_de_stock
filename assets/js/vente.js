@@ -1460,14 +1460,20 @@ class VenteManager {
         document.getElementById('venteQteTotale').textContent = `${qteTotale} articles`;
         
         // Client
+        console.log('🔍 DEBUG Client - vente.client:', vente.client);
+        console.log('🔍 DEBUG Client - vente object keys:', Object.keys(vente));
         const clientNom = vente.client || vente.nomClient || vente.clientNom || 'Client anonyme';
+        console.log('🔍 DEBUG Client - Final clientNom:', clientNom);
         const clientElement = document.getElementById('venteClient');
+        console.log('🔍 DEBUG Client - Element found:', !!clientElement, 'Tag:', clientElement?.tagName);
         if (clientElement) {
             // Use .value if it's an input, .textContent for other elements
             if (clientElement.tagName === 'INPUT') {
                 clientElement.value = clientNom;
+                console.log('🔍 DEBUG Client - Set as INPUT value');
             } else {
                 clientElement.textContent = clientNom;
+                console.log('🔍 DEBUG Client - Set as textContent, now:', clientElement.textContent);
             }
         }
 
@@ -1512,8 +1518,8 @@ class VenteManager {
                 rayonNom = typeof produit.rayonId === 'object' ? produit.rayonId.nomRayon || produit.rayonId.nom : produit.rayonId;
             }
             
-            // Code: cherche code, codeBarre, ou codeArticle (fallback to designation)
-            const codeProduit = produit.code || produit.codeBarre || produit.codeArticle || produit.designation?.split('-')[0] || '-';
+            // Code: Use reference field (SKU/product reference from DB)
+            const codeProduit = produit.reference || produit.code || produit.codeBarre || produit.designation || '-';
             const prixUnitaire = article.prixUnitaire || article.prix || 0;
             const quantite = article.quantite || 0;
             const sousTotal = prixUnitaire * quantite;
