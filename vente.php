@@ -759,6 +759,6 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
     <script src="assets/js/theme.js"></script>
 
     <!-- Module Vente -->
-    <script src="assets/js/vente.js"></script>
+    <script src="assets/js/vente.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
