@@ -19,6 +19,14 @@ class VenteManager {
         this.produits = [];
         this.panier = [];
         this.ventesHistorique = []; // 📋 Cache des ventes pour modal détails
+        
+        // 📑 Pagination et Recherche
+        this.allVentes = []; // Toutes les ventes
+        this.filteredVentes = []; // Ventes filtrées
+        this.currentPage = 1;
+        this.itemsPerPage = 10;
+        this.searchTerm = '';
+        
         this.init();
     }
 
@@ -1035,10 +1043,15 @@ class VenteManager {
      */
     async loadVentesHistorique() {
         try {
+            // Afficher le loader
+            const loading = document.getElementById('ventesLoading');
+            if (loading) loading.style.display = 'block';
+            
             // Utiliser le magasin sélectionné actuellement au lieu de chercher un select
             const magasinId = this.currentMagasin;
             if (!magasinId) {
                 console.log('⚠️ Pas de magasin sélectionné pour charger l\'historique');
+                if (loading) loading.style.display = 'none';
                 return;
             }
 
@@ -1069,6 +1082,10 @@ class VenteManager {
             }
         } catch (error) {
             console.error('❌ Erreur chargement historique:', error);
+        } finally {
+            // Masquer le loader en tous cas
+            const loading = document.getElementById('ventesLoading');
+            if (loading) loading.style.display = 'none';
         }
     }
 
@@ -1076,41 +1093,112 @@ class VenteManager {
      * Affiche l'historique des ventes
      */
     displayVentesHistorique(ventes) {
-        const tbody = document.getElementById('ventesTableBody');
-        
-        console.log('📋 Affichage historique:', ventes);
-        
-        // 📋 Stocker les ventes dans le cache pour la modal détails
+        // 📋 Stocker TOUTES les ventes
+        this.allVentes = ventes || [];
         this.ventesHistorique = ventes || [];
+        this.currentPage = 1;
+        this.searchTerm = '';
         
-        if (!ventes || ventes.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Aucune vente enregistrée</td></tr>';
+        // Initialiser la recherche
+        this.initializeSearch();
+        
+        // Afficher la première page
+        this.renderVentesPage();
+    }
+
+    /**
+     * 🔍 Initialiser la recherche
+     */
+    initializeSearch() {
+        const searchInput = document.getElementById('ventesSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.searchTerm = e.target.value.toLowerCase();
+                this.currentPage = 1;
+                this.filterAndRenderVentes();
+            });
+        }
+    }
+
+    /**
+     * 🔎 Filtrer les ventes par terme de recherche
+     */
+    filterAndRenderVentes() {
+        if (!this.searchTerm) {
+            this.filteredVentes = [...this.allVentes];
+        } else {
+            this.filteredVentes = this.allVentes.filter(vente => {
+                const searchFields = [
+                    // Magasin
+                    (typeof vente.magasinId === 'object' ? vente.magasinId.nom_magasin : '').toLowerCase(),
+                    (typeof vente.magasinId === 'object' ? vente.magasinId.adresse : '').toLowerCase(),
+                    // Produits
+                    (vente.articles || []).map(art => {
+                        const produit = typeof art.produitId === 'object' ? art.produitId : null;
+                        return (produit?.designation || art.nomProduit || '').toLowerCase();
+                    }).join(' '),
+                    // Utilisateur
+                    (typeof vente.utilisateurId === 'object' ? 
+                        `${vente.utilisateurId.prenom} ${vente.utilisateurId.nom}` : '').toLowerCase(),
+                    // Mode paiement
+                    (vente.modePaiement || '').toLowerCase()
+                ].join(' ');
+                
+                return searchFields.includes(this.searchTerm);
+            });
+        }
+        
+        this.renderVentesPage();
+    }
+
+    /**
+     * 📑 Afficher la page actuelle
+     */
+    renderVentesPage() {
+        const tbody = document.getElementById('ventesTableBody');
+        const noResults = document.getElementById('ventesNoResults');
+        
+        // Masquer le loading
+        const loading = document.getElementById('ventesLoading');
+        if (loading) loading.style.display = 'none';
+        
+        if (!this.filteredVentes || this.filteredVentes.length === 0) {
+            tbody.innerHTML = '';
+            noResults.style.display = 'block';
+            this.updatePaginationInfo();
             return;
         }
-
-        tbody.innerHTML = ventes.map(vente => {
+        
+        noResults.style.display = 'none';
+        
+        // Calculer la pagination
+        const totalPages = Math.ceil(this.filteredVentes.length / this.itemsPerPage);
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = Math.min(start + this.itemsPerPage, this.filteredVentes.length);
+        const paginaledVentes = this.filteredVentes.slice(start, end);
+        
+        // Afficher les ventes de la page
+        tbody.innerHTML = paginaledVentes.map(vente => {
             const montantUSD = (vente.montantTotalUSD || 0).toFixed(2);
             const heureLocal = new Date(vente.dateVente).toLocaleTimeString('fr-FR', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
             
-            // Récupérer le nom du magasin - les données sont maintenant populées directement
+            // Récupérer le nom du magasin
             const magasinInfo = typeof vente.magasinId === 'object' ? vente.magasinId : this.magasins.find(m => m._id === vente.magasinId);
             const magasinNom = magasinInfo?.nom_magasin || magasinInfo?.nom || 'Non défini';
             
             // Récupérer les noms des produits et quantité totale + photos
             let produitsHtml = '-';
             let quantiteTotale = 0;
-            const MAX_SHOWN = 2; // Afficher max 2 produits dans le tableau
+            const MAX_SHOWN = 2;
             
             if (vente.articles && vente.articles.length > 0) {
-                // Afficher seulement les N premiers produits + badge si y'en a plus
                 const articlesToShow = vente.articles.slice(0, MAX_SHOWN);
                 const articlesRestantes = vente.articles.length - MAX_SHOWN;
                 
                 const produitsPhotos = articlesToShow.map(art => {
-                    quantiteTotale += art.quantite || 0;
                     const produit = typeof art.produitId === 'object' ? art.produitId : null;
                     const photoUrl = produit?.photoUrl || 'assets/img/placeholder.svg';
                     const nom = produit?.designation || art.nomProduit || 'Produit';
@@ -1123,17 +1211,14 @@ class VenteManager {
                     return produit?.designation || art.nomProduit || 'Produit';
                 }).join(', ');
                 
-                // Ajouter badge si y'a plus de produits
                 const badgePlus = articlesRestantes > 0 ? 
                     `<span class="badge bg-info ms-2" title="${articlesRestantes} produit(s) supplémentaire(s)">+${articlesRestantes}</span>` : '';
                 
-                // Calculer la quantité totale
                 quantiteTotale = vente.articles.reduce((sum, art) => sum + (art.quantite || 0), 0);
                 
                 produitsHtml = `<div style="display: flex; align-items: center; flex-wrap: wrap;">${produitsPhotos}<span>${produitsNoms}</span>${badgePlus}</div>`;
             }
             
-            // Récupérer les infos de l'utilisateur - données populées
             const utilisateurInfo = typeof vente.utilisateurId === 'object' ? vente.utilisateurId : null;
             const utilisateurNom = utilisateurInfo ? `${utilisateurInfo.prenom} ${utilisateurInfo.nom}` : 'Système';
 
@@ -1154,10 +1239,59 @@ class VenteManager {
                 </tr>
             `;
         }).join('');
+        
+        // Mettre à jour les infos de pagination
+        this.updatePaginationInfo();
     }
 
     /**
-     * Affiche les détails d'une vente
+     * 📊 Mettre à jour les infos de pagination
+     */
+    updatePaginationInfo() {
+        const totalPages = Math.ceil(this.filteredVentes.length / this.itemsPerPage);
+        const start = this.filteredVentes.length === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+        const end = Math.min(this.currentPage * this.itemsPerPage, this.filteredVentes.length);
+        
+        // Mettre à jour les spans
+        document.getElementById('ventesStart').textContent = start;
+        document.getElementById('ventesEnd').textContent = end;
+        document.getElementById('ventesTotal').textContent = this.filteredVentes.length;
+        document.getElementById('ventesCurrentPage').textContent = this.currentPage;
+        document.getElementById('ventesTotalPages').textContent = totalPages || 1;
+        
+        // Activer/désactiver les boutons de pagination
+        const prevBtn = document.getElementById('ventes-prev');
+        const nextBtn = document.getElementById('ventes-next');
+        
+        if (prevBtn) prevBtn.classList.toggle('disabled', this.currentPage === 1);
+        if (nextBtn) nextBtn.classList.toggle('disabled', this.currentPage >= totalPages);
+    }
+
+    /**
+     * ⬅️ Page précédente
+     */
+    previousPage() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+            this.renderVentesPage();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    /**
+     * ➡️ Page suivante
+     */
+    nextPage() {
+        const totalPages = Math.ceil(this.filteredVentes.length / this.itemsPerPage);
+        if (this.currentPage < totalPages) {
+            this.currentPage++;
+            this.renderVentesPage();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    /**
+     * 📋 Affiche les détails d'une vente
      */
     viewDetails(id) {
         console.log('📋 Affichage modal détails vente:', id);

@@ -501,10 +501,34 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                     <div class="col-12">
                         <div class="card border-0">
                             <div class="card-header bg-light p-3">
-                                <h6 class="mb-0 fw-semibold">
-                                    <i class="fas fa-history text-info me-2"></i>Historique des Ventes
-                                </h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-semibold">
+                                        <i class="fas fa-history text-info me-2"></i>Historique des Ventes
+                                    </h6>
+                                    <!-- Loading Spinner -->
+                                    <div id="ventesLoading" class="spinner-border spinner-border-sm text-info" role="status" style="display: none;">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                </div>
                             </div>
+                            
+                            <!-- Search Bar -->
+                            <div class="card-body p-3 border-bottom">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-0">
+                                        <i class="fas fa-search text-muted"></i>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        id="ventesSearch" 
+                                        class="form-control border-0 bg-light" 
+                                        placeholder="Rechercher par magasin, produit, utilisateur..."
+                                        autocomplete="off"
+                                    >
+                                </div>
+                            </div>
+                            
+                            <!-- Table -->
                             <div class="card-body p-3">
                                 <div id="ventesHistorique" class="table-responsive">
                                     <table class="table table-sm table-hover mb-0">
@@ -526,6 +550,37 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                             </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                                
+                                <!-- No Results Message -->
+                                <div id="ventesNoResults" class="text-center text-muted py-4" style="display: none;">
+                                    <i class="fas fa-search fa-2x mb-3 d-block text-secondary"></i>
+                                    <p>Aucune vente trouvée. Essayez une autre recherche.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Pagination -->
+                            <div class="card-footer bg-light p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <small class="text-muted">
+                                            Affichage <span id="ventesStart">0</span>-<span id="ventesEnd">0</span> 
+                                            sur <span id="ventesTotal">0</span> vente(s)
+                                        </small>
+                                    </div>
+                                    <nav>
+                                        <ul class="pagination pagination-sm mb-0">
+                                            <li class="page-item" id="ventes-prev">
+                                                <a class="page-link" href="#" onclick="event.preventDefault(); venteManager.previousPage()">Précédent</a>
+                                            </li>
+                                            <li class="page-item active" id="ventes-page-info">
+                                                <span class="page-link">Page <span id="ventesCurrentPage">1</span>/<span id="ventesTotalPages">1</span></span>
+                                            </li>
+                                            <li class="page-item" id="ventes-next">
+                                                <a class="page-link" href="#" onclick="event.preventDefault(); venteManager.nextPage()">Suivant</a>
+                                            </li>
+                                        </ul>
+                                    </nav>
                                 </div>
                             </div>
                         </div>
