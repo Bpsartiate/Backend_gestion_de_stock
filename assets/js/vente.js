@@ -1455,8 +1455,6 @@ class VenteManager {
         document.getElementById('venteStatut').textContent = statut.toUpperCase();
         document.getElementById('venteStatut').className = 
             `badge ${this.getStatutBadgeClass(statut)}`;
-        document.getElementById('venteClient').textContent = 
-            vente.client || vente.nomClient || 'Client anonyme';
         
         const qteTotale = articles.reduce((sum, a) => sum + (a.quantite || 0), 0);
         document.getElementById('venteQteTotale').textContent = `${qteTotale} articles`;
