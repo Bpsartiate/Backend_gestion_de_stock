@@ -107,7 +107,68 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
         .sortable-list {
             cursor: grab;
         }
+        
+        /* Responsive table improvements */
+        .table-responsive {
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        
+        .table th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .table td {
+            vertical-align: middle;
+            padding: 12px 8px;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .table {
+                font-size: 0.80rem;
+            }
+            
+            .table td, .table th {
+                padding: 8px 4px;
+            }
+            
+            .btn-sm {
+                padding: 0.25rem 0.4rem;
+                font-size: 0.7rem;
+            }
+            
+            /* Hide less important columns on small screens */
+            .table th:nth-child(6),
+            .table td:nth-child(6) {
+                display: none; /* Hide Payment Mode */
+            }
+            
+            .table th:nth-child(7),
+            .table td:nth-child(7) {
+                display: none; /* Hide User */
+            }
+        }
+        
+        @media (max-width: 576px) {
+            /* Hide even more columns on extra small screens */
+            .table th:nth-child(4),
+            .table td:nth-child(4) {
+                display: none; /* Hide Quantity */
+            }
+        }
+        
+        /* Product display truncation */
+        .product-column {
+            max-width: 200px;
+            white-space: normal;
+            word-break: break-word;
+        }
     </style>
+
 </head>
 
 <body>

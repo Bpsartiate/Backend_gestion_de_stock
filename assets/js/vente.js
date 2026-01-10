@@ -1102,22 +1102,35 @@ class VenteManager {
             // Récupérer les noms des produits et quantité totale + photos
             let produitsHtml = '-';
             let quantiteTotale = 0;
+            const MAX_SHOWN = 2; // Afficher max 2 produits dans le tableau
             
             if (vente.articles && vente.articles.length > 0) {
-                const produitsPhotos = vente.articles.map(art => {
+                // Afficher seulement les N premiers produits + badge si y'en a plus
+                const articlesToShow = vente.articles.slice(0, MAX_SHOWN);
+                const articlesRestantes = vente.articles.length - MAX_SHOWN;
+                
+                const produitsPhotos = articlesToShow.map(art => {
                     quantiteTotale += art.quantite || 0;
-                    // Les données sont maintenant directement populées dans art.produitId
                     const produit = typeof art.produitId === 'object' ? art.produitId : null;
                     const photoUrl = produit?.photoUrl || 'assets/img/placeholder.svg';
                     const nom = produit?.designation || art.nomProduit || 'Produit';
                     const typeName = produit?.typeProduitId?.nomType ? ` (${produit.typeProduitId.nomType})` : '';
                     return `<img src="${photoUrl}" alt="${nom}" style="width: 30px; height: 30px; border-radius: 4px; margin-right: 4px; object-fit: cover; vertical-align: middle;" title="${nom}${typeName}">`;
                 }).join('');
-                const produitsNoms = vente.articles.map(art => {
+                
+                const produitsNoms = articlesToShow.map(art => {
                     const produit = typeof art.produitId === 'object' ? art.produitId : null;
                     return produit?.designation || art.nomProduit || 'Produit';
                 }).join(', ');
-                produitsHtml = `<div style="display: flex; align-items: center;">${produitsPhotos}<span>${produitsNoms}</span></div>`;
+                
+                // Ajouter badge si y'a plus de produits
+                const badgePlus = articlesRestantes > 0 ? 
+                    `<span class="badge bg-info ms-2" title="${articlesRestantes} produit(s) supplémentaire(s)">+${articlesRestantes}</span>` : '';
+                
+                // Calculer la quantité totale
+                quantiteTotale = vente.articles.reduce((sum, art) => sum + (art.quantite || 0), 0);
+                
+                produitsHtml = `<div style="display: flex; align-items: center; flex-wrap: wrap;">${produitsPhotos}<span>${produitsNoms}</span>${badgePlus}</div>`;
             }
             
             // Récupérer les infos de l'utilisateur - données populées
@@ -1126,16 +1139,16 @@ class VenteManager {
 
             return `
                 <tr>
-                    <td class="small">${heureLocal}</td>
-                    <td class="small">${magasinNom}</td>
-                    <td class="small">${produitsHtml}</td>
-                    <td class="small fw-semibold text-center">${quantiteTotale}</td>
-                    <td class="small fw-semibold">${montantUSD}</td>
+                    <td class="small text-nowrap">${heureLocal}</td>
+                    <td class="small text-nowrap">${magasinNom}</td>
+                    <td class="small" style="max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${produitsHtml}</td>
+                    <td class="small fw-semibold text-center text-nowrap">${quantiteTotale}</td>
+                    <td class="small fw-semibold text-nowrap">${montantUSD} $</td>
                     <td><span class="badge bg-secondary">${vente.modePaiement || 'CASH'}</span></td>
-                    <td class="small text-muted">${utilisateurNom}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-info" onclick="venteManager.viewDetails('${vente._id}')" title="Détails">
-                            <i class="fas fa-eye"></i>
+                    <td class="small text-muted text-nowrap">${utilisateurNom}</td>
+                    <td class="text-nowrap">
+                        <button class="btn btn-sm btn-outline-info" onclick="venteManager.viewDetails('${vente._id}')" title="Voir tous les détails">
+                            <i class="fas fa-eye"></i> Détails
                         </button>
                     </td>
                 </tr>
