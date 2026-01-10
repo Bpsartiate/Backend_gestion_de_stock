@@ -1,0 +1,448 @@
+/**
+ * STYLES PERSONNALISÉS - Modal Détails de Vente
+ * Amélioration du design et animations du modal avancé
+ */
+
+/* ==================== MODAL SHELL ==================== */
+
+/* Header avec gradient */
+#modalDetailsVente .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white;
+    border: none;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Décoration header */
+#modalDetailsVente .modal-header::before {
+    content: '';
+    position: absolute;
+    right: -50px;
+    top: -50px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(20px); }
+}
+
+/* Contenu header */
+#modalDetailsVente .modal-header h5 {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+}
+
+#modalDetailsVente .modal-header small {
+    display: block;
+    opacity: 0.9;
+    font-size: 0.85rem;
+}
+
+/* ==================== SPINNER ==================== */
+
+#venteLoadingSpinner {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+}
+
+#venteLoadingSpinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3em;
+}
+
+/* ==================== SECTIONS CONTENU ==================== */
+
+/* Titre de section */
+#venteDetailsContent h6 {
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+#venteDetailsContent h6:hover {
+    border-bottom-color: currentColor;
+}
+
+/* ==================== VENDEUR CARD ==================== */
+
+#venteDetailsContent .card img.rounded-circle {
+    object-fit: cover;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#venteDetailsContent .card img.rounded-circle:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.4);
+}
+
+/* Badge rôle */
+#venteDetailsContent .badge {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* ==================== MAGASIN & GUICHET ==================== */
+
+/* Card magasin */
+#venteDetailsContent .card.bg-light {
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+}
+
+#venteDetailsContent .card.bg-light:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Card guichet */
+#venteDetailsContent .card[style*="gradient"] {
+    border: none;
+    box-shadow: 0 4px 12px rgba(247, 147, 30, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#venteDetailsContent .card[style*="gradient"]::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+#venteDetailsContent .card[style*="gradient"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(247, 147, 30, 0.4);
+}
+
+/* Info card */
+#venteDetailsContent .card.border-0.bg-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+/* ==================== ARTICLES LISTE ==================== */
+
+#venteArticlesList {
+    background: transparent;
+    border: none;
+}
+
+.list-group-item {
+    background: transparent;
+    padding: 1rem 0;
+    border: none;
+    border-bottom: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.list-group-item:hover {
+    background: rgba(102, 126, 234, 0.05);
+    padding-left: 0.5rem;
+}
+
+/* Article image */
+#venteArticlesList img {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+#venteArticlesList img:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(1.05);
+}
+
+/* Article details */
+.list-group-item h6 {
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.list-group-item .badge {
+    background: #17a2b8 !important;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+/* Sous-total */
+.list-group-item > .row:last-child > .col-12 > div {
+    background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #667eea;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.list-group-item > .row:last-child > .col-12 > div:hover {
+    background: linear-gradient(90deg, #e9ecef 0%, #dee2e6 100%);
+    border-left-color: #764ba2;
+}
+
+/* ==================== RÉSUMÉ FINANCIER ==================== */
+
+#venteDetailsContent .card.border-0 {
+    background: linear-gradient(135deg, #fff9f0 0%, #fff5eb 100%);
+    border: 1px solid #ffd699 !important;
+    box-shadow: 0 2px 8px rgba(247, 147, 30, 0.15);
+}
+
+/* Montant USD */
+#venteMontantUSD {
+    color: #28a745;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+/* Montant FC */
+#venteMontantFC {
+    color: #0066cc;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+/* Mode paiement */
+#venteModePaiement {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==================== INFOS SUPPLÉMENTAIRES ==================== */
+
+/* Observations */
+#venteObservations {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border: 1px solid #b3c1d1 !important;
+    color: #333;
+    font-style: italic;
+    transition: all 0.3s ease;
+}
+
+#venteObservations:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== BOUTONS ==================== */
+
+#modalDetailsVente .modal-footer {
+    border-top: 1px solid #dee2e6;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    gap: 0.5rem;
+}
+
+#modalDetailsVente .btn {
+    padding: 0.55rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#modalDetailsVente .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#modalDetailsVente .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+#modalDetailsVente .btn-primary:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+#modalDetailsVente .btn-outline-secondary {
+    border-width: 2px;
+}
+
+#modalDetailsVente .btn-outline-secondary:hover {
+    transform: translateY(-2px);
+}
+
+#modalDetailsVente .btn-outline-danger {
+    border-width: 2px;
+}
+
+#modalDetailsVente .btn-outline-danger:hover {
+    background: #dc3545;
+    color: white;
+}
+
+/* ==================== MESSAGE ERREUR ==================== */
+
+#venteErrorMessage .alert {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+    font-weight: 500;
+}
+
+/* ==================== ANIMATIONS ==================== */
+
+/* Apparition fade-in */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#venteDetailsContent {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Pulse sur montant */
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+}
+
+#venteMontantUSD:hover {
+    animation: pulse 1s infinite;
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+    #modalDetailsVente .modal-header {
+        padding: 16px;
+    }
+
+    #modalDetailsVente .modal-header h5 {
+        font-size: 1.1rem;
+    }
+
+    #venteDetailsContent h6 {
+        font-size: 0.9rem;
+    }
+
+    #modalDetailsVente .btn {
+        padding: 0.45rem 0.9rem;
+        font-size: 0.8rem;
+    }
+
+    .list-group-item {
+        padding: 0.75rem 0;
+    }
+
+    #venteArticlesList img {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+    .row.g-3 {
+        row-gap: 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    #modalDetailsVente .modal-content {
+        border-radius: 12px 12px 0 0;
+    }
+
+    #modalDetailsVente .modal-header {
+        padding: 12px;
+        gap: 0;
+    }
+
+    #modalDetailsVente .modal-header h5 {
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    #modalDetailsVente .modal-footer {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    #modalDetailsVente .btn {
+        flex: 1;
+        min-width: 100px;
+    }
+
+    #venteArticlesList img {
+        width: 45px !important;
+        height: 45px !important;
+    }
+
+    .list-group-item .col-md-3 {
+        text-align: left;
+    }
+}
+
+/* ==================== THÈME SOMBRE (optionnel) ==================== */
+
+@media (prefers-color-scheme: dark) {
+    #modalDetailsVente .modal-body {
+        background: #1e1e1e;
+        color: #e0e0e0;
+    }
+
+    #venteDetailsContent h6 {
+        color: #fff;
+    }
+
+    .list-group-item {
+        border-bottom-color: #333;
+    }
+
+    .list-group-item h6 {
+        color: #fff;
+    }
+
+    #venteDetailsContent .card.bg-light {
+        background: #2d2d2d !important;
+        border-color: #444;
+    }
+
+    .list-group-item > .row:last-child > .col-12 > div {
+        background: #2d2d2d;
+        color: #fff;
+    }
+
+    #venteObservations {
+        background: #2d2d2d;
+        border-color: #444 !important;
+        color: #e0e0e0;
+    }
+}

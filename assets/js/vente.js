@@ -18,6 +18,7 @@ class VenteManager {
         this.rayons = [];
         this.produits = [];
         this.panier = [];
+        this.ventesHistorique = []; // 📋 Cache des ventes pour modal détails
         this.init();
     }
 
@@ -1079,6 +1080,9 @@ class VenteManager {
         
         console.log('📋 Affichage historique:', ventes);
         
+        // 📋 Stocker les ventes dans le cache pour la modal détails
+        this.ventesHistorique = ventes || [];
+        
         if (!ventes || ventes.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Aucune vente enregistrée</td></tr>';
             return;
@@ -1143,8 +1147,8 @@ class VenteManager {
      * Affiche les détails d'une vente
      */
     viewDetails(id) {
-        console.log('📋 Détails vente:', id);
-        alert('Détails vente: ' + id);
+        console.log('📋 Affichage modal détails vente:', id);
+        this.showVenteDetails(id);
     }
 
     /**
@@ -1254,6 +1258,575 @@ class VenteManager {
         if (this.currentMagasin) {
             select.value = this.currentMagasin;
         }
+    }
+
+    /**
+     * 📋 Afficher les détails d'une vente dans un modal avancé
+     */
+    async showVenteDetails(venteId) {
+        let loader, content, error;
+        
+        try {
+            const modal = new bootstrap.Modal(document.getElementById('modalDetailsVente'));
+            loader = document.getElementById('venteLoadingSpinner');
+            content = document.getElementById('venteDetailsContent');
+            error = document.getElementById('venteErrorMessage');
+
+            // Réinitialiser l'affichage
+            if (loader) loader.style.display = 'block';
+            if (content) content.style.display = 'none';
+            if (error) error.style.display = 'none';
+
+            // Afficher le modal
+            modal.show();
+
+            console.log('🔍 Chargement détails vente:', venteId);
+            
+            // Toujours appeler l'API pour obtenir les données complètes avec relations peuplées
+            const response = await fetch(
+                `${this.API_BASE}/api/protected/ventes/${venteId}`,
+                { headers: this.authHeaders() }
+            );
+
+            let vente;
+            if (!response.ok) {
+                // Essayer un autre endpoint si celui-ci échoue
+                const response2 = await fetch(
+                    `${this.API_BASE}/api/ventes/${venteId}`,
+                    { headers: this.authHeaders() }
+                );
+                if (!response2.ok) {
+                    throw new Error(`Erreur: ${response2.status}`);
+                }
+                vente = await response2.json();
+            } else {
+                vente = await response.json();
+                // Si la réponse est un objet avec une propriété "vente", l'extraire
+                if (vente && vente.vente && typeof vente.vente === 'object') {
+                    vente = vente.vente;
+                }
+            }
+
+            console.log('✅ Vente chargée:', vente);
+
+            // Petit délai pour effet de chargement
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Remplir les détails
+            this.populateVenteDetails(vente);
+
+            // Afficher le contenu, cacher le loader
+            if (loader) loader.style.display = 'none';
+            if (content) content.style.display = 'block';
+
+            // Attacher les événements
+            this.attachVenteDetailsEvents(vente);
+
+        } catch (err) {
+            console.error('❌ Erreur lors du chargement des détails:', err);
+            if (loader) loader.style.display = 'none';
+            
+            const errorDiv = document.getElementById('venteErrorMessage');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerHTML = `<div class="alert alert-danger">❌ ${err.message}</div>`;
+            }
+        }
+    }
+
+    /**
+     * 📝 Remplir le modal avec les données de la vente
+     */
+    populateVenteDetails(vente) {
+        console.log('📝 Remplissage modal avec:', vente);
+        
+        // 1️⃣ Numéro de vente
+        document.getElementById('venteNumero').textContent = `Vente #${vente._id.substring(0, 8).toUpperCase()}`;
+
+        // 2️⃣ Vendeur - CHERCHER DANS utilisateurId (API populate)
+        const vendeur = vente.utilisateurId || vente.utilisateur || {};
+        console.log('👤 Vendeur trouvé:', vendeur);
+        
+        if (vendeur && vendeur._id) {
+            document.getElementById('venteVendeurNom').textContent = `${vendeur.prenom || ''} ${vendeur.nom || ''}`.trim() || '-';
+            document.getElementById('venteVendeurRole').textContent = vendeur.role || '-';
+            document.getElementById('venteVendeurEmail').innerHTML = `<i class="fas fa-envelope me-1"></i><span>${vendeur.email || '-'}</span>`;
+            document.getElementById('venteVendeurRoleBadge').textContent = (vendeur.role || '-').toUpperCase();
+            document.getElementById('venteVendeurRoleBadge').className = `badge ${this.getRoleBadgeClass(vendeur.role)}`;
+            
+            // Photo vendeur
+            if (vendeur.photoUrl || vendeur.photo) {
+                document.getElementById('venteVendeurPhoto').src = vendeur.photoUrl || vendeur.photo;
+            }
+        } else {
+            document.getElementById('venteVendeurNom').textContent = '-';
+            document.getElementById('venteVendeurRole').textContent = '-';
+            document.getElementById('venteVendeurEmail').innerHTML = `<i class="fas fa-envelope me-1"></i><span>-</span>`;
+            document.getElementById('venteVendeurRoleBadge').textContent = '-';
+        }
+
+        // 3️⃣ Magasin - CHERCHER DANS magasinId (API populate)
+        const magasin = vente.magasinId || vente.magasin || {};
+        console.log('🏪 Magasin trouvé:', magasin);
+        
+        if (magasin && magasin._id) {
+            document.getElementById('venteMagasinNom').textContent = magasin.nom_magasin || magasin.nom || '-';
+            document.getElementById('venteMagasinAdresse').textContent = magasin.adresse || magasin.localisation || '-';
+            
+            // Entreprise liée au magasin
+            let entrepriseNom = '-';
+            if (magasin.businessId) {
+                if (typeof magasin.businessId === 'object') {
+                    // Correct field name is nomEntreprise
+                    entrepriseNom = magasin.businessId.nomEntreprise || '-';
+                } else {
+                    entrepriseNom = magasin.businessId;
+                }
+            }
+            document.getElementById('venteMagasinEntreprise').innerHTML = 
+                `<i class="fas fa-building me-1"></i><span>${entrepriseNom}</span>`;
+        } else {
+            document.getElementById('venteMagasinNom').textContent = '-';
+            document.getElementById('venteMagasinAdresse').textContent = '-';
+            document.getElementById('venteMagasinEntreprise').innerHTML = 
+                `<i class="fas fa-building me-1"></i><span>-</span>`;
+        }
+
+        // 4️⃣ Guichet - CHERCHER DANS guichetId (API populate)
+        const guichet = vente.guichetId || vente.guichet || {};
+        console.log('🪟 Guichet trouvé:', guichet);
+        
+        if (guichet && guichet._id) {
+            document.getElementById('venteGuichetNom').textContent = guichet.nom_guichet || guichet.nom || '-';
+            document.getElementById('venteGuichetCode').textContent = `Code: ${guichet.code || '-'}`;
+            
+            // Vendeur principal du guichet
+            if (guichet.vendeurPrincipal) {
+                const vendeurGuichet = typeof guichet.vendeurPrincipal === 'object' ?
+                    `${guichet.vendeurPrincipal.prenom || ''} ${guichet.vendeurPrincipal.nom || ''}`.trim() :
+                    guichet.vendeurPrincipal;
+                document.getElementById('venteGuichetVendeur').innerHTML = 
+                    `<i class="fas fa-user me-1"></i><span>${vendeurGuichet || '-'}</span>`;
+            } else {
+                document.getElementById('venteGuichetVendeur').innerHTML = 
+                    `<i class="fas fa-user me-1"></i><span>-</span>`;
+            }
+        } else {
+            document.getElementById('venteGuichetNom').textContent = '-';
+            document.getElementById('venteGuichetCode').textContent = 'Code: -';
+            document.getElementById('venteGuichetVendeur').innerHTML = 
+                `<i class="fas fa-user me-1"></i><span>-</span>`;
+        }
+
+        // 5️⃣ Articles vendus
+        const articles = vente.articles || [];
+        this.displayVenteArticles(articles);
+
+        // 6️⃣ Montants et paiement
+        const montantUSD = vente.montantTotalUSD || vente.montantUSD || 0;
+        document.getElementById('venteMontantUSD').textContent = 
+            this.formatDevise(montantUSD, 'USD');
+        document.getElementById('venteModePaiement').textContent = 
+            (vente.modePaiement || 'Non spécifié').toUpperCase();
+
+        // Si montant FC existe
+        const montantFC = vente.montantFC || vente.montantTotalFC;
+        if (montantFC) {
+            document.getElementById('venteMontantFCDiv').style.display = 'flex';
+            document.getElementById('venteMontantFC').textContent = 
+                this.formatDevise(montantFC, 'FC');
+            
+            // Afficher le taux si disponible
+            if (vente.taux || vente.tauxFC) {
+                document.getElementById('venteTauxDiv').style.display = 'flex';
+                const tauxValue = vente.taux || vente.tauxFC || '-';
+                document.getElementById('venteTaux').textContent = `1 USD = ${tauxValue} FC`;
+            }
+        } else {
+            document.getElementById('venteMontantFCDiv').style.display = 'none';
+            document.getElementById('venteTauxDiv').style.display = 'none';
+        }
+
+        // 7️⃣ Infos supplémentaires
+        document.getElementById('venteDateHeure').textContent = 
+            this.formatDateTime(vente.dateVente || vente.createdAt || new Date());
+        
+        const statut = vente.statut || 'VALIDÉE';
+        document.getElementById('venteStatut').textContent = statut.toUpperCase();
+        document.getElementById('venteStatut').className = 
+            `badge ${this.getStatutBadgeClass(statut)}`;
+        document.getElementById('venteClient').textContent = 
+            vente.client || vente.nomClient || 'Client anonyme';
+        
+        const qteTotale = articles.reduce((sum, a) => sum + (a.quantite || 0), 0);
+        document.getElementById('venteQteTotale').textContent = `${qteTotale} articles`;
+        
+        // Client
+        const clientNom = vente.client || vente.nomClient || vente.clientNom || 'Client anonyme';
+        const clientElement = document.getElementById('venteClient');
+        if (clientElement) {
+            // Use .value if it's an input, .textContent for other elements
+            if (clientElement.tagName === 'INPUT') {
+                clientElement.value = clientNom;
+            } else {
+                clientElement.textContent = clientNom;
+            }
+        }
+
+        // Observations
+        document.getElementById('venteObservations').innerHTML = 
+            vente.observations || '<i class="text-muted">Aucune observation</i>';
+    }
+
+    /**
+     * 📦 Afficher la liste des articles
+     */
+    displayVenteArticles(articles) {
+        const container = document.getElementById('venteArticlesList');
+        container.innerHTML = '';
+
+        if (!articles || articles.length === 0) {
+            container.innerHTML = '<p class="text-muted">Aucun article</p>';
+            return;
+        }
+
+        articles.forEach((article, index) => {
+            // Gérer différentes structures de données possibles
+            const produit = article.produit || article.produitId || {};
+            const nomProduit = produit.nom || produit.designation || 'Article';
+            const photoProduit = produit.photo || produit.photoUrl || 'https://via.placeholder.com/60';
+            
+            // Type: cherche dans produit.type, produit.typeProduitId.nomType, ou article.typeProduitId.nomType
+            let typeNom = '-';
+            if (produit.type) {
+                typeNom = typeof produit.type === 'object' ? produit.type.nomType || produit.type.nom : produit.type;
+            } else if (produit.typeProduitId) {
+                typeNom = typeof produit.typeProduitId === 'object' ? produit.typeProduitId.nomType : produit.typeProduitId;
+            }
+            
+            // Rayon: cherche dans produit.rayon, produit.rayonId.nomRayon, ou article.rayonId.nomRayon
+            let rayonNom = '-';
+            if (article.rayonId) {
+                rayonNom = typeof article.rayonId === 'object' ? article.rayonId.nomRayon || article.rayonId.nom : article.rayonId;
+            } else if (produit.rayon) {
+                rayonNom = typeof produit.rayon === 'object' ? produit.rayon.nomRayon || produit.rayon.nom : produit.rayon;
+            } else if (produit.rayonId) {
+                rayonNom = typeof produit.rayonId === 'object' ? produit.rayonId.nomRayon || produit.rayonId.nom : produit.rayonId;
+            }
+            
+            // Code: cherche code, codeBarre, ou codeArticle (fallback to designation)
+            const codeProduit = produit.code || produit.codeBarre || produit.codeArticle || produit.designation?.split('-')[0] || '-';
+            const prixUnitaire = article.prixUnitaire || article.prix || 0;
+            const quantite = article.quantite || 0;
+            const sousTotal = prixUnitaire * quantite;
+
+            const html = `
+                <div class="list-group-item border-0 border-bottom pb-3 mb-3">
+                    <div class="row g-3">
+                        <!-- Image produit -->
+                        <div class="col-auto">
+                            <img src="${photoProduit}" 
+                                alt="${nomProduit}" 
+                                class="rounded border" 
+                                style="width: 60px; height: 60px; object-fit: cover;">
+                        </div>
+                        
+                        <!-- Infos produit -->
+                        <div class="col">
+                            <h6 class="mb-1 fw-bold">${nomProduit}</h6>
+                            <div class="row g-2 small text-muted">
+                                <div class="col-auto">
+                                    <i class="fas fa-tag me-1"></i>Type: ${typeNom}
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-layer-group me-1"></i>Rayon: ${rayonNom}
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-barcode me-1"></i>Code: ${codeProduit}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Prix & Qté -->
+                        <div class="col-md-3 text-end">
+                            <div class="mb-2">
+                                <strong>${this.formatDevise(prixUnitaire, 'USD')}</strong>
+                                <span class="text-muted small">/unité</span>
+                            </div>
+                            <div class="badge bg-info">
+                                Qté: ${quantite}
+                            </div>
+                        </div>
+
+                        <!-- Total -->
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between" style="background: #f8f9fa; padding: 8px; border-radius: 4px;">
+                                <span class="text-muted small">Sous-total:</span>
+                                <strong class="text-success">
+                                    ${this.formatDevise(sousTotal, 'USD')}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    /**
+     * 🎨 Classe CSS pour badge rôle
+     */
+    getRoleBadgeClass(role) {
+        const roles = {
+            'ADMIN': 'bg-danger',
+            'SUPERVISEUR': 'bg-warning text-dark',
+            'VENDEUR': 'bg-info',
+            'CAISSIER': 'bg-success'
+        };
+        return roles[role?.toUpperCase()] || 'bg-secondary';
+    }
+
+    /**
+     * 🎨 Classe CSS pour badge statut
+     */
+    getStatutBadgeClass(statut) {
+        const statuts = {
+            'COMPLÉTÉ': 'bg-success',
+            'EN_COURS': 'bg-warning text-dark',
+            'ANNULÉ': 'bg-danger',
+            'REMBOURSÉ': 'bg-info'
+        };
+        return statuts[statut?.toUpperCase()] || 'bg-secondary';
+    }
+
+    /**
+     * 📅 Formater une date/heure
+     */
+    formatDateTime(date) {
+        if (!date) return '-';
+        const d = new Date(date);
+        return d.toLocaleString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    /**
+     * 💵 Formater une devise
+     */
+    formatDevise(montant, devise = 'USD') {
+        if (!montant) return '0 ' + devise;
+        
+        try {
+            // Essayer avec Intl.NumberFormat pour les devises standard
+            return new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: devise
+            }).format(montant);
+        } catch (e) {
+            // Si le code de devise n'est pas reconnu (ex: FC), formater manuellement
+            const formatted = new Intl.NumberFormat('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(montant);
+            return `${formatted} ${devise}`;
+        }
+    }
+
+    /**
+     * ⚠️ Afficher un message d'erreur dans le modal
+     */
+    showVenteError(message) {
+        const loader = document.getElementById('venteLoadingSpinner');
+        const content = document.getElementById('venteDetailsContent');
+        const error = document.getElementById('venteErrorMessage');
+
+        loader.style.display = 'none';
+        content.style.display = 'none';
+        error.style.display = 'block';
+        document.getElementById('venteErrorText').textContent = message;
+
+        this.showAlert(message, 'danger');
+    }
+
+    /**
+     * 🎯 Attacher les événements au modal des détails
+     */
+    attachVenteDetailsEvents(vente) {
+        const btnPrint = document.getElementById('btnPrinterVente');
+        const btnCancel = document.getElementById('btnAnnulerVente');
+
+        // Imprimer
+        btnPrint.onclick = () => this.printVente(vente);
+
+        // Annuler la vente
+        btnCancel.onclick = () => this.confirmAnnulerVente(vente);
+    }
+
+    /**
+     * 🖨️ Imprimer la vente
+     */
+    printVente(vente) {
+        // Créer une fenêtre d'impression
+        const printWindow = window.open('', '', 'width=800,height=600');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Vente #${vente._id}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h1 { text-align: center; color: #333; }
+                    .info { margin: 20px 0; }
+                    .articles { margin-top: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    .total { font-weight: bold; font-size: 1.2em; }
+                    .footer { margin-top: 30px; text-align: center; color: #666; }
+                </style>
+            </head>
+            <body>
+                <h1>REÇU DE VENTE</h1>
+                <div class="info">
+                    <p><strong>Numéro:</strong> ${vente._id}</p>
+                    <p><strong>Date:</strong> ${this.formatDateTime(vente.dateVente)}</p>
+                    <p><strong>Vendeur:</strong> ${vente.utilisateur?.nom || '-'}</p>
+                    <p><strong>Magasin:</strong> ${vente.magasin?.nom || '-'}</p>
+                    <p><strong>Guichet:</strong> ${vente.guichet?.nom || '-'}</p>
+                </div>
+
+                <div class="articles">
+                    <h3>Articles</h3>
+                    <table>
+                        <tr>
+                            <th>Produit</th>
+                            <th>Qté</th>
+                            <th>Prix Unitaire</th>
+                            <th>Sous-total</th>
+                        </tr>
+                        ${vente.articles.map(a => `
+                            <tr>
+                                <td>${a.produit?.nom || '-'}</td>
+                                <td>${a.quantite}</td>
+                                <td>$${a.prixUnitaire.toFixed(2)}</td>
+                                <td>$${(a.prixUnitaire * a.quantite).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                </div>
+
+                <p class="total" style="text-align: right; margin-top: 20px;">
+                    Total: ${this.formatDevise(vente.montantUSD, 'USD')}
+                </p>
+
+                <div class="footer">
+                    <p>Merci de votre achat!</p>
+                    <p style="font-size: 0.8em;">${new Date().toLocaleString('fr-FR')}</p>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+
+        this.showAlert('Impression lancée', 'success');
+    }
+
+    /**
+     * ❌ Confirmer l'annulation d'une vente
+     */
+    confirmAnnulerVente(vente) {
+        if (confirm(`Êtes-vous sûr d'annuler la vente #${vente._id.substring(0, 8)}?`)) {
+            this.annulerVente(vente._id);
+        }
+    }
+
+    /**
+     * ❌ Annuler une vente
+     */
+    async annulerVente(venteId) {
+        try {
+            const response = await fetch(
+                `${this.API_BASE}/api/ventes/${venteId}`,
+                {
+                    method: 'DELETE',
+                    headers: this.authHeaders()
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Erreur: ${response.status}`);
+            }
+
+            this.showAlert('Vente annulée avec succès', 'success');
+            
+            // Fermer le modal
+            bootstrap.Modal.getInstance(document.getElementById('modalDetailsVente')).hide();
+            
+            // Recharger la liste des ventes
+            this.loadVentes();
+
+        } catch (error) {
+            console.error('Erreur lors de l\'annulation:', error);
+            this.showAlert(`Impossible d'annuler: ${error.message}`, 'danger');
+        }
+    }
+
+    /**
+     * 📢 Afficher une alerte/toast
+     */
+    showAlert(message, type = 'info') {
+        // Vérifier si on utilise ThemeManager
+        if (window.themeManager && typeof window.themeManager.showAlert === 'function') {
+            window.themeManager.showAlert(message, type);
+            return;
+        }
+
+        // Créer un toast Bootstrap personnalisé
+        const toastId = `toast-${Date.now()}`;
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center border-0 shadow-sm" 
+                role="alert" aria-live="assertive" aria-atomic="true"
+                style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                <div class="d-flex bg-${type}${type !== 'warning' ? ' text-white' : ''}">
+                    <div class="toast-body">
+                        <i class="fas fa-${this.getAlertIcon(type)} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-${type === 'light' || type === 'warning' ? 'dark' : 'white'} me-2 m-auto" 
+                        data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', toastHtml);
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+        toast.show();
+
+        // Supprimer après fermeture
+        toastElement.addEventListener('hidden.bs.toast', () => {
+            toastElement.remove();
+        });
+    }
+
+    /**
+     * 🎨 Icône pour alerte
+     */
+    getAlertIcon(type) {
+        const icons = {
+            'success': 'check-circle',
+            'danger': 'exclamation-circle',
+            'warning': 'exclamation-triangle',
+            'info': 'info-circle'
+        };
+        return icons[type] || 'info-circle';
     }
 }
 

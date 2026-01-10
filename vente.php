@@ -36,6 +36,7 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
     <link href="assets/css/theme.min.css" rel="stylesheet" id="style-default">
     <link href="assets/css/user-rtl.min.css" rel="stylesheet" id="user-style-rtl">
     <link href="assets/css/user.min.css" rel="stylesheet" id="user-style-default">
+    <link href="assets/css/vente-details-modal.css" rel="stylesheet">
 
     <script>
         // RTL/Theme existant
@@ -530,6 +531,217 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
 
                     <!-- Message d'erreur -->
                     <div id="guichetsError" style="display: none;" class="alert alert-danger mb-0"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📋 MODAL DÉTAILS VENTE (Avancé) -->
+    <div class="modal fade" id="modalDetailsVente" tabindex="-1" aria-labelledby="modalDetailsVenteLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow-xl border-0">
+                <!-- Header Gradient -->
+                <div class="modal-header border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px;">
+                    <div class="w-100">
+                        <h5 class="modal-title mb-1" id="modalDetailsVenteLabel">
+                            <i class="fas fa-receipt me-2"></i>Détails de la Vente
+                        </h5>
+                        <small id="venteNumero" style="opacity: 0.9;">Vente #...</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Spinner de Chargement -->
+                <div id="venteLoadingSpinner" class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="text-muted">Chargement des détails...</p>
+                </div>
+
+                <!-- Contenu Principal (caché au démarrage) -->
+                <div id="venteDetailsContent" style="display: none;" class="modal-body">
+                    <!-- 1️⃣ INFO VENDEUR -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="fas fa-user me-2"></i>Information du Vendeur
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-auto">
+                                <img id="venteVendeurPhoto" src="https://via.placeholder.com/80" alt="Vendeur" 
+                                    class="rounded-circle border border-3 border-primary" 
+                                    style="width: 80px; height: 80px; object-fit: cover;">
+                            </div>
+                            <div class="col">
+                                <div class="d-flex flex-column justify-content-center h-100">
+                                    <h6 id="venteVendeurNom" class="mb-1 fw-bold">-</h6>
+                                    <small id="venteVendeurRole" class="text-muted mb-2">-</small>
+                                    <small id="venteVendeurEmail" class="text-muted">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        <span>-</span>
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-auto text-end">
+                                <div class="badge bg-primary" id="venteVendeurRoleBadge">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- 2️⃣ INFO GUICHET & MAGASIN -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-info mb-3">
+                            <i class="fas fa-store me-2"></i>Magasin & Guichet
+                        </h6>
+                        <div class="row g-3">
+                            <!-- Magasin -->
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body">
+                                        <small class="text-muted fw-semibold">🏪 MAGASIN</small>
+                                        <h6 id="venteMagasinNom" class="mb-1 text-black">-</h6>
+                                        <small id="venteMagasinAdresse" class="text-muted">-</small>
+                                        <br>
+                                        <small id="venteMagasinEntreprise" class="text-muted d-block mt-2">
+                                            <i class="fas fa-building me-1"></i><span>-</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Guichet -->
+                            <div class="col-md-6">
+                                <div class="card border-0" style="background: linear-gradient(135deg, #f7931e 0%, #ff6b35 100%); color: white;">
+                                    <div class="card-body">
+                                        <small class="fw-semibold" style="opacity: 0.9;">🪟 GUICHET</small>
+                                        <h6 class="mb-1" id="venteGuichetNom">-</h6>
+                                        <small style="opacity: 0.85;" id="venteGuichetCode">Code: -</small>
+                                        <br>
+                                        <small style="opacity: 0.85; display: block; margin-top: 8px;" id="venteGuichetVendeur">
+                                            <i class="fas fa-user me-1"></i><span>-</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- 3️⃣ ARTICLES VENDUS -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-success mb-3">
+                            <i class="fas fa-box me-2"></i>Articles Vendus
+                        </h6>
+                        <div id="venteArticlesList" class="list-group list-group-flush">
+                            <!-- Sera rempli par JavaScript -->
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- 4️⃣ MONTANTS & PAIEMENT -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-warning mb-3">
+                            <i class="fas fa-dollar-sign me-2"></i>Résumé Financier
+                        </h6>
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <!-- Montant USD -->
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-black" >💵 Montant USD:</span>
+                                    <span id="venteMontantUSD" class="fw-bold">-</span>
+                                </div>
+
+                                <!-- Montant FC (si applicable) -->
+                                <div id="venteMontantFCDiv" class="d-flex text-black justify-content-between mb-2" style="display: none;">
+                                    <span>🇨🇩 Montant FC:</span>
+                                    <span id="venteMontantFC" class="fw-bold text-info">-</span>
+                                </div>
+
+                                <!-- Taux -->
+                                <div id="venteTauxDiv" class="d-flex justify-content-between mb-2 small text-muted" style="display: none;">
+                                    <span>Taux FC/USD:</span>
+                                    <span id="venteTaux">-</span>
+                                </div>
+
+                                <hr class="my-2">
+
+                                <!-- Mode de Paiement -->
+                                <div class="d-flex text-black justify-content-between">
+                                    <span>Mode de Paiement:</span>
+                                    <span id="venteModePaiement" class="badge bg-success">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- 5️⃣ INFOS SUPPLÉMENTAIRES -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-secondary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Informations Supplémentaires
+                        </h6>
+                        <div class="row g-3">
+                            <!-- Date -->
+                            <div class="col-md-6">
+                                <small class="text-muted fw-semibold">📅 DATE & HEURE</small>
+                                <p id="venteDateHeure" class="mb-0 fw-semibold">-</p>
+                            </div>
+
+                            <!-- Statut -->
+                            <div class="col-md-6">
+                                <small class="text-muted fw-semibold">📊 STATUT</small>
+                                <p class="mb-0">
+                                    <span id="venteStatut" class="badge bg-secondary">-</span>
+                                </p>
+                            </div>
+
+                            <!-- Client -->
+                            <div class="col-md-6">
+                                <small class="text-muted fw-semibold">👥 CLIENT</small>
+                                <p id="venteClient" class="mb-0 fw-semibold">-</p>
+                            </div>
+
+                            <!-- Quantité -->
+                            <div class="col-md-6">
+                                <small class="text-muted fw-semibold">📦 QTÉ TOTALE</small>
+                                <p id="venteQteTotale" class="mb-0 fw-semibold">-</p>
+                            </div>
+                        </div>
+
+                        <!-- Observations -->
+                        <div class="mt-3">
+                            <small class="text-muted fw-semibold">📝 OBSERVATIONS</small>
+                            <div id="venteObservations" class="card border-0 bg-light p-2 mt-1" style="font-size: 0.9rem;">
+                                -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer avec boutons d'action -->
+                <div class="modal-footer  bg-light">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnPrinterVente">
+                        <i class="fas fa-print me-1"></i>Imprimer
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="btnAnnulerVente">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">
+                        <i class="fas fa-check me-1"></i>Fermer
+                    </button>
+                </div>
+
+                <!-- Message d'Erreur -->
+                <div id="venteErrorMessage" class="modal-body" style="display: none;">
+                    <div class="alert alert-danger mb-0">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <span id="venteErrorText">Une erreur est survenue</span>
+                    </div>
                 </div>
             </div>
         </div>

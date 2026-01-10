@@ -231,7 +231,7 @@ router.get('/ventes/:venteId', authMiddleware, async (req, res) => {
                 select: '_id nom_magasin nom adresse telephone photoUrl latitude longitude',
                 populate: {
                     path: 'businessId',
-                    select: '_id nom_entreprise email'
+                    select: '_id nomEntreprise email'
                 }
             })
             .populate({
