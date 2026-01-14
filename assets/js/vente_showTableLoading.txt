@@ -1,0 +1,16 @@
+    /**
+     * 📋 Afficher/Masquer le loading de la table historique
+     */
+    showTableLoading(isLoading) {
+        const loadingRow = document.getElementById('ventesLoadingRow');
+        const tbody = document.getElementById('ventesTableBody');
+        
+        if (isLoading) {
+            if (tbody) {
+                tbody.innerHTML = '<tr id="ventesLoadingRow"><td colspan="8" class="text-center py-4"><div class="spinner-border text-info" role="status"><span class="visually-hidden">Chargement...</span></div><p class="mt-2 text-muted small">Chargement des ventes...</p></td></tr>';
+            }
+            if (loadingRow) loadingRow.style.display = 'table-row';
+        } else {
+            if (loadingRow) loadingRow.style.display = 'none';
+        }
+    }

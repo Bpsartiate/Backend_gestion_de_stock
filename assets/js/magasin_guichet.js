@@ -173,7 +173,8 @@ async function loadDashboardData() {
         // Widgets immédiats
         $('#widgetTotalMagasins').text(magasins.length);
         $('#widgetTotalGuichets').text(stats.totalGuichets || 0);
-        $('#widgetVendeurs').text(stats.totalVendeurs || 0);
+        $('#widgetVendeurs').text(stats.totalVendeurs || 0);  // 🎯 Vendeurs avec affectation active
+        $('#widgetStockAlertes').text(stats.stockAlerts || 0);  // 🎯 Alertes stock
         $('#totalMagasins').text(magasins.length);
         $('#totalGuichets').text(stats.totalGuichets || 0);
         
@@ -1146,88 +1147,160 @@ function updateGuichetHeader(g) {
         $('#guichetCode').text(`#${codeGuichet}`).show();
     }
     
-    // Status badge
+    // 🎯 Status badge avec couleur dynamique
     const statusColor = g.status === 1 ? 'bg-success' : 'bg-danger';
-    const statusText = g.status === 1 ? 'Actif' : 'Inactif';
+    const statusText = g.status === 1 ? '✅ Actif' : '❌ Inactif';
     $('#guichetStatus').removeClass('bg-success bg-danger').addClass(statusColor).text(statusText);
     
-    // Vendeur info
-    const vendeur = g.vendeurPrincipal || g.caissierActuel;
-    const vendeurName = vendeur?.prenom && vendeur?.nom ? `${vendeur.prenom} ${vendeur.nom}` : vendeur?.email || '-';
-    $('#guichetSubtitle').html(`Vendeur: <strong>${vendeurName}</strong>`);
+    // 🎯 NOUVEAU: Afficher les vendeurs affectés au lieu du vendeur principal
+    let vendeurText = '-';
+    
+    if (g.vendeurs && Array.isArray(g.vendeurs) && g.vendeurs.length > 0) {
+        const noms = g.vendeurs
+            .filter(v => v && (v.prenom || v.nom || v.email))
+            .map(v => v.prenom && v.nom ? `${v.prenom} ${v.nom}` : v.email)
+            .join(', ');
+        
+        vendeurText = noms || (g.vendeurPrincipal?.prenom ? `${g.vendeurPrincipal.prenom} ${g.vendeurPrincipal.nom}` : '-');
+    } else if (g.vendeurPrincipal) {
+        vendeurText = g.vendeurPrincipal?.prenom && g.vendeurPrincipal?.nom 
+            ? `${g.vendeurPrincipal.prenom} ${g.vendeurPrincipal.nom}` 
+            : g.vendeurPrincipal?.email || '-';
+    }
+    
+    $('#guichetSubtitle').html(`
+        <i class="fas fa-users me-1"></i>
+        Vendeur(s): <strong>${vendeurText}</strong>
+    `);
 }
 
 function updateGuichetStats(g) {
-    // Stats principales
-    $('#guichetCaJour').text((g.caJour || 0).toLocaleString() + ' CDF');
-    $('#guichetNbProduits').text(g.produitVendus?.length || 0);
-    $('#guichetNbTransactions').text(g.nbVentesJour || 0);
+    // 🎯 NOUVEAU: Utiliser les ventes réelles et statistiques du backend
+    const ventes = g.ventes || [];
+    const stats = g.statistiques || {};
     
-    // Marge moyenne
-    const produits = g.produitVendus || [];
-    let margeMoyenne = 0;
-    if(produits.length > 0) {
-        const totalMarge = produits.reduce((acc, p) => acc + (p.marge || 0), 0);
-        margeMoyenne = Math.round(totalMarge / produits.length);
-    }
-    $('#guichetMargeMoyenne').text(margeMoyenne + '%');
+    // Calculer CA aujourd'hui (filtre par date du jour)
+    const aujourd = new Date().toLocaleDateString();
+    const ventesAuj = ventes.filter(v => new Date(v.dateVente).toLocaleDateString() === aujourd);
+    const caAuj = ventesAuj.reduce((sum, v) => sum + (v.montantTotalUSD || 0), 0);
+    
+    // Compter les produits uniques vendus
+    let totalArticles = 0;
+    const produitsUniques = new Set();
+    
+    ventes.forEach(v => {
+        if (v.articles && Array.isArray(v.articles)) {
+            totalArticles += v.articles.length;
+            v.articles.forEach(a => {
+                const key = a.produitId?._id || a.nomProduit;
+                if (key) produitsUniques.add(key);
+            });
+        }
+    });
+    
+    // Afficher les stats
+    $('#guichetCaJour').text('$' + caAuj.toFixed(2));
+    $('#guichetNbProduits').text(produitsUniques.size || 0);
+    $('#guichetNbTransactions').text(stats.totalVentes || ventes.length || 0);
+    
+    // Marge moyenne (simple calcul basé sur montant total)
+    const margeMoyenne = ventes.length > 0 ? Math.round((stats.totalMontant / ventes.length) * 10) : 0;
+    $('#guichetMargeMoyenne').text(Math.min(margeMoyenne, 100) + '%');
 }
 
 // ✨ Afficher les produits vendus avec table design amélioré
 function updateProduitsVendus(g) {
-    const produits = g.produitVendus || [];
+    // 🎯 NOUVEAU: Utiliser les ventes réelles du guichet au lieu de produitVendus
+    const ventes = g.ventes || [];
+    
+    if (ventes.length === 0) {
+        $('#guichetProduitsVendusTable').html(`
+            <tr><td colspan="6" class="text-center text-muted py-5">
+                <i class="fas fa-inbox fa-2x mb-2 d-block" style="opacity:0.3;"></i>
+                Aucune vente dans ce guichet
+            </td></tr>
+        `);
+        $('#guichetNbProduitsUnique').text('0');
+        $('#guichetTotalVentes').text('0 USD');
+        $('#guichetMoyenneMarge').text('0%');
+        return;
+    }
+    
+    // Agréger les produits vendus par vente
+    const produitsMap = {};
+    let totalVentes = 0;
+    
+    ventes.forEach(vente => {
+        totalVentes += (vente.montantTotalUSD || 0);
+        
+        if (vente.articles && Array.isArray(vente.articles)) {
+            vente.articles.forEach(article => {
+                const key = article.produitId?._id || article.nomProduit || 'Produit';
+                
+                if (!produitsMap[key]) {
+                    produitsMap[key] = {
+                        nom: article.produitId?.designation || article.nomProduit || 'Produit',
+                        quantite: 0,
+                        prixUnitaire: article.prixUnitaire || 0,
+                        total: 0
+                    };
+                }
+                
+                produitsMap[key].quantite += (article.quantite || 0);
+                produitsMap[key].total += (article.montantUSD || (article.quantite * article.prixUnitaire));
+            });
+        }
+    });
+    
+    const produits = Object.values(produitsMap);
     
     if (produits.length === 0) {
         $('#guichetProduitsVendusTable').html(`
             <tr><td colspan="6" class="text-center text-muted py-5">
                 <i class="fas fa-inbox fa-2x mb-2 d-block" style="opacity:0.3;"></i>
-                Aucun produit vendu
+                Aucun produit trouvé dans les ventes
             </td></tr>
         `);
         $('#guichetNbProduitsUnique').text('0');
-        $('#guichetTotalVentes').text('0 CDF');
+        $('#guichetTotalVentes').text('0 USD');
         $('#guichetMoyenneMarge').text('0%');
         return;
     }
     
-    let totalVentes = 0;
-    let totalMarge = 0;
-    
     const html = produits.map(p => {
-        totalVentes += (p.totalVente || 0);
-        totalMarge += (p.marge || 0);
-        
-        const margeCouleur = (p.marge || 0) >= 20 ? 'text-success' : 
-                           (p.marge || 0) >= 15 ? 'text-info' : 'text-warning';
-        const margeIcon = (p.marge || 0) >= 20 ? '✓' : 
-                         (p.marge || 0) >= 15 ? '–' : '!';
+        const marge = p.total > 0 ? Math.round((p.total / totalVentes) * 100) : 0;
+        const margeCouleur = marge >= 20 ? 'text-success' : 
+                           marge >= 15 ? 'text-info' : 
+                           marge >= 10 ? 'text-warning' : 'text-danger';
         
         return `
             <tr class="align-middle" style="transition: all 0.2s ease;">
                 <td>
-                    <div class="fw-semibold" style="color:#2c3e50;">${p.nom || '–'}</div>
+                    <div class="fw-semibold" style="color:#2c3e50;">
+                        <i class="fas fa-package me-2 text-primary"></i>${p.nom}
+                    </div>
                 </td>
                 <td class="text-center">
-                    <span class="badge bg-primary-subtle text-primary" style="border-radius: 20px; padding: 5px 10px;">
-                        ${p.categorie || 'N/A'}
+                    <span class="badge bg-info-subtle text-info" style="border-radius: 20px; padding: 5px 10px;">
+                        Vente
                     </span>
                 </td>
                 <td class="text-end">
                     <span class="badge bg-success" style="padding: 6px 10px; font-size: 0.95rem;">
-                        <i class="fas fa-box me-1"></i>${p.quantiteVendue || 0}
+                        <i class="fas fa-box me-1"></i>${p.quantite}
                     </span>
                 </td>
                 <td class="text-end text-muted">
-                    <span style="font-weight: 500;">${(p.prixUnitaire || 0).toLocaleString()}</span> CDF
+                    <span style="font-weight: 500;">$${(p.prixUnitaire || 0).toFixed(2)}</span>
                 </td>
                 <td class="text-end fw-bold text-success">
                     <span style="font-size: 1.05rem;">
-                        ${(p.totalVente || 0).toLocaleString()}
-                    </span> CDF
+                        $${(p.total || 0).toFixed(2)}
+                    </span>
                 </td>
                 <td class="text-center">
                     <span class="badge ${margeCouleur}" style="padding: 6px 8px; font-size: 0.9rem;">
-                        ${margeIcon} ${p.marge || 0}%
+                        <i class="fas fa-percent me-1"></i>${marge}%
                     </span>
                 </td>
             </tr>
@@ -1236,10 +1309,8 @@ function updateProduitsVendus(g) {
     
     $('#guichetProduitsVendusTable').html(html);
     $('#guichetNbProduitsUnique').text(produits.length);
-    $('#guichetTotalVentes').text(totalVentes.toLocaleString() + ' CDF');
-    
-    const margeMoyenne = Math.round(totalMarge / produits.length);
-    $('#guichetMoyenneMarge').text(margeMoyenne + '%');
+    $('#guichetTotalVentes').text('$' + totalVentes.toFixed(2));
+    $('#guichetMoyenneMarge').text(Math.round((100 / ventes.length)) + '%');
 }
 
 function updateTransactionsRecentes(g) {

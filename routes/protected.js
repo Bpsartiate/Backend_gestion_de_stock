@@ -18,6 +18,7 @@ const cloudinary = require('../services/cloudinary');
 const utilisateurController = require('../controllers/utilisateurController');
 const upload = require('../middlewares/upload');
 const Rayon = require('../models/rayon');
+const Produit = require('../models/produit');
 const TypeProduit = require('../models/typeProduit');
 const Produit = require('../models/produit');
 const StockMovement = require('../models/stockMovement');
@@ -164,10 +165,11 @@ router.get('/affectations', authMiddleware, async (req, res) => {
 
   try {
     const affectations = await Affectation.find()
-      .populate('vendeurId', 'nom prenom email')
-      .populate('guichetId', 'nom_guichet')
-      .populate('magasinId', 'nom_magasin')
-      .populate('entrepriseId', 'nomEntreprise');
+      .populate('vendeurId', 'nom prenom email role')
+      .populate('managerId', 'nom prenom email role')
+      .populate('guichetId', 'nom')
+      .populate('magasinId', 'nom')
+      .populate('entrepriseId', 'nom');
     
     return res.json(affectations);
   } catch(err) {
@@ -577,7 +579,7 @@ router.get('/guichets/:magasinId', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/protected/guichets/detail/:guichetId - Détail d'un guichet
+// GET /api/protected/guichets/detail/:guichetId - Détail d'un guichet avec ventes
 router.get('/guichets/detail/:guichetId', authMiddleware, async (req, res) => {
   try {
     const requester = req.user;
@@ -604,12 +606,37 @@ router.get('/guichets/detail/:guichetId', authMiddleware, async (req, res) => {
     
     // Récupérer les vendeurs affectés à ce guichet
     const affectations = await Affectation.find({ guichetId })
-      .populate('vendeurId', 'nom prenom email role')
+      .populate('vendeurId', 'nom prenom email role photoUrl')
       .lean();
+    
+    // 🎯 NOUVEAU: Récupérer les ventes du guichet
+    const Vente = require('../models/vente');
+    const ventes = await Vente.find({ guichetId })
+      .select('_id dateVente montantTotalUSD articles utilisateurId client modePaiement')
+      .populate('utilisateurId', 'nom prenom email')
+      .populate({
+        path: 'articles.produitId',
+        select: 'designation prixUnitaire'
+      })
+      .sort({ dateVente: -1 })
+      .limit(100)
+      .lean();
+    
+    // Calculer les statistiques du guichet
+    const totalVentes = ventes.length;
+    const totalMontant = ventes.reduce((sum, v) => sum + (v.montantTotalUSD || 0), 0);
+    const totalArticles = ventes.reduce((sum, v) => sum + (v.articles?.length || 0), 0);
     
     return res.json({
       ...guichet,
-      vendeurs: affectations.map(a => a.vendeurId)
+      vendeurs: affectations.map(a => a.vendeurId),
+      ventes: ventes,
+      statistiques: {
+        totalVentes,
+        totalMontant: totalMontant.toFixed(2),
+        totalArticles,
+        joursActifs: new Set(ventes.map(v => new Date(v.dateVente).toLocaleDateString())).size
+      }
     });
   } catch (err) {
     console.error('guichets.detail.error', err);
@@ -931,7 +958,7 @@ router.get('/stats/magasins-guichets', authMiddleware, async (req, res) => {
     // Compter TOUS les guichets
     const totalGuichets = await Guichet.countDocuments({});
     
-    // Get unique vendeurs (from ALL affectations)
+    // 🎯 NOUVEAU: Get unique vendeurs AVEC affectation ACTIVE à un guichet
     const affectations = await Affectation.find({ status: 1 }).distinct('vendeurId');
     const totalVendeurs = affectations.length;
     
@@ -941,14 +968,20 @@ router.get('/stats/magasins-guichets', authMiddleware, async (req, res) => {
     ]);
     const totalStock = stockData.length > 0 ? stockData[0].totalStock : 0;
     
+    // 🎯 NOUVEAU: Compter les alertes stock (produits avec quantité < seuil d'alerte)
+    const stockAlerts = await Produit.countDocuments({
+      $expr: { $lt: ['$quantiteActuelle', '$seuilAlerte'] }
+    });
+    
     // Get first entreprise for display
     const entreprise = await Business.findOne().select('nomEntreprise').lean();
     
     return res.json({
       totalMagasins,
       totalGuichets,
-      totalVendeurs,
+      totalVendeurs,  // ✅ Vendeurs avec affectation active
       totalStock,
+      stockAlerts,    // ✅ Produits en alerte stock
       entreprise: entreprise || { nomEntreprise: 'Toutes les entreprises' }
     });
   } catch (err) {
@@ -1036,8 +1069,9 @@ router.get('/affectations/list', authMiddleware, async (req, res) => {
       .limit(Number(limit))
       .skip(Number(skip))
       .populate('vendeurId', 'nom prenom email role')
-      .populate('guichetId', 'nom_guichet code')
-      .populate('magasinId', 'nom_magasin')
+      .populate('managerId', 'nom prenom email role')
+      .populate('guichetId', 'nom code')
+      .populate('magasinId', 'nom')
       .lean();
 
     const total = await Affectation.countDocuments(filter);

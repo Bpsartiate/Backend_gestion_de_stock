@@ -72,9 +72,13 @@ class VenteManager {
             userToken: !!localStorage.getItem('userToken')
         });
         
+        // 📊 Afficher le loading des KPIs dès le démarrage
+        this.showKPIsLoading(true);
+        
         if (!this.TOKEN) {
             console.error('❌ Aucun token JWT trouvé! Impossible de charger les données.');
             alert('⚠️ Authentification requise. Veuillez vous reconnecter.');
+            this.showKPIsLoading(false);
             return;
         }
         
@@ -86,6 +90,7 @@ class VenteManager {
             console.log('✅ Module Vente initialisé');
         } catch (error) {
             console.error('❌ Erreur initialisation Vente:', error);
+            this.showKPIsLoading(false);
         }
     }
 
@@ -218,7 +223,8 @@ class VenteManager {
             
             // Mettre à jour le header avec le nom du magasin
             if (this.magasins.length > 0) {
-                const magasinName = this.magasins[0].nom;
+                const magasin = this.magasins[0];
+                const magasinName = magasin.nom_magasin || magasin.nom || 'Magasin';
                 const badge = document.getElementById('currentMagasinName');
                 if (badge) badge.textContent = magasinName;
             }
@@ -338,6 +344,7 @@ class VenteManager {
         try {
             await this.loadGuichets(magasinId);  // 🎯 Charger les guichets du magasin
             await this.loadProduits(magasinId);
+            await this.loadVentesHistorique();  // 📊 Charger les ventes et KPIs
         } catch (error) {
             console.error('❌ Erreur changement magasin:', error);
         }
@@ -428,26 +435,64 @@ class VenteManager {
         }
         
         spinner.style.display = 'none';
-        list.innerHTML = this.guichets.map(guichet => `
-            <div class="card mb-2 cursor-pointer ${guichet._id === this.currentGuichet ? 'border-warning border-2' : ''}" 
-                 onclick="venteManager.selectGuichet('${guichet._id}')" 
-                 style="cursor: pointer; transition: all 0.2s ease;">
-                <div class="card-body p-2">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <h6 class="mb-1 fw-bold">
-                                <i class="fas fa-window-maximize me-2" style="color: #f7931e;"></i>${guichet.nom_guichet}
-                            </h6>
-                            <small class="text-muted">Code: ${guichet.code || 'N/A'}</small>
-                            ${guichet.vendeurPrincipal ? `<br><small class="text-info">Vendeur: <strong>${guichet.vendeurPrincipal.prenom} ${guichet.vendeurPrincipal.nom}</strong></small>` : ''}
-                        </div>
-                        <div>
-                            ${guichet._id === this.currentGuichet ? '<i class="fas fa-check-circle fa-2x text-success"></i>' : '<i class="fas fa-circle fa-2x text-secondary" style="opacity: 0.3;"></i>'}
+        
+        // 🎯 FILTRE: Séparer guichets actifs et inactifs
+        const guichetsActifs = this.guichets.filter(g => g.status === 1);
+        const guichetsInactifs = this.guichets.filter(g => g.status !== 1);
+        
+        let html = '';
+        
+        // Afficher guichets ACTIFS
+        if (guichetsActifs.length > 0) {
+            html += guichetsActifs.map(guichet => `
+                <div class="card mb-2 cursor-pointer ${guichet._id === this.currentGuichet ? 'border-warning border-2' : ''}" 
+                     onclick="venteManager.selectGuichet('${guichet._id}')" 
+                     style="cursor: pointer; transition: all 0.2s ease; background: #fff;">
+                    <div class="card-body p-2">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="mb-1 fw-bold text-dark">
+                                    <i class="fas fa-window-maximize me-2" style="color: #f7931e;"></i>${guichet.nom_guichet}
+                                    <span class="badge bg-success ms-2">Actif</span>
+                                </h6>
+                                <small class="text-muted">Code: ${guichet.code || 'N/A'}</small>
+                                ${guichet.vendeurPrincipal ? `<br><small class="text-info">Vendeur: <strong>${guichet.vendeurPrincipal.prenom} ${guichet.vendeurPrincipal.nom}</strong></small>` : ''}
+                            </div>
+                            <div>
+                                ${guichet._id === this.currentGuichet ? '<i class="fas fa-check-circle fa-2x text-success"></i>' : '<i class="fas fa-circle fa-2x text-secondary" style="opacity: 0.3;"></i>'}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
+        }
+        
+        // Afficher guichets INACTIFS (désactivés)
+        if (guichetsInactifs.length > 0) {
+            html += '<div class="mb-3"><small class="text-muted fw-bold">⚠️ Guichets Inactifs (Non disponibles)</small></div>';
+            html += guichetsInactifs.map(guichet => `
+                <div class="card mb-2" 
+                     style="cursor: not-allowed; transition: all 0.2s ease; background: #f8f9fa; opacity: 0.6;">
+                    <div class="card-body p-2" onclick="event.stopPropagation(); alert('❌ Ce guichet est inactif. Impossible de faire une vente.');">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="mb-1 fw-bold text-muted">
+                                    <i class="fas fa-window-maximize me-2" style="color: #999;"></i>${guichet.nom_guichet}
+                                    <span class="badge bg-danger ms-2">Inactif</span>
+                                </h6>
+                                <small class="text-muted">Code: ${guichet.code || 'N/A'}</small>
+                                ${guichet.vendeurPrincipal ? `<br><small class="text-muted" style="opacity: 0.6;">Vendeur: <strong>${guichet.vendeurPrincipal.prenom} ${guichet.vendeurPrincipal.nom}</strong></small>` : ''}
+                            </div>
+                            <div>
+                                <i class="fas fa-lock fa-2x text-danger" style="opacity: 0.5;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        list.innerHTML = html || '<p class="text-center text-muted py-3">Aucun guichet disponible</p>';
         list.style.display = 'block';
     }
 
@@ -1043,15 +1088,21 @@ class VenteManager {
      */
     async loadVentesHistorique() {
         try {
-            // Afficher le loader
-            const loading = document.getElementById('ventesLoading');
-            if (loading) loading.style.display = 'block';
+            // Afficher le loading dans les KPIs et la table
+            this.showKPIsLoading(true);
+            
+            // Afficher le loader dans le tbody
+            const loadingRow = document.getElementById('ventesLoadingRow');
+            const tbody = document.getElementById('ventesTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr id="ventesLoadingRow"><td colspan="8" class="text-center py-4"><div class="spinner-border text-info" role="status"><span class="visually-hidden">Chargement...</span></div><p class="mt-2 text-muted small">Chargement des ventes...</p></td></tr>';
+            }
             
             // Utiliser le magasin sélectionné actuellement au lieu de chercher un select
             const magasinId = this.currentMagasin;
             if (!magasinId) {
                 console.log('⚠️ Pas de magasin sélectionné pour charger l\'historique');
-                if (loading) loading.style.display = 'none';
+                if (loadingRow) loadingRow.style.display = 'none';
                 return;
             }
 
@@ -1083,9 +1134,11 @@ class VenteManager {
         } catch (error) {
             console.error('❌ Erreur chargement historique:', error);
         } finally {
-            // Masquer le loader en tous cas
-            const loading = document.getElementById('ventesLoading');
-            if (loading) loading.style.display = 'none';
+            // Masquer le loading des KPIs
+            this.showKPIsLoading(false);
+            // Masquer le loader (fallback si erreur)
+            const loadingRow = document.getElementById('ventesLoadingRow');
+            if (loadingRow) loadingRow.style.display = 'none';
         }
     }
 
@@ -1095,6 +1148,7 @@ class VenteManager {
     displayVentesHistorique(ventes) {
         // 📋 Stocker TOUTES les ventes
         this.allVentes = ventes || [];
+        this.filteredVentes = ventes || [];
         this.ventesHistorique = ventes || [];
         this.currentPage = 1;
         this.searchTerm = '';
@@ -1104,10 +1158,83 @@ class VenteManager {
         
         // Afficher la première page
         this.renderVentesPage();
+        
+        // 📊 Calculer et afficher les KPIs
+        this.updateKPIs(ventes);
     }
 
     /**
-     * 🔍 Initialiser la recherche
+     * 📊 Calculer et afficher les KPIs
+     */
+    updateKPIs(ventes) {
+        if (!ventes || ventes.length === 0) {
+            // Pas de ventes: afficher 0
+            document.getElementById('widgetVentesJour').textContent = '0';
+            document.getElementById('widgetChiffre').textContent = '0.00';
+            document.getElementById('widgetQteSortie').textContent = '0';
+            document.getElementById('widgetMouvements').textContent = '0';
+            document.getElementById('ventesToday').textContent = '0';
+            document.getElementById('totalVentes').textContent = '0.00';
+            return;
+        }
+
+        // Calculer les KPIs
+        let totalVentes = 0;
+        let totalMontantUSD = 0;
+        let totalQteSortie = 0;
+
+        ventes.forEach(vente => {
+            totalVentes++;
+            totalMontantUSD += vente.montantTotalUSD || 0;
+            
+            // Additionner les quantités de tous les articles
+            if (vente.articles && Array.isArray(vente.articles)) {
+                vente.articles.forEach(article => {
+                    totalQteSortie += article.quantite || 0;
+                });
+            }
+        });
+
+        // Mettre à jour les widgets
+        const venteCount = totalVentes;
+        const montantUSD = totalMontantUSD.toFixed(2);
+        const qteCount = totalQteSortie;
+        const mouvementCount = ventes.length; // Nombre de mouvements = nombre de ventes
+
+        document.getElementById('widgetVentesJour').textContent = venteCount;
+        document.getElementById('widgetChiffre').textContent = montantUSD;
+        document.getElementById('widgetQteSortie').textContent = qteCount;
+        document.getElementById('widgetMouvements').textContent = mouvementCount;
+        
+        // Mettre à jour le header aussi
+        document.getElementById('ventesToday').textContent = venteCount;
+        document.getElementById('totalVentes').textContent = montantUSD;
+    }
+
+    /**
+     * � Afficher/Masquer le loading des KPIs
+     */
+    showKPIsLoading(isLoading) {
+        const kpiLoadingIds = [
+            'kpiVentesLoading', 'kpiChiffresLoading', 'kpiQteLoading', 'kpiMouvementsLoading'
+        ];
+        const kpiContentIds = [
+            'kpiVentesContent', 'kpiChiffresContent', 'kpiQteContent', 'kpiMouvementsContent'
+        ];
+        
+        kpiLoadingIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = isLoading ? 'block' : 'none';
+        });
+        
+        kpiContentIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = isLoading ? 'none' : 'block';
+        });
+    }
+
+    /**
+     * �🔍 Initialiser la recherche
      */
     initializeSearch() {
         const searchInput = document.getElementById('ventesSearch');
@@ -1157,19 +1284,21 @@ class VenteManager {
     renderVentesPage() {
         const tbody = document.getElementById('ventesTableBody');
         const noResults = document.getElementById('ventesNoResults');
+        const loadingRow = document.getElementById('ventesLoadingRow');
+        const emptyRow = document.getElementById('ventesEmptyRow');
         
         // Masquer le loading
-        const loading = document.getElementById('ventesLoading');
-        if (loading) loading.style.display = 'none';
+        if (loadingRow) loadingRow.style.display = 'none';
         
         if (!this.filteredVentes || this.filteredVentes.length === 0) {
             tbody.innerHTML = '';
+            if (emptyRow) emptyRow.style.display = 'none';
             noResults.style.display = 'block';
             this.updatePaginationInfo();
             return;
         }
         
-        noResults.style.display = 'none';
+        if (emptyRow) emptyRow.style.display = 'none';
         
         // Calculer la pagination
         const totalPages = Math.ceil(this.filteredVentes.length / this.itemsPerPage);
@@ -1824,61 +1953,283 @@ class VenteManager {
      */
     printVente(vente) {
         // Créer une fenêtre d'impression
-        const printWindow = window.open('', '', 'width=800,height=600');
+        const printWindow = window.open('', '', 'width=900,height=1000');
+        const magasinInfo = vente.magasinId && typeof vente.magasinId === 'object' ? vente.magasinId : {};
+        const businessInfo = magasinInfo.businessId && typeof magasinInfo.businessId === 'object' ? magasinInfo.businessId : {};
+        const vendeurInfo = vente.utilisateurId && typeof vente.utilisateurId === 'object' ? vente.utilisateurId : {};
+        const guichetInfo = vente.guichetId && typeof vente.guichetId === 'object' ? vente.guichetId : {};
+
         printWindow.document.write(`
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Vente #${vente._id}</title>
+                <meta charset="UTF-8">
+                <title>Reçu de Vente</title>
                 <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    h1 { text-align: center; color: #333; }
-                    .info { margin: 20px 0; }
-                    .articles { margin-top: 20px; }
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    th { background-color: #f2f2f2; }
-                    .total { font-weight: bold; font-size: 1.2em; }
-                    .footer { margin-top: 30px; text-align: center; color: #666; }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        padding: 20px;
+                        background: white;
+                        color: #333;
+                    }
+                    .container {
+                        max-width: 800px;
+                        margin: 0 auto;
+                        border: 2px solid #667eea;
+                        border-radius: 8px;
+                        padding: 30px;
+                        background: white;
+                    }
+                    /* En-tête Premium */
+                    .header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 30px;
+                        padding-bottom: 20px;
+                        border-bottom: 3px solid #667eea;
+                    }
+                    .logo-section {
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                    }
+                    .logo {
+                        width: 60px;
+                        height: 60px;
+                        border-radius: 8px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 28px;
+                        font-weight: bold;
+                    }
+                    .company-info h2 {
+                        color: #667eea;
+                        font-size: 1.4em;
+                        margin-bottom: 4px;
+                    }
+                    .company-info p {
+                        font-size: 0.85em;
+                        color: #666;
+                        line-height: 1.4;
+                    }
+                    .receipt-title {
+                        text-align: right;
+                    }
+                    .receipt-title h1 {
+                        color: #667eea;
+                        font-size: 1.8em;
+                        margin-bottom: 4px;
+                    }
+                    .receipt-title p {
+                        color: #999;
+                        font-size: 0.9em;
+                    }
+                    /* Info Section */
+                    .info-section {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 20px;
+                        margin-bottom: 30px;
+                        padding: 20px;
+                        background: #f8fafc;
+                        border-radius: 8px;
+                    }
+                    .info-box h3 {
+                        color: #667eea;
+                        font-size: 0.9em;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin-bottom: 10px;
+                        border-bottom: 2px solid #667eea;
+                        padding-bottom: 8px;
+                    }
+                    .info-box p {
+                        font-size: 0.95em;
+                        margin: 6px 0;
+                        line-height: 1.5;
+                    }
+                    .info-box strong {
+                        color: #333;
+                        display: inline-block;
+                        min-width: 100px;
+                    }
+                    /* Table */
+                    .articles {
+                        margin-bottom: 30px;
+                    }
+                    .articles h3 {
+                        color: #667eea;
+                        font-size: 1.1em;
+                        margin-bottom: 15px;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        background: white;
+                    }
+                    th {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 12px 8px;
+                        text-align: left;
+                        font-weight: 600;
+                        font-size: 0.9em;
+                    }
+                    td {
+                        padding: 12px 8px;
+                        border-bottom: 1px solid #e0e0e0;
+                    }
+                    tr:hover {
+                        background: #f8fafc;
+                    }
+                    /* Totals */
+                    .totals {
+                        display: flex;
+                        justify-content: flex-end;
+                        margin-bottom: 30px;
+                    }
+                    .totals-box {
+                        width: 350px;
+                        padding: 20px;
+                        background: linear-gradient(135deg, #f5f7ff 0%, #fafbff 100%);
+                        border: 2px solid #667eea;
+                        border-radius: 8px;
+                    }
+                    .total-line {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 12px;
+                        font-size: 0.95em;
+                    }
+                    .total-line strong {
+                        color: #333;
+                    }
+                    .total-amount {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 1.3em;
+                        font-weight: bold;
+                        color: #667eea;
+                        border-top: 2px solid #667eea;
+                        padding-top: 12px;
+                        margin-top: 12px;
+                    }
+                    /* Footer */
+                    .footer {
+                        text-align: center;
+                        padding-top: 20px;
+                        border-top: 2px solid #e0e0e0;
+                        color: #666;
+                        font-size: 0.9em;
+                    }
+                    .footer .thank-you {
+                        font-weight: bold;
+                        color: #667eea;
+                        margin-bottom: 10px;
+                        font-size: 1.1em;
+                    }
+                    .footer .timestamp {
+                        color: #999;
+                        font-size: 0.85em;
+                    }
+                    @media print {
+                        body { margin: 0; padding: 0; }
+                        .container { border: 1px solid #ddd; }
+                    }
                 </style>
             </head>
             <body>
-                <h1>REÇU DE VENTE</h1>
-                <div class="info">
-                    <p><strong>Numéro:</strong> ${vente._id}</p>
-                    <p><strong>Date:</strong> ${this.formatDateTime(vente.dateVente)}</p>
-                    <p><strong>Vendeur:</strong> ${vente.utilisateur?.nom || '-'}</p>
-                    <p><strong>Magasin:</strong> ${vente.magasin?.nom || '-'}</p>
-                    <p><strong>Guichet:</strong> ${vente.guichet?.nom || '-'}</p>
-                </div>
+                <div class="container">
+                    <!-- En-tête avec logo et titre -->
+                    <div class="header">
+                        <div class="logo-section">
+                            <div class="logo">🏪</div>
+                            <div class="company-info">
+                                <h2>${businessInfo.nom_entreprise || 'Entreprise'}</h2>
+                                <p>${magasinInfo.nom_magasin || 'Magasin'}</p>
+                                <p>${magasinInfo.adresse || 'Adresse non disponible'}</p>
+                                <p>Tel: ${magasinInfo.telephone || 'N/A'}</p>
+                            </div>
+                        </div>
+                        <div class="receipt-title">
+                            <h1>REÇU</h1>
+                            <p>de Vente</p>
+                        </div>
+                    </div>
 
-                <div class="articles">
-                    <h3>Articles</h3>
-                    <table>
-                        <tr>
-                            <th>Produit</th>
-                            <th>Qté</th>
-                            <th>Prix Unitaire</th>
-                            <th>Sous-total</th>
-                        </tr>
-                        ${vente.articles.map(a => `
-                            <tr>
-                                <td>${a.produit?.nom || '-'}</td>
-                                <td>${a.quantite}</td>
-                                <td>$${a.prixUnitaire.toFixed(2)}</td>
-                                <td>$${(a.prixUnitaire * a.quantite).toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                </div>
+                    <!-- Infos Vente -->
+                    <div class="info-section">
+                        <div class="info-box">
+                            <h3>📌 Détails Vente</h3>
+                            <p><strong>N° Vente:</strong> ${vente._id.substring(0, 12)}</p>
+                            <p><strong>Date:</strong> ${this.formatDateTime(vente.dateVente)}</p>
+                            <p><strong>Magasin:</strong> ${magasinInfo.nom_magasin || 'N/A'}</p>
+                            <p><strong>Guichet:</strong> ${guichetInfo.nom_guichet || 'N/A'}</p>
+                        </div>
+                        <div class="info-box">
+                            <h3>👤 Informations</h3>
+                            <p><strong>Vendeur:</strong> ${vendeurInfo.prenom || ''} ${vendeurInfo.nom || '-'}</p>
+                            <p><strong>Mode Paiement:</strong> ${vente.modePaiement || 'CASH'}</p>
+                            <p><strong>Devise:</strong> USD</p>
+                        </div>
+                    </div>
 
-                <p class="total" style="text-align: right; margin-top: 20px;">
-                    Total: ${this.formatDevise(vente.montantUSD, 'USD')}
-                </p>
+                    <!-- Articles -->
+                    <div class="articles">
+                        <h3>📦 Articles</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th style="text-align: center;">Qté</th>
+                                    <th style="text-align: right;">Prix Unitaire</th>
+                                    <th style="text-align: right;">Sous-total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${vente.articles.map(a => {
+                                    const produit = a.produitId && typeof a.produitId === 'object' ? a.produitId : {};
+                                    const sousTotal = (a.quantite * (a.prixUnitaire || 0)).toFixed(2);
+                                    return `
+                                        <tr>
+                                            <td>${produit.designation || a.nomProduit || 'Produit'}</td>
+                                            <td style="text-align: center;">${a.quantite}</td>
+                                            <td style="text-align: right;">$${(a.prixUnitaire || 0).toFixed(2)}</td>
+                                            <td style="text-align: right;">$${sousTotal}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
 
-                <div class="footer">
-                    <p>Merci de votre achat!</p>
-                    <p style="font-size: 0.8em;">${new Date().toLocaleString('fr-FR')}</p>
+                    <!-- Totaux -->
+                    <div class="totals">
+                        <div class="totals-box">
+                            <div class="total-line">
+                                <strong>Sous-total:</strong>
+                                <span>$${(vente.montantTotalUSD || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="total-amount">
+                                <strong>TOTAL:</strong>
+                                <span>$${(vente.montantTotalUSD || 0).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="footer">
+                        <div class="thank-you">✅ Merci de votre achat!</div>
+                        <p class="timestamp">Reçu généré le ${new Date().toLocaleString('fr-FR')}</p>
+                        <p style="margin-top: 10px; font-size: 0.8em;">Veuillez conserver ce reçu</p>
+                    </div>
                 </div>
             </body>
             </html>
@@ -1988,3 +2339,4 @@ let venteManager;
 document.addEventListener('DOMContentLoaded', () => {
     venteManager = new VenteManager();
 });
+

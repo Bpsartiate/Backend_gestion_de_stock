@@ -223,7 +223,14 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                             <div class="d-flex align-items-center justify-content-center mb-2">
                                 <i class="fas fa-cart-plus fa-2x text-success"></i>
                             </div>
-                            <div class="fs-3 fw-bold text-success" id="widgetVentesJour">0</div>
+                            <div id="kpiVentesLoading" style="display: none;">
+                                <div class="spinner-border spinner-border-sm text-success" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                            </div>
+                            <div id="kpiVentesContent">
+                                <div class="fs-3 fw-bold text-success" id="widgetVentesJour">0</div>
+                            </div>
                             <div class="small text-muted">Ventes aujourd'hui</div>
                         </div>
                     </div>
@@ -232,7 +239,14 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                             <div class="d-flex align-items-center justify-content-center mb-2">
                                 <i class="fas fa-chart-line fa-2x text-primary"></i>
                             </div>
-                            <div class="fs-3 fw-bold text-primary" id="widgetChiffre">0.00</div>
+                            <div id="kpiChiffresLoading" style="display: none;">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                            </div>
+                            <div id="kpiChiffresContent">
+                                <div class="fs-3 fw-bold text-primary" id="widgetChiffre">0.00</div>
+                            </div>
                             <div class="small text-muted">Chiffre d'affaires</div>
                         </div>
                     </div>
@@ -241,7 +255,14 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                             <div class="d-flex align-items-center justify-content-center mb-2">
                                 <i class="fas fa-boxes fa-2x text-info"></i>
                             </div>
-                            <div class="fs-3 fw-bold text-info" id="widgetQteSortie">0</div>
+                            <div id="kpiQteLoading" style="display: none;">
+                                <div class="spinner-border spinner-border-sm text-info" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                            </div>
+                            <div id="kpiQteContent">
+                                <div class="fs-3 fw-bold text-info" id="widgetQteSortie">0</div>
+                            </div>
                             <div class="small text-muted">Quantités sorties</div>
                         </div>
                     </div>
@@ -250,7 +271,14 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                             <div class="d-flex align-items-center justify-content-center mb-2">
                                 <i class="fas fa-exchange-alt fa-2x text-warning"></i>
                             </div>
-                            <div class="fs-3 fw-bold text-warning" id="widgetMouvements">0</div>
+                            <div id="kpiMouvementsLoading" style="display: none;">
+                                <div class="spinner-border spinner-border-sm text-warning" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                            </div>
+                            <div id="kpiMouvementsContent">
+                                <div class="fs-3 fw-bold text-warning" id="widgetMouvements">0</div>
+                            </div>
                             <div class="small text-muted">Mouvements</div>
                         </div>
                     </div>
@@ -505,10 +533,6 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                     <h6 class="mb-0 fw-semibold">
                                         <i class="fas fa-history text-info me-2"></i>Historique des Ventes
                                     </h6>
-                                    <!-- Loading Spinner -->
-                                    <div id="ventesLoading" class="spinner-border spinner-border-sm text-info" role="status" style="display: none;">
-                                        <span class="visually-hidden">Chargement...</span>
-                                    </div>
                                 </div>
                             </div>
                             
@@ -545,7 +569,15 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                             </tr>
                                         </thead>
                                         <tbody id="ventesTableBody">
-                                            <tr>
+                                            <tr id="ventesLoadingRow" style="display: none;">
+                                                <td colspan="8" class="text-center py-4">
+                                                    <div class="spinner-border text-info" role="status">
+                                                        <span class="visually-hidden">Chargement...</span>
+                                                    </div>
+                                                    <p class="mt-2 text-muted small">Chargement des ventes...</p>
+                                                </td>
+                                            </tr>
+                                            <tr id="ventesEmptyRow">
                                                 <td colspan="8" class="text-center text-muted py-3">Aucune vente enregistrée</td>
                                             </tr>
                                         </tbody>

@@ -3,6 +3,9 @@ const router = express.Router();
 const Business = require('../models/business');
 const Magasin = require('../models/magasin');
 const Guichet = require('../models/guichet');
+const Vente = require('../models/vente');
+const Affectation = require('../models/affectation');
+const Activity = require('../models/activity');
 const authenticateToken = require('../middlewares/authenticateToken'); // Middleware JWT
 const upload = require('../middlewares/upload');
 const cloudinary = require('../services/cloudinary');
@@ -141,25 +144,53 @@ router.put('/:id', authenticateToken, upload.single('logo'), async (req, res) =>
   }
 });
 
-// DELETE /api/business/:id - Supprimer une business (admin)
+// DELETE /api/business/:id - Supprimer une business et TOUT ce qui la concerne (admin)
 router.delete('/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès admin requis' });
 
   try {
-    const deleted = await Business.findByIdAndDelete(req.params.id);
+    const businessId = req.params.id;
+    
+    // 1. Récupérer tous les magasins de l'entreprise
+    const magasins = await Magasin.find({ businessId });
+    const magasinIds = magasins.map(m => m._id);
+    
+    // 2. Récupérer tous les guichets de ces magasins
+    const guichets = await Guichet.find({ magasinId: { $in: magasinIds } });
+    const guichetIds = guichets.map(g => g._id);
+    
+    // 3. Supprimer les ventes associées aux magasins
+    await Vente.deleteMany({ magasinId: { $in: magasinIds } });
+    
+    // 4. Supprimer les affectations associées aux guichets
+    await Affectation.deleteMany({ guichetId: { $in: guichetIds } });
+    
+    // 5. Supprimer les activités associées à l'entreprise
+    await Activity.deleteMany({ businessId });
+    
+    // 6. Supprimer tous les guichets
+    await Guichet.deleteMany({ magasinId: { $in: magasinIds } });
+    
+    // 7. Supprimer tous les magasins
+    await Magasin.deleteMany({ businessId });
+    
+    // 8. Supprimer l'entreprise elle-même
+    const deleted = await Business.findByIdAndDelete(businessId);
     if (!deleted) return res.status(404).json({ message: 'Entreprise non trouvée' });
     
-    // Supprimer tous les magasins et guichets associés
-    const magasins = await Magasin.find({ businessId: req.params.id });
-    for (const mag of magasins) {
-      await Guichet.deleteMany({ magasinId: mag._id });
-    }
-    await Magasin.deleteMany({ businessId: req.params.id });
-    
-    return res.json({ message: 'Entreprise supprimée avec tous ses magasins et guichets' });
+    return res.json({ 
+      message: 'Entreprise et toutes ses données associées supprimées',
+      details: {
+        magasins: magasins.length,
+        guichets: guichets.length,
+        ventes: 'supprimées',
+        affectations: 'supprimées',
+        activites: 'supprimées'
+      }
+    });
   } catch(err) {
     console.error('business.delete.error', err);
-    return res.status(500).json({ message: 'Erreur serveur' });
+    return res.status(500).json({ message: 'Erreur serveur: ' + err.message });
   }
 });
 

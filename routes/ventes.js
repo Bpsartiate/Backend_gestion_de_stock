@@ -6,6 +6,7 @@ const StockMovement = require('../models/stockMovement');  // ✅ CORRIGÉ: util
 const Produit = require('../models/produit');  // ✅ CORRIGÉ: utiliser le modèle Produit
 const Magasin = require('../models/magasin');
 const Utilisateur = require('../models/utilisateur');
+const Guichet = require('../models/guichet');  // ✅ Pour valider le statut du guichet
 
 /**
  * POST /api/protected/ventes
@@ -30,6 +31,23 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             return res.status(400).json({
                 message: '❌ Magasin et articles requis'
             });
+        }
+        
+        // 🎯 NOUVEAU: Vérifier que le guichet est actif (si guichet fourni)
+        if (guichetId) {
+            const guichet = await Guichet.findById(guichetId);
+            if (!guichet) {
+                return res.status(404).json({
+                    message: '❌ Guichet non trouvé'
+                });
+            }
+            if (guichet.status !== 1) {
+                return res.status(400).json({
+                    message: `❌ Le guichet ${guichet.nom_guichet} est inactif. Impossible de faire une vente.`,
+                    guichet: guichet.nom_guichet,
+                    status: guichet.status
+                });
+            }
         }
         
         // Vérifier chaque article et calculer total
