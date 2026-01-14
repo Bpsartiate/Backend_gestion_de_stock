@@ -20,7 +20,6 @@ const upload = require('../middlewares/upload');
 const Rayon = require('../models/rayon');
 const Produit = require('../models/produit');
 const TypeProduit = require('../models/typeProduit');
-const Produit = require('../models/produit');
 const StockMovement = require('../models/stockMovement');
 const Lot = require('../models/lot');
 const AlerteStock = require('../models/alerteStock');
