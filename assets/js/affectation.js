@@ -81,15 +81,30 @@ class AffectationManager {
         $('#btnBulkCancel').on('click', () => this.cancelBulkActions());
 
         // Modal hidden reset
-        $('#modalCreateAffectation').on('hidden.bs.modal', () => this.resetFormCreateAffectation());
-        $('#modalTerminerAffectation').on('hidden.bs.modal', () => this.resetFormTerminer());
+        $('#modalCreateAffectation').on('hidden.bs.modal', () => {
+            this.resetFormCreateAffectation();
+            // Nettoyer le backdrop
+            document.body.classList.remove('modal-open');
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) backdrop.remove();
+        });
+        
+        $('#modalTerminerAffectation').on('hidden.bs.modal', () => {
+            this.resetFormTerminer();
+            // Nettoyer le backdrop
+            document.body.classList.remove('modal-open');
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) backdrop.remove();
+        });
     }
 
     // ==================== CHARGEMENT DATA ====================
     async loadAllData() {
         try {
-            // Afficher le spinner
+            // Afficher le spinner et les loaders KPI
             $('#affectationSpinner').show();
+            this.showKPILoaders();
+            this.toggleLoading(true);
             
             const headers = this.getAuthHeaders();
             // Charger les affectations
@@ -160,7 +175,10 @@ class AffectationManager {
                     const magData = await magRes.json();
                     this.allMagasins = Array.isArray(magData) ? magData : magData.magasins || [];
                     console.log('✅ Magasins chargés:', this.allMagasins.length);
-                    this.allMagasins.forEach(m => console.log('  - Magasin:', {id: m._id, nom: m.nom, nomMagasin: m.nomMagasin, nomEntreprise: m.nomEntreprise}));
+                    if (this.allMagasins.length > 0) {
+                        console.log('🔍 PREMIER MAGASIN - TOUS LES CHAMPS:', this.allMagasins[0]);
+                        console.log('📋 Clés magasin disponibles:', Object.keys(this.allMagasins[0]));
+                    }
                 } else {
                     this.allMagasins = [];
                 }
@@ -180,7 +198,10 @@ class AffectationManager {
                     }
                 }
                 console.log('✅ Guichets chargés:', this.allGuichets.length);
-                this.allGuichets.forEach(g => console.log('  - Guichet:', {id: g._id, nom: g.nom, nomGuichet: g.nomGuichet, nomGuichets: g.nomGuichets}));
+                if (this.allGuichets.length > 0) {
+                    console.log('🔍 PREMIER GUICHET - TOUS LES CHAMPS:', this.allGuichets[0]);
+                    console.log('📋 Clés guichet disponibles:', Object.keys(this.allGuichets[0]));
+                }
             } catch (e) {
                 console.error('Erreur guichets:', e);
                 this.allGuichets = [];
@@ -191,9 +212,34 @@ class AffectationManager {
                 const entRes = await fetch(`${window.API_BASE}/api/business`, { headers });
                 if (entRes.ok) {
                     const entData = await entRes.json();
-                    this.allEntreprises = Array.isArray(entData) ? entData : entData.business || [];
-                    console.log('✅ Entreprises chargées:', this.allEntreprises.length, this.allEntreprises.map(e => ({id: e._id, nom: e.nom})));
+                    console.log('📦 Données brutes entreprises reçues:', entData);
+                    
+                    // Essayer différents formats
+                    if (Array.isArray(entData)) {
+                        this.allEntreprises = entData;
+                    } else if (entData.business && Array.isArray(entData.business)) {
+                        this.allEntreprises = entData.business;
+                    } else if (entData.data && Array.isArray(entData.data)) {
+                        this.allEntreprises = entData.data;
+                    } else if (typeof entData === 'object') {
+                        // Si c'est un objet, essayer d'extraire les entreprises
+                        this.allEntreprises = Object.values(entData).filter(item => item && typeof item === 'object');
+                    } else {
+                        this.allEntreprises = [];
+                    }
+                    
+                    if (this.allEntreprises.length === 0) {
+                        console.warn('⚠️ Aucune entreprise trouvée. Vérifiez la structure des données:', entData);
+                    } else {
+                        console.log('✅ Entreprises chargées:', this.allEntreprises.length);
+                        console.log('📋 Première entreprise complète:', this.allEntreprises[0]);
+                        console.log('🔑 Clés disponibles dans l\'entreprise:', Object.keys(this.allEntreprises[0]));
+                        console.log('📌 Valeur du champ "nom":', this.allEntreprises[0].nom);
+                        console.log('📌 Valeur du champ "nomEntreprise":', this.allEntreprises[0].nomEntreprise);
+                        console.log('📌 Valeur du champ "name":', this.allEntreprises[0].name);
+                    }
                 } else {
+                    console.error('❌ Erreur chargement entreprises, status:', entRes.status);
                     this.allEntreprises = [];
                 }
             } catch (e) {
@@ -211,6 +257,7 @@ class AffectationManager {
             this.populateFormOptions();
             this.applyFilters();
             this.updateKPIs();
+            this.updateHeaderCounters();
             this.initializeListJs(); // Initialiser list.js
             
             // Cacher le spinner et afficher les données
@@ -278,19 +325,19 @@ class AffectationManager {
         // Entreprises
         $('#filterEntreprise').html('<option value="">Toutes les entreprises</option>');
         this.allEntreprises.forEach(e => {
-            $('#filterEntreprise').append(`<option value="${e._id}">${e.nom}</option>`);
+            $('#filterEntreprise').append(`<option value="${e._id}">${e.nomEntreprise || 'Sans nom'}</option>`);
         });
 
         // Magasins
         $('#filterMagasin').html('<option value="">Tous les magasins</option>');
         this.allMagasins.forEach(m => {
-            $('#filterMagasin').append(`<option value="${m._id}">${m.nom}</option>`);
+            $('#filterMagasin').append(`<option value="${m._id}">${m.nom_magasin || 'Sans nom'}</option>`);
         });
 
         // Guichets
         $('#filterGuichet').html('<option value="">Tous les guichets</option>');
         this.allGuichets.forEach(g => {
-            $('#filterGuichet').append(`<option value="${g._id}">${g.nom}</option>`);
+            $('#filterGuichet').append(`<option value="${g._id}">${g.nom_guichet || 'Sans nom'}</option>`);
         });
 
         // Vendeurs - utiliser vendeursFiltres
@@ -301,26 +348,64 @@ class AffectationManager {
     }
 
     populateFormOptions() {
+        console.log('🔧 populateFormOptions() appelée');
+        console.log('   - allEntreprises:', this.allEntreprises);
+        console.log('   - allMagasins:', this.allMagasins);
+        console.log('   - allGuichets:', this.allGuichets);
+        
         // Form: Entreprises
         $('#affectEntreprise').html('<option value="">Sélectionner une entreprise</option>');
-        this.allEntreprises.forEach(e => {
-            $('#affectEntreprise').append(`<option value="${e._id}">${e.nom}</option>`);
-        });
+        if (this.allEntreprises && this.allEntreprises.length > 0) {
+            console.log('📝 Remplissage Entreprises...');
+            this.allEntreprises.forEach((e, idx) => {
+                const nomEntreprise = e.nomEntreprise || 'Sans nom';
+                console.log(`   [${idx}] ID: ${e._id}, Nom: ${nomEntreprise}`);
+                $('#affectEntreprise').append(`<option value="${e._id}">${nomEntreprise}</option>`);
+            });
+            console.log('✅ Entreprises remplies:', this.allEntreprises.length);
+        } else {
+            console.warn('⚠️ allEntreprises vide ou undefined');
+        }
 
         // Form: Magasins
         $('#affectMagasin').html('<option value="">Sélectionner un magasin</option>');
-        this.allMagasins.forEach(m => {
-            $('#affectMagasin').append(`<option value="${m._id}">${m.nom}</option>`);
-        });
+        if (this.allMagasins && this.allMagasins.length > 0) {
+            console.log('📝 Remplissage Magasins...');
+            this.allMagasins.forEach((m, idx) => {
+                const nomMagasin = m.nom_magasin || 'Sans nom';
+                console.log(`   [${idx}] ID: ${m._id}, Nom: ${nomMagasin}`);
+                $('#affectMagasin').append(`<option value="${m._id}">${nomMagasin}</option>`);
+            });
+            console.log('✅ Magasins remplis:', this.allMagasins.length);
+        } else {
+            console.warn('⚠️ allMagasins vide ou undefined');
+        }
 
         // Form: Guichets (vide initialement, rempli au changement de magasin)
         $('#affectGuichet').html('<option value="">Sélectionner un guichet</option>');
+        if (this.allGuichets && this.allGuichets.length > 0) {
+            console.log('📝 Remplissage Guichets initiaux...');
+            this.allGuichets.forEach((g, idx) => {
+                const nomGuichet = g.nom_guichet || 'Sans nom';
+                console.log(`   [${idx}] ID: ${g._id}, Nom: ${nomGuichet}`);
+                $('#affectGuichet').append(`<option value="${g._id}">${nomGuichet}</option>`);
+            });
+            console.log('✅ Guichets remplis:', this.allGuichets.length);
+        }
 
         // Form: Vendeurs - utiliser vendeursFiltres pour les formulaires
         $('#affectVendeur').html('<option value="">Sélectionner un vendeur</option>');
-        this.vendeursFiltres.forEach(v => {
-            $('#affectVendeur').append(`<option value="${v._id}">${v.prenom} ${v.nom}</option>`);
-        });
+        if (this.vendeursFiltres && this.vendeursFiltres.length > 0) {
+            console.log('📝 Remplissage Vendeurs...');
+            this.vendeursFiltres.forEach((v, idx) => {
+                const nomVendeur = `${v.prenom || ''} ${v.nom || ''}`.trim() || 'Sans nom';
+                console.log(`   [${idx}] ID: ${v._id}, Nom: ${nomVendeur}`);
+                $('#affectVendeur').append(`<option value="${v._id}">${nomVendeur}</option>`);
+            });
+            console.log('✅ Vendeurs remplis:', this.vendeursFiltres.length);
+        } else {
+            console.warn('⚠️ vendeursFiltres vide ou undefined');
+        }
     }
 
     // ==================== FILTRES & AFFICHAGE ====================
@@ -572,9 +657,9 @@ class AffectationManager {
             }
 
             const vendeurName = vendeur ? `${vendeur.prenom || ''} ${vendeur.nom || ''}`.trim() || 'N/A' : 'Inconnu';
-            const guichetName = guichet?.nom_guichet || guichet?.nom || 'N/A';
-            const magasinName = magasin?.nom_magasin || magasin?.nom || 'N/A';
-            const entrepriseName = entreprise?.nom || entreprise?.nomEntreprise || 'N/A';
+            const guichetName = guichet?.nom_guichet || 'N/A';
+            const magasinName = magasin?.nom_magasin || 'N/A';
+            const entrepriseName = entreprise?.nom || 'N/A';
 
             const dateAffect = new Date(a.dateAffectation);
             const dateStr = dateAffect.toLocaleDateString('fr-FR');
@@ -725,9 +810,18 @@ class AffectationManager {
         this.editingAffectationId = null; // Mode création
         this.resetFormCreateAffectation();
         
+        // Remplir les selects avec les données actuelles
+        this.populateFormOptions();
+        
         // Réinitialiser le titre du modal
         $('#modalCreateAffectation .modal-title').html('<i class="fas fa-plus-circle me-2"></i>Nouvelle Affectation');
         $('#btnSaveAffectation').html('<i class="fas fa-save me-2"></i>Créer Affectation');
+        
+        // Écouter les changements d'entreprise pour filtrer les magasins
+        $('#affectEntreprise').off('change').on('change', (e) => this.onEntrepriseChange());
+        
+        // Écouter les changements de magasin pour filtrer les guichets
+        $('#affectMagasin').off('change').on('change', (e) => this.onMagasinChange());
         
         const modal = new bootstrap.Modal(document.getElementById('modalCreateAffectation'));
         modal.show();
@@ -764,6 +858,18 @@ class AffectationManager {
         $('#affectGuichet').html('<option value="">Sélectionner un guichet</option>');
         $('#affectVendeur').html('<option value="">Sélectionner un vendeur</option>');
         $('#validationMessages').empty();
+        
+        // Réinitialiser le bouton et le mode
+        const btnSave = $('#btnSaveAffectation');
+        btnSave.prop('disabled', false).html('<i class="fas fa-save me-2"></i>Créer Affectation');
+        
+        // Réinitialiser les titres du modal
+        const modalTitle = $('#modalCreateAffectation .modal-title');
+        if (modalTitle.length) {
+            modalTitle.html('<i class="fas fa-plus-circle me-2"></i>Nouvelle Affectation');
+        }
+        
+        this.editingAffectationId = null;
     }
 
     // ==================== VALIDATIONS ====================
@@ -872,6 +978,11 @@ class AffectationManager {
             }
         }
 
+        // Désactiver le bouton et afficher le loader
+        const btnSave = $('#btnSaveAffectation');
+        const originalHtml = btnSave.html();
+        btnSave.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Enregistrement...');
+
         try {
             const payload = {
                 entrepriseId,
@@ -892,12 +1003,12 @@ class AffectationManager {
                 // Mode MODIFICATION
                 method = 'PUT';
                 url = `${window.API_BASE}/api/protected/affectations/${this.editingAffectationId}`;
-                successMsg = 'Affectation modifiée avec succès';
+                successMsg = '✅ Affectation modifiée avec succès';
             } else {
                 // Mode CRÉATION
                 method = 'POST';
                 url = `${window.API_BASE}/api/protected/affectations`;
-                successMsg = 'Affectation créée avec succès';
+                successMsg = '✅ Affectation créée avec succès';
             }
 
             res = await fetch(url, {
@@ -906,19 +1017,44 @@ class AffectationManager {
                 body: JSON.stringify(payload)
             });
 
+            console.log('📤 Requête envoyée:', { method, url, payload });
+            console.log('📥 Réponse reçue - Status:', res.status, 'OK:', res.ok);
+
             if (!res.ok) {
-                const error = await res.json();
-                throw new Error(error.message || 'Erreur lors de l\'opération');
+                const responseText = await res.text();
+                console.error('❌ Réponse API (non-OK):', responseText.substring(0, 200));
+                
+                // Essayer de parser en JSON si c'est du JSON
+                try {
+                    const error = JSON.parse(responseText);
+                    throw new Error(error.message || 'Erreur lors de l\'opération');
+                } catch (e) {
+                    throw new Error(`Erreur ${res.status}: ${responseText.substring(0, 100)}`);
+                }
             }
 
+            const responseData = await res.json();
+            console.log('✅ Affectation sauvegardée:', responseData);
             this.showAlert(successMsg, 'success');
-            bootstrap.Modal.getInstance(document.getElementById('modalCreateAffectation')).hide();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalCreateAffectation'));
+            if (modal) {
+                modal.hide();
+            }
             this.editingAffectationId = null; // Réinitialiser
-            this.loadAllData();
+            
+            // Nettoyer le backdrop s'il reste
+            setTimeout(() => {
+                document.body.classList.remove('modal-open');
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
+                this.loadAllData();
+            }, 500);
 
         } catch (error) {
             console.error('Erreur save affectation:', error);
-            this.showAlert(`Erreur: ${error.message}`, 'danger');
+            this.showAlert(`❌ Erreur: ${error.message}`, 'danger');
+            // Restaurer le bouton en cas d'erreur
+            btnSave.prop('disabled', false).html(originalHtml);
         }
     }
 
@@ -1010,8 +1146,18 @@ class AffectationManager {
             }
 
             this.showAlert('✅ Affectation terminée avec succès', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('modalTerminerAffectation')).hide();
-            this.loadAllData();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalTerminerAffectation'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Nettoyer le backdrop s'il reste
+            setTimeout(() => {
+                document.body.classList.remove('modal-open');
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
+                this.loadAllData();
+            }, 500);
 
         } catch (error) {
             console.error('Erreur terminer affectation:', error);
@@ -1062,7 +1208,7 @@ class AffectationManager {
         // Durée moyenne
         const durees = affectationsTerminees.map(a => {
             const start = new Date(a.dateAffectation);
-            const end = new Date(a.dateTerminaison || new Date());
+            const end = new Date(a.dateFinAffectation || new Date());
             return (end - start) / (1000 * 60 * 60 * 24); // en jours
         });
         const dureeAverage = durees.length > 0 ? Math.round(durees.reduce((a, b) => a + b) / durees.length) : 0;
@@ -1084,7 +1230,7 @@ class AffectationManager {
         const totalAffectations = this.allAffectations.length;
         this.animateKPI('#kpiTotal', totalAffectations, 'text');
         
-        $('#totalAffectations').text(affectationsActives.length);
+        console.log(`✅ KPIs mis à jour: ${affectationsActives.length} actifs, ${affectationsTerminees.length} terminés`);
 
         // Mettre à jour le cercle de progression pour les affectations actives
         const maxAffectations = this.allGuichets.length * 2; // Estimation max
@@ -1097,6 +1243,12 @@ class AffectationManager {
     animateKPI(selector, endValue, type = 'text') {
         const element = $(selector);
         if (type === 'text') {
+            // Si c'est une chaîne comme "5j", afficher directement
+            if (typeof endValue === 'string') {
+                element.text(endValue);
+                return;
+            }
+            
             const currentValue = parseInt(element.text()) || 0;
             const difference = endValue - currentValue;
             const steps = 20;
@@ -1160,6 +1312,80 @@ class AffectationManager {
         setTimeout(() => {
             alertDiv.remove();
         }, 5000);
+    }
+
+    // ==================== LOADERS KPI ====================
+    showKPILoaders() {
+        $('#kpiActives').html('<div class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Chargement...</span></div>');
+        $('#kpiInactives').html('<div class="spinner-border spinner-border-sm text-warning" role="status"><span class="visually-hidden">Chargement...</span></div>');
+        $('#kpiSansAffectation').html('<div class="spinner-border spinner-border-sm text-danger" role="status"><span class="visually-hidden">Chargement...</span></div>');
+        $('#kpiDureeAverage').html('<div class="spinner-border spinner-border-sm text-info" role="status"><span class="visually-hidden">Chargement...</span></div>');
+        $('#kpiTotal').html('<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Chargement...</span></div>');
+    }
+
+    // ==================== FILTRAGE DYNAMIQUE FORMULAIRE ====================
+    onEntrepriseChange() {
+        const entrepriseId = $('#affectEntreprise').val();
+        console.log('🏢 Entreprise changée:', entrepriseId);
+        
+        // Si pas d'entreprise, vider les magasins et guichets
+        if (!entrepriseId) {
+            $('#affectMagasin').html('<option value="">Sélectionner un magasin</option>');
+            $('#affectGuichet').html('<option value="">Sélectionner un guichet</option>');
+            return;
+        }
+        
+        // Filtrer les magasins par entreprise (via businessId)
+        const magasinsFiltrés = this.allMagasins.filter(m => {
+            const busId = typeof m.businessId === 'object' ? m.businessId._id : m.businessId;
+            return busId === entrepriseId;
+        });
+        
+        console.log('🏪 Magasins filtrés:', magasinsFiltrés.length);
+        
+        $('#affectMagasin').html('<option value="">Sélectionner un magasin</option>');
+        magasinsFiltrés.forEach(m => {
+            const nomMagasin = m.nom_magasin || 'Sans nom';
+            $('#affectMagasin').append(`<option value="${m._id}">${nomMagasin}</option>`);
+        });
+    }
+
+    onMagasinChange() {
+        const magasinId = $('#affectMagasin').val();
+        console.log('🏪 Magasin changé:', magasinId);
+        
+        // Si pas de magasin, vider les guichets
+        if (!magasinId) {
+            $('#affectGuichet').html('<option value="">Sélectionner un guichet</option>');
+            return;
+        }
+        
+        // Filtrer les guichets par magasin
+        const guichetsFiltrés = this.allGuichets.filter(g => g.magasinId === magasinId);
+        
+        console.log('🪟 Guichets filtrés:', guichetsFiltrés.length);
+        
+        $('#affectGuichet').html('<option value="">Sélectionner un guichet</option>');
+        guichetsFiltrés.forEach(g => {
+            const nomGuichet = g.nom_guichet || 'Sans nom';
+            $('#affectGuichet').append(`<option value="${g._id}">${nomGuichet}</option>`);
+        });
+    }
+
+    // ==================== MISE À JOUR COMPTEURS HEADER ====================
+    updateHeaderCounters() {
+        const activeAffectations = this.allAffectations.filter(a => a.status === 1).length;
+        const uniqueVendeurs = new Set(this.allAffectations
+            .filter(a => a.status === 1)
+            .map(a => a.vendeurId || a.managerId)
+            .filter(v => v)
+        ).size;
+        
+        $('#totalVendeurs').text(uniqueVendeurs);
+        $('#totalGuichets').text(this.allGuichets.length);
+        $('#totalAffectations').text(activeAffectations);
+        
+        console.log(`📊 Compteurs mis à jour: ${uniqueVendeurs} vendeurs, ${this.allGuichets.length} guichets, ${activeAffectations} affectations actives`);
     }
 }
 

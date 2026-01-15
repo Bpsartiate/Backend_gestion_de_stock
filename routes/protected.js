@@ -230,7 +230,174 @@ router.get('/affectations/rapport', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+// POST /api/protected/affectations - Créer une nouvelle affectation
+router.post('/affectations', authMiddleware, async (req, res) => {
+  try {
+    // Vérifier les droits d'accès
+    if (!['admin', 'superviseur'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+
+    const { vendeurId, guichetId, magasinId, entrepriseId, dateAffectation, notes } = req.body;
+
+    // Validation des champs requis
+    if (!vendeurId || !guichetId || !magasinId || !entrepriseId) {
+      return res.status(400).json({ 
+        message: 'Champs requis manquants: vendeurId, guichetId, magasinId, entrepriseId' 
+      });
+    }
+
+    // Vérifier que le vendeur existe et est un vendeur
+    const vendeur = await Utilisateur.findById(vendeurId).select('role nom prenom');
+    if (!vendeur || vendeur.role !== 'vendeur') {
+      return res.status(400).json({ message: 'Vendeur invalide ou inexistant' });
+    }
+
+    // Vérifier que le guichet existe
+    const guichet = await Guichet.findById(guichetId).select('_id magasinId nom_guichet');
+    if (!guichet) {
+      return res.status(400).json({ message: 'Guichet invalide ou inexistant' });
+    }
+
+    // Vérifier que le magasin existe
+    const magasin = await Magasin.findById(magasinId).select('_id businessId nom_magasin');
+    if (!magasin) {
+      return res.status(400).json({ message: 'Magasin invalide ou inexistant' });
+    }
+
+    // Vérifier que l'entreprise existe
+    const entreprise = await Business.findById(entrepriseId).select('_id nomEntreprise');
+    if (!entreprise) {
+      return res.status(400).json({ message: 'Entreprise invalide ou inexistante' });
+    }
+
+    // Vérifier que le vendeur n'a pas déjà une affectation active
+    const affectationExistante = await Affectation.findOne({
+      vendeurId,
+      $or: [
+        { status: 1 },
+        { status: true },
+        { statut: 'active' }
+      ]
+    });
+
+    if (affectationExistante) {
+      return res.status(400).json({ 
+        message: 'Ce vendeur a déjà une affectation active' 
+      });
+    }
+
+    // Créer la nouvelle affectation
+    const nouvelleAffectation = new Affectation({
+      vendeurId,
+      guichetId,
+      magasinId,
+      entrepriseId,
+      managerId: req.user.id,
+      dateAffectation: dateAffectation ? new Date(dateAffectation) : new Date(),
+      status: 1,
+      notes: notes || ''
+    });
+
+    await nouvelleAffectation.save();
+
+    // Populer les références pour la réponse
+    const affectationPopulee = await Affectation.findById(nouvelleAffectation._id)
+      .populate('vendeurId', 'nom prenom email role')
+      .populate('managerId', 'nom prenom email role')
+      .populate('guichetId', 'nom_guichet code')
+      .populate('magasinId', 'nom_magasin adresse')
+      .populate('entrepriseId', 'nomEntreprise budget devise');
+
+    console.log('✅ Affectation créée:', affectationPopulee._id);
+    
+    return res.status(201).json({
+      message: 'Affectation créée avec succès',
+      affectation: affectationPopulee
+    });
+  } catch(err) {
+    console.error('affectations.create.error', err);
+    return res.status(500).json({ message: 'Erreur lors de la création: ' + err.message });
+  }
+});
+
+// PUT /api/protected/affectations/:id - Modifier une affectation
+router.put('/affectations/:id', authMiddleware, async (req, res) => {
+  try {
+    // Vérifier les droits d'accès
+    if (!['admin', 'superviseur'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+
+    const affectationId = req.params.id;
+    const { vendeurId, guichetId, magasinId, entrepriseId, dateAffectation, status, notes } = req.body;
+
+    // Vérifier que l'affectation existe
+    const affectation = await Affectation.findById(affectationId);
+    if (!affectation) {
+      return res.status(404).json({ message: 'Affectation introuvable' });
+    }
+
+    // Mise à jour des champs
+    if (vendeurId) affectation.vendeurId = vendeurId;
+    if (guichetId) affectation.guichetId = guichetId;
+    if (magasinId) affectation.magasinId = magasinId;
+    if (entrepriseId) affectation.entrepriseId = entrepriseId;
+    if (dateAffectation) affectation.dateAffectation = new Date(dateAffectation);
+    if (typeof status !== 'undefined') affectation.status = status;
+    if (notes !== undefined) affectation.notes = notes;
+
+    await affectation.save();
+
+    // Populer les références pour la réponse
+    const affectationPopulee = await Affectation.findById(affectationId)
+      .populate('vendeurId', 'nom prenom email role')
+      .populate('managerId', 'nom prenom email role')
+      .populate('guichetId', 'nom_guichet code')
+      .populate('magasinId', 'nom_magasin adresse')
+      .populate('entrepriseId', 'nomEntreprise budget devise');
+
+    console.log('✅ Affectation modifiée:', affectationId);
+    
+    return res.json({
+      message: 'Affectation modifiée avec succès',
+      affectation: affectationPopulee
+    });
+  } catch(err) {
+    console.error('affectations.update.error', err);
+    return res.status(500).json({ message: 'Erreur lors de la modification: ' + err.message });
+  }
+});
+
+// DELETE /api/protected/affectations/:id - Supprimer une affectation
+router.delete('/affectations/:id', authMiddleware, async (req, res) => {
+  try {
+    // Vérifier les droits d'accès
+    if (!['admin', 'superviseur'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+
+    const affectationId = req.params.id;
+
+    // Vérifier que l'affectation existe
+    const affectation = await Affectation.findById(affectationId);
+    if (!affectation) {
+      return res.status(404).json({ message: 'Affectation introuvable' });
+    }
+
+    // Supprimer l'affectation
+    await Affectation.findByIdAndDelete(affectationId);
+
+    console.log('✅ Affectation supprimée:', affectationId);
+    
+    return res.json({
+      message: 'Affectation supprimée avec succès'
+    });
+  } catch(err) {
+    console.error('affectations.delete.error', err);
+    return res.status(500).json({ message: 'Erreur lors de la suppression: ' + err.message });
+  }
+});
 
 // POST /api/protected/magasins - créer un magasin (with optional photo)
 router.post('/magasins', authMiddleware, upload.single('photo'), async (req, res) => {
