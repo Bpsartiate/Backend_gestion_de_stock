@@ -10,12 +10,39 @@ class AffectationManager {
         this.allMagasins = [];
         this.allEntreprises = [];
         this.selectedAffectationId = null;
+        this.editingAffectationId = null; // Pour mode édition
+        this.selectedAffectations = new Set(); // Pour les sélections en masse
+        this.listInstance = null; // Pour list.js
         this.init();
     }
 
     init() {
         this.setupEventListeners();
         this.loadAllData();
+    }
+
+    initializeListJs() {
+        if (typeof List !== 'undefined' && document.getElementById('affectationsTable')) {
+            try {
+                // Détruire l'ancienne instance si elle existe
+                if (this.listInstance) {
+                    this.listInstance.destroy();
+                }
+                
+                // Configuration personnalisée pour éviter les problèmes avec le tri
+                this.listInstance = new List('affectationsTable', {
+                    valueNames: ['vendeur-name', 'guichet-name', 'magasin-name', 'entreprise-name', 'date-affectation', 'statut'],
+                    page: 10,
+                    pagination: true,
+                    listClass: 'list'
+                });
+                console.log('✅ List.js initialisé avec succès');
+            } catch(e) {
+                console.error('❌ Erreur initialisation list.js:', e);
+            }
+        } else {
+            console.warn('⚠️ List.js ou le tableau non trouvé');
+        }
     }
 
     setupEventListeners() {
@@ -41,6 +68,18 @@ class AffectationManager {
         $('#btnSaveAffectation').on('click', () => this.saveAffectation());
         $('#btnConfirmTerminer').on('click', () => this.confirmTerminerAffectation());
 
+        // Validation en temps réel quand vendeur/guichet change
+        $('#affectVendeur').on('change', () => this.validateFormChanges());
+        $('#affectGuichet').on('change', () => this.validateFormChanges());
+        $('#affectMagasin').on('change', () => this.validateFormChanges());
+
+        // Actions en masse
+        $('#checkAllAffectations').on('change', (e) => this.toggleSelectAll(e.target.checked));
+        $('#btnBulkTerminer').on('click', () => this.bulkTerminerAffectations());
+        $('#btnBulkDelete').on('click', () => this.bulkDeleteAffectations());
+        $('#btnBulkExport').on('click', () => this.bulkExportAffectations());
+        $('#btnBulkCancel').on('click', () => this.cancelBulkActions());
+
         // Modal hidden reset
         $('#modalCreateAffectation').on('hidden.bs.modal', () => this.resetFormCreateAffectation());
         $('#modalTerminerAffectation').on('hidden.bs.modal', () => this.resetFormTerminer());
@@ -51,12 +90,8 @@ class AffectationManager {
         try {
             // Afficher le spinner
             $('#affectationSpinner').show();
-            $('#affectationEmpty').hide();
-            
-            this.toggleLoading(true);
             
             const headers = this.getAuthHeaders();
-            
             // Charger les affectations
             try {
                 const affectRes = await fetch(`${window.API_BASE}/api/protected/affectations`, { headers });
@@ -76,19 +111,42 @@ class AffectationManager {
                 if (!vendRes.ok) {
                     vendRes = await fetch(`${window.API_BASE}/api/utilisateurs`, { headers });
                 }
+                let allUsers = [];
                 if (vendRes.ok) {
                     const vendData = await vendRes.json();
-                    // Charger TOUS les utilisateurs (sans filtre de rôle) pour les managerId
-                    const allUsers = Array.isArray(vendData) ? vendData : vendData.utilisateurs || [];
-                    // Garder aussi une liste filtrée pour le formulaire
-                    this.allVendeurs = allUsers; // Charger TOUS
-                    this.vendeursFiltres = allUsers.filter(v => v.role === 'vendeur' || v.role === 'manager') || [];
-                    console.log('✅ Tous les utilisateurs chargés:', this.allVendeurs.length);
-                    console.log('🔍 IDs disponibles:', this.allVendeurs.map(v => ({ id: v._id, role: v.role, nom: v.prenom + ' ' + v.nom })).slice(0, 5));
-                } else {
-                    this.allVendeurs = [];
-                    this.vendeursFiltres = [];
+                    allUsers = Array.isArray(vendData) ? vendData : vendData.utilisateurs || [];
                 }
+                
+                // Ajouter les managers depuis les affectations (qui sont populés)
+                // Cela capture les utilisateurs qui ne seraient pas retournés par l'endpoint utilisateurs
+                const managersFromAffectations = new Map();
+                this.allAffectations.forEach(a => {
+                    if (a.managerId && typeof a.managerId === 'object' && a.managerId._id) {
+                        if (!managersFromAffectations.has(a.managerId._id)) {
+                            managersFromAffectations.set(a.managerId._id, {
+                                _id: a.managerId._id,
+                                nom: a.managerId.nom || '',
+                                prenom: a.managerId.prenom || '',
+                                email: a.managerId.email || '',
+                                role: a.managerId.role || 'manager'
+                            });
+                        }
+                    }
+                });
+                
+                // Fusionner: allUsers + managers des affectations
+                const managersArray = Array.from(managersFromAffectations.values());
+                const mergedUsers = [...allUsers];
+                managersArray.forEach(manager => {
+                    if (!mergedUsers.find(u => u._id === manager._id)) {
+                        mergedUsers.push(manager);
+                    }
+                });
+                
+                this.allVendeurs = mergedUsers; // Tous les utilisateurs + managers des affectations
+                this.vendeursFiltres = mergedUsers.filter(v => v.role === 'vendeur' || v.role === 'manager') || [];
+                console.log('✅ Tous les utilisateurs chargés:', this.allVendeurs.length, '(incluant managers des affectations)');
+                console.log('🔍 IDs disponibles:', this.allVendeurs.map(v => ({ id: v._id, role: v.role, nom: (v.prenom || '') + ' ' + (v.nom || '') })).slice(0, 5));
             } catch (e) {
                 console.error('Erreur vendeurs:', e);
                 this.allVendeurs = [];
@@ -101,7 +159,8 @@ class AffectationManager {
                 if (magRes.ok) {
                     const magData = await magRes.json();
                     this.allMagasins = Array.isArray(magData) ? magData : magData.magasins || [];
-                    console.log('✅ Magasins chargés:', this.allMagasins.length, this.allMagasins.map(m => ({id: m._id, nom: m.nom})));
+                    console.log('✅ Magasins chargés:', this.allMagasins.length);
+                    this.allMagasins.forEach(m => console.log('  - Magasin:', {id: m._id, nom: m.nom, nomMagasin: m.nomMagasin, nomEntreprise: m.nomEntreprise}));
                 } else {
                     this.allMagasins = [];
                 }
@@ -120,7 +179,8 @@ class AffectationManager {
                         this.allGuichets = [...this.allGuichets, ...guichets];
                     }
                 }
-                console.log('✅ Guichets chargés:', this.allGuichets.length, this.allGuichets.map(g => ({id: g._id, nom: g.nom})));
+                console.log('✅ Guichets chargés:', this.allGuichets.length);
+                this.allGuichets.forEach(g => console.log('  - Guichet:', {id: g._id, nom: g.nom, nomGuichet: g.nomGuichet, nomGuichets: g.nomGuichets}));
             } catch (e) {
                 console.error('Erreur guichets:', e);
                 this.allGuichets = [];
@@ -151,13 +211,16 @@ class AffectationManager {
             this.populateFormOptions();
             this.applyFilters();
             this.updateKPIs();
+            this.initializeListJs(); // Initialiser list.js
             
             // Cacher le spinner et afficher les données
+            $('#affectationSpinner').hide();
             this.toggleLoading(false);
 
         } catch (error) {
             console.error('Erreur chargement data:', error);
             this.showAlert('Erreur lors du chargement des données', 'danger');
+            $('#affectationSpinner').hide();
             this.toggleLoading(false);
         }
     }
@@ -271,10 +334,24 @@ class AffectationManager {
 
         this.filteredAffectations = this.allAffectations.filter(a => {
             // Utiliser managerId au lieu de vendeurId
-            const affectVendeurId = a.vendeurId || a.managerId;
+            let affectVendeurId = a.vendeurId || a.managerId;
+            if (typeof affectVendeurId === 'object' && affectVendeurId !== null) {
+                affectVendeurId = affectVendeurId._id;
+            }
             
-            const matchEntreprise = !entrepriseId || a.entrepriseId === entrepriseId;
-            const matchMagasin = !magasinId || a.magasinId === magasinId;
+            // Gérer magasinId/entrepriseId qui peuvent être des objets
+            let affectMagasinId = a.magasinId;
+            if (typeof affectMagasinId === 'object' && affectMagasinId !== null) {
+                affectMagasinId = affectMagasinId._id;
+            }
+            
+            let affectEntrepriseId = a.entrepriseId;
+            if (typeof affectEntrepriseId === 'object' && affectEntrepriseId !== null) {
+                affectEntrepriseId = affectEntrepriseId._id;
+            }
+            
+            const matchEntreprise = !entrepriseId || affectEntrepriseId === entrepriseId;
+            const matchMagasin = !magasinId || affectMagasinId === magasinId;
             const matchGuichet = !guichetId || a.guichetId === guichetId;
             const matchVendeur = !vendeurId || affectVendeurId === vendeurId;
             const matchStatut = statut === '' || a.status.toString() === statut;
@@ -290,29 +367,191 @@ class AffectationManager {
 
         this.currentPage = 1;
         this.displayAffectations();
+        this.resetBulkSelection();
+    }
+
+    // ==================== ACTIONS EN MASSE ====================
+    updateBulkSelection() {
+        this.selectedAffectations.clear();
+        $('.affectation-checkbox:checked').each((idx, el) => {
+            this.selectedAffectations.add($(el).data('affectation-id'));
+        });
+
+        const count = this.selectedAffectations.size;
+        if (count > 0) {
+            $('#bulkActionsBar').show();
+            $('#bulkSelectedCount').text(count);
+        } else {
+            $('#bulkActionsBar').hide();
+        }
+    }
+
+    toggleSelectAll(checked) {
+        $('.affectation-checkbox').prop('checked', checked);
+        this.updateBulkSelection();
+    }
+
+    resetBulkSelection() {
+        this.selectedAffectations.clear();
+        $('#checkAllAffectations').prop('checked', false);
+        $('#bulkActionsBar').hide();
+    }
+
+    cancelBulkActions() {
+        this.resetBulkSelection();
+    }
+
+    async bulkTerminerAffectations() {
+        if (this.selectedAffectations.size === 0) {
+            this.showAlert('Aucune affectation sélectionnée', 'warning');
+            return;
+        }
+
+        if (!confirm(`Êtes-vous sûr de vouloir terminer ${this.selectedAffectations.size} affectation(s) ?`)) {
+            return;
+        }
+
+        try {
+            const headers = this.getAuthHeaders();
+            headers['Content-Type'] = 'application/json';
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const affectationId of this.selectedAffectations) {
+                const res = await fetch(`${window.API_BASE}/api/protected/affectations/${affectationId}`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify({ statut: 0 })
+                });
+
+                if (res.ok) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            }
+
+            this.showAlert(`✅ ${successCount} terminée(s) - ❌ ${errorCount} échouée(s)`, 'success');
+            this.loadAllData();
+
+        } catch (error) {
+            console.error('Erreur bulk terminer:', error);
+            this.showAlert('Erreur lors de la terminaison en masse', 'danger');
+        }
+    }
+
+    async bulkDeleteAffectations() {
+        if (this.selectedAffectations.size === 0) {
+            this.showAlert('Aucune affectation sélectionnée', 'warning');
+            return;
+        }
+
+        if (!confirm(`Êtes-vous sûr de vouloir supprimer ${this.selectedAffectations.size} affectation(s) ? Cette action est irréversible.`)) {
+            return;
+        }
+
+        try {
+            const headers = this.getAuthHeaders();
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const affectationId of this.selectedAffectations) {
+                const res = await fetch(`${window.API_BASE}/api/protected/affectations/${affectationId}`, {
+                    method: 'DELETE',
+                    headers
+                });
+
+                if (res.ok) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            }
+
+            this.showAlert(`✅ ${successCount} supprimée(s) - ❌ ${errorCount} échouée(s)`, 'success');
+            this.loadAllData();
+
+        } catch (error) {
+            console.error('Erreur bulk delete:', error);
+            this.showAlert('Erreur lors de la suppression en masse', 'danger');
+        }
+    }
+
+    bulkExportAffectations() {
+        if (this.selectedAffectations.size === 0) {
+            this.showAlert('Aucune affectation sélectionnée', 'warning');
+            return;
+        }
+
+        const selectedData = this.allAffectations.filter(a => this.selectedAffectations.has(a._id));
+        this.exportToCSV(selectedData, `affectations_export_${new Date().getTime()}.csv`);
+        this.showAlert(`✅ ${selectedData.length} affectation(s) exportée(s) en CSV`, 'success');
+    }
+
+    exportToCSV(data, filename) {
+        // Préparer les en-têtes
+        const headers = ['Vendeur', 'Guichet', 'Magasin', 'Entreprise', 'Date Affectation', 'Statut'];
+        
+        // Préparer les lignes
+        const rows = data.map(a => {
+            let vendeurId = a.vendeurId || a.managerId;
+            if (typeof vendeurId === 'object' && vendeurId !== null) {
+                vendeurId = vendeurId._id;
+            }
+            const vendeur = this.allVendeurs.find(v => v._id === vendeurId);
+            const guichet = this.allGuichets.find(g => g._id === a.guichetId);
+            const magasin = this.allMagasins.find(m => m._id === (typeof a.magasinId === 'string' ? a.magasinId : a.magasinId?._id));
+            const entreprise = this.allEntreprises.find(e => e._id === (typeof a.entrepriseId === 'string' ? a.entrepriseId : a.entrepriseId?._id));
+
+            const vendeurName = vendeur ? `${vendeur.prenom} ${vendeur.nom}` : 'N/A';
+            const guichetName = guichet?.nom_guichet || guichet?.nom || 'N/A';
+            const magasinName = magasin?.nom_magasin || magasin?.nom || 'N/A';
+            const entrepriseName = entreprise?.nom || 'N/A';
+            const dateStr = new Date(a.dateAffectation).toLocaleDateString('fr-FR');
+            const statut = a.status === 1 ? 'Actif' : 'Terminé';
+
+            return [vendeurName, guichetName, magasinName, entrepriseName, dateStr, statut];
+        });
+
+        // Créer le CSV
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+
+        // Télécharger
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     displayAffectations() {
-        const start = (this.currentPage - 1) * this.itemsPerPage;
-        const end = start + this.itemsPerPage;
-        const paginated = this.filteredAffectations.slice(start, end);
-
+        // Afficher le spinner
+        $('#affectationSpinner').show();
         const tbody = $('#affectationsTableBody');
-        
-        // Cacher le spinner
-        $('#affectationSpinner').hide();
 
-        if (paginated.length === 0) {
+        if (this.filteredAffectations.length === 0) {
+            // Vider le tbody et afficher le message vide
             tbody.html('<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-inbox me-2"></i>Aucune affectation trouvée</td></tr>');
             $('#affectationInfo').text('Affichage 0 sur 0');
-            this.displayPagination();
+            $('#affectationSpinner').hide();
             return;
         }
 
         let rowsHtml = '';
-        paginated.forEach(a => {
+        this.filteredAffectations.forEach(a => {
             // Utiliser managerId au lieu de vendeurId (selon structure API)
-            const vendeurId = a.vendeurId || a.managerId;
+            // Extraire l'ID si managerId est un objet populé, sinon utiliser la valeur directement
+            let vendeurId = a.vendeurId || a.managerId;
+            if (typeof vendeurId === 'object' && vendeurId !== null) {
+                vendeurId = vendeurId._id;
+            }
             const vendeur = this.allVendeurs.find(v => v._id === vendeurId);
             
             // Gérer les cas où magasinId/entrepriseId peuvent être des objets ou des strings
@@ -324,14 +563,21 @@ class AffectationManager {
             const magasin = magasinId ? this.allMagasins.find(m => m._id === magasinId) : null;
             const entreprise = entrepriseId ? this.allEntreprises.find(e => e._id === entrepriseId) : null;
 
-            const vendeurName = vendeur ? `${vendeur.prenom} ${vendeur.nom}` : 'Inconnu';
-            const guichetName = guichet ? guichet.nom : 'N/A';
-            const magasinName = magasin ? magasin.nom : 'N/A';
-            const entrepriseName = entreprise ? entreprise.nom : 'N/A';
+            // Debug si N/A
+            if (!magasin && magasinId) {
+                console.warn('⚠️ Magasin non trouvé:', magasinId, 'Magasins dispo:', this.allMagasins.map(m => m._id));
+            }
+            if (!guichet && guichetId) {
+                console.warn('⚠️ Guichet non trouvé:', guichetId, 'Guichets dispo:', this.allGuichets.map(g => g._id));
+            }
+
+            const vendeurName = vendeur ? `${vendeur.prenom || ''} ${vendeur.nom || ''}`.trim() || 'N/A' : 'Inconnu';
+            const guichetName = guichet?.nom_guichet || guichet?.nom || 'N/A';
+            const magasinName = magasin?.nom_magasin || magasin?.nom || 'N/A';
+            const entrepriseName = entreprise?.nom || entreprise?.nomEntreprise || 'N/A';
 
             const dateAffect = new Date(a.dateAffectation);
             const dateStr = dateAffect.toLocaleDateString('fr-FR');
-
             const statusBadge = a.status === 1 
                 ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Actif</span>'
                 : '<span class="badge bg-secondary"><i class="fas fa-stop-circle me-1"></i>Terminé</span>';
@@ -344,30 +590,32 @@ class AffectationManager {
 
             const row = `
                 <tr class="align-middle hover-highlight" data-affectation-id="${a._id}">
-                    <td>
+                    <td style="width: 30px;">
+                        <input type="checkbox" class="form-check-input affectation-checkbox" data-affectation-id="${a._id}" title="Sélectionner">
+                    </td>
+                    <td class="vendeur-name">
                         <div class="d-flex align-items-center gap-2">
                             <div class="avatar avatar-sm rounded-circle bg-primary-soft text-primary fw-bold">
                                 ${vendeurName.charAt(0)}
                             </div>
                             <div>
-                                <strong>${vendeurName}</strong><br>
-                                <small class="text-muted">${vendeurId || 'N/A'}</small>
+                                <strong>${vendeurName}</strong>
                             </div>
                         </div>
                     </td>
-                    <td>
+                    <td class="guichet-name">
                         <i class="fas fa-cash-register text-info me-2"></i>${guichetName}
                     </td>
-                    <td>
+                    <td class="magasin-name">
                         <i class="fas fa-store text-success me-2"></i>${magasinName}
                     </td>
-                    <td>
+                    <td class="entreprise-name">
                         <i class="fas fa-building text-warning me-2"></i>${entrepriseName}
                     </td>
-                    <td>
+                    <td class="date-affectation">
                         <small>${dateStr}</small>
                     </td>
-                    <td>
+                    <td class="statut">
                         ${statusBadge}
                     </td>
                     <td class="text-end">
@@ -388,20 +636,43 @@ class AffectationManager {
             rowsHtml += row;
         });
 
+        // Vider le tbody et ajouter les rows
+        tbody.empty();
         tbody.html(rowsHtml);
+        
+        console.log('✅ Affichage de', this.filteredAffectations.length, 'affectations');
+        console.log('✅ Checkboxes créées:', $('.affectation-checkbox').length);
+
+        // Event listeners pour les checkboxes
+        $('.affectation-checkbox').on('change', (e) => this.updateBulkSelection());
 
         // Event listeners pour les boutons d'action
         $('.btnEditAffectation').on('click', (e) => this.editAffectation($(e.target).closest('button').data('id')));
         $('.btnTerminerAffectation').on('click', (e) => this.openTerminerModal($(e.target).closest('button').data('id')));
         $('.btnDeleteAffectation').on('click', (e) => this.deleteAffectation($(e.target).closest('button').data('id')));
 
-        // Update info
+        // Update info et cacher le spinner
         const total = this.filteredAffectations.length;
-        const displayed = paginated.length;
-        $('#affectationInfo').text(`Affichage ${displayed} sur ${total}`);
+        $('#affectationInfo').text(`Affichage de ${total} affectations`);
         $('#countAffectations').text(total);
+        $('#affectationSpinner').hide();
+        
+        // Réinitialiser list.js après avoir mis à jour le DOM
+        setTimeout(() => {
+            if (!this.listInstance || typeof this.listInstance !== 'object') {
+                this.initializeListJs();
+            } else {
+                try {
+                    this.listInstance.reIndex();
+                } catch(e) {
+                    console.warn('Erreur reIndex list.js, réinitialisation:', e);
+                    this.initializeListJs();
+                }
+            }
+        }, 100);
 
-        this.displayPagination();
+        // Mettre à jour les KPIs
+        this.updateKPIs();
     }
 
     displayPagination() {
@@ -451,9 +722,35 @@ class AffectationManager {
 
     // ==================== CRUD OPÉRATIONS ====================
     openCreateModal() {
+        this.editingAffectationId = null; // Mode création
         this.resetFormCreateAffectation();
+        
+        // Réinitialiser le titre du modal
+        $('#modalCreateAffectation .modal-title').html('<i class="fas fa-plus-circle me-2"></i>Nouvelle Affectation');
+        $('#btnSaveAffectation').html('<i class="fas fa-save me-2"></i>Créer Affectation');
+        
         const modal = new bootstrap.Modal(document.getElementById('modalCreateAffectation'));
         modal.show();
+    }
+
+    validateFormChanges() {
+        const vendeurId = $('#affectVendeur').val();
+        const guichetId = $('#affectGuichet').val();
+        const magasinId = $('#affectMagasin').val();
+
+        if (!vendeurId || !guichetId || !magasinId) {
+            $('#validationMessages').empty();
+            return;
+        }
+
+        const validation = this.validateAffectation({
+            vendeurId,
+            guichetId,
+            magasinId,
+            entrepriseId: $('#affectEntreprise').val()
+        });
+
+        this.displayValidationMessages(validation.errors, validation.warnings);
     }
 
     resetFormCreateAffectation() {
@@ -466,6 +763,82 @@ class AffectationManager {
         $('#affectMagasin').html('<option value="">Sélectionner un magasin</option>');
         $('#affectGuichet').html('<option value="">Sélectionner un guichet</option>');
         $('#affectVendeur').html('<option value="">Sélectionner un vendeur</option>');
+        $('#validationMessages').empty();
+    }
+
+    // ==================== VALIDATIONS ====================
+    validateAffectation(data) {
+        const errors = [];
+        const warnings = [];
+
+        // 1. Vérifier les doublons (vendeur + guichet + magasin)
+        const existingAffectation = this.allAffectations.find(a => 
+            a.vendeurId === data.vendeurId && 
+            a.guichetId === data.guichetId && 
+            a.magasinId === data.magasinId && 
+            a.status === 1 // Affectation active
+        );
+        if (existingAffectation) {
+            const vendeur = this.allVendeurs.find(v => v._id === data.vendeurId);
+            const guichet = this.allGuichets.find(g => g._id === data.guichetId);
+            errors.push(`❌ <strong>${vendeur?.prenom} ${vendeur?.nom}</strong> est déjà affecté au guichet <strong>${guichet?.nom}</strong>`);
+        }
+
+        // 2. Vérifier la surcharge vendeur (max 3 affectations actives)
+        const vendeurAffectations = this.allAffectations.filter(a => 
+            a.vendeurId === data.vendeurId && 
+            a.status === 1
+        ).length;
+        if (vendeurAffectations >= 3) {
+            const vendeur = this.allVendeurs.find(v => v._id === data.vendeurId);
+            warnings.push(`⚠️ <strong>${vendeur?.prenom} ${vendeur?.nom}</strong> a déjà ${vendeurAffectations} affectations actives`);
+        }
+
+        // 3. Vérifier la disponibilité du guichet
+        const guichetAffectations = this.allAffectations.filter(a => 
+            a.guichetId === data.guichetId && 
+            a.status === 1
+        ).length;
+        if (guichetAffectations >= 2) {
+            const guichet = this.allGuichets.find(g => g._id === data.guichetId);
+            warnings.push(`⚠️ Le guichet <strong>${guichet?.nom}</strong> a déjà ${guichetAffectations} vendeurs assignés`);
+        }
+
+        return { valid: errors.length === 0, errors, warnings };
+    }
+
+    displayValidationMessages(errors, warnings) {
+        const container = $('#validationMessages');
+        container.empty();
+
+        if (errors.length > 0) {
+            const errorDiv = $('<div class="alert alert-danger alert-dismissible fade show" role="alert"></div>');
+            errorDiv.html(`
+                <strong><i class="fas fa-exclamation-circle me-2"></i>Erreurs détectées:</strong><br>
+                ${errors.map(e => `<div class="mt-2">${e}</div>`).join('')}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `);
+            container.append(errorDiv);
+        }
+
+        if (warnings.length > 0) {
+            const warningDiv = $('<div class="alert alert-warning alert-dismissible fade show" role="alert"></div>');
+            warningDiv.html(`
+                <strong><i class="fas fa-exclamation-triangle me-2"></i>Avertissements:</strong><br>
+                ${warnings.map(w => `<div class="mt-2">${w}</div>`).join('')}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `);
+            container.append(warningDiv);
+        }
+
+        if (errors.length === 0 && warnings.length === 0) {
+            const successDiv = $('<div class="alert alert-success alert-dismissible fade show" role="alert"></div>');
+            successDiv.html(`
+                <i class="fas fa-check-circle me-2"></i><strong>Aucun conflit détecté!</strong> L'affectation peut être créée.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `);
+            container.append(successDiv);
+        }
     }
 
     async saveAffectation() {
@@ -479,6 +852,24 @@ class AffectationManager {
         if (!entrepriseId || !magasinId || !guichetId || !vendeurId) {
             this.showAlert('Veuillez remplir tous les champs requis', 'warning');
             return;
+        }
+
+        // Si on est en mode édition, ne valider que pour éviter les doublons (sauf si c'est la même affectation)
+        if (!this.editingAffectationId) {
+            // Créer: Valider l'affectation
+            const validation = this.validateAffectation({
+                vendeurId,
+                guichetId,
+                magasinId,
+                entrepriseId
+            });
+
+            this.displayValidationMessages(validation.errors, validation.warnings);
+
+            if (!validation.valid) {
+                this.showAlert('Impossible de créer l\'affectation: conflits détectés', 'danger');
+                return;
+            }
         }
 
         try {
@@ -495,19 +886,34 @@ class AffectationManager {
             const headers = this.getAuthHeaders();
             headers['Content-Type'] = 'application/json';
 
-            const res = await fetch(`${window.API_BASE}/api/protected/affectations`, {
-                method: 'POST',
+            let res, method, url, successMsg;
+
+            if (this.editingAffectationId) {
+                // Mode MODIFICATION
+                method = 'PUT';
+                url = `${window.API_BASE}/api/protected/affectations/${this.editingAffectationId}`;
+                successMsg = 'Affectation modifiée avec succès';
+            } else {
+                // Mode CRÉATION
+                method = 'POST';
+                url = `${window.API_BASE}/api/protected/affectations`;
+                successMsg = 'Affectation créée avec succès';
+            }
+
+            res = await fetch(url, {
+                method,
                 headers,
                 body: JSON.stringify(payload)
             });
 
             if (!res.ok) {
                 const error = await res.json();
-                throw new Error(error.message || 'Erreur lors de la création');
+                throw new Error(error.message || 'Erreur lors de l\'opération');
             }
 
-            this.showAlert('Affectation créée avec succès', 'success');
+            this.showAlert(successMsg, 'success');
             bootstrap.Modal.getInstance(document.getElementById('modalCreateAffectation')).hide();
+            this.editingAffectationId = null; // Réinitialiser
             this.loadAllData();
 
         } catch (error) {
@@ -520,21 +926,38 @@ class AffectationManager {
         const affectation = this.allAffectations.find(a => a._id === affectationId);
         if (!affectation) return;
 
-        // Ouvrir le modal avec les données
-        $('#affectEntreprise').val(affectation.entrepriseId);
+        // Stocker l'ID de l'affectation à modifier
+        this.editingAffectationId = affectationId;
+
+        // Charger les données
+        let entrepriseId = affectation.entrepriseId;
+        if (typeof entrepriseId === 'object') entrepriseId = entrepriseId._id;
+        
+        let magasinId = affectation.magasinId;
+        if (typeof magasinId === 'object') magasinId = magasinId._id;
+        
+        let vendeurId = affectation.vendeurId || affectation.managerId;
+        if (typeof vendeurId === 'object') vendeurId = vendeurId._id;
+
+        $('#affectEntreprise').val(entrepriseId);
         this.loadMagasinsForAffectation();
         
         setTimeout(() => {
-            $('#affectMagasin').val(affectation.magasinId);
+            $('#affectMagasin').val(magasinId);
             this.loadGuichetsForAffectation();
             this.loadVendeursForAffectation();
         }, 100);
 
         setTimeout(() => {
             $('#affectGuichet').val(affectation.guichetId);
-            $('#affectVendeur').val(affectation.vendeurId);
+            $('#affectVendeur').val(vendeurId);
             $('#affectDate').val(affectation.dateAffectation.split('T')[0]);
             $('#affectObservations').val(affectation.observations || '');
+            
+            // Changer le titre et bouton du modal
+            $('#modalCreateAffectation .modal-title').html('<i class="fas fa-edit me-2"></i>Modifier Affectation');
+            $('#btnSaveAffectation').html('<i class="fas fa-save me-2"></i>Mettre à Jour');
+            $('#validationMessages').empty();
         }, 200);
 
         const modal = new bootstrap.Modal(document.getElementById('modalCreateAffectation'));
@@ -579,20 +1002,20 @@ class AffectationManager {
             const res = await fetch(`${window.API_BASE}/api/protected/affectations/${this.selectedAffectationId}`, {
                 method: 'PUT',
                 headers,
-                body: JSON.stringify({ status: 0 })
+                body: JSON.stringify({ statut: 0 })
             });
 
             if (!res.ok) {
                 throw new Error('Erreur lors de la terminaison');
             }
 
-            this.showAlert('Affectation terminée avec succès', 'success');
+            this.showAlert('✅ Affectation terminée avec succès', 'success');
             bootstrap.Modal.getInstance(document.getElementById('modalTerminerAffectation')).hide();
             this.loadAllData();
 
         } catch (error) {
             console.error('Erreur terminer affectation:', error);
-            this.showAlert(`Erreur: ${error.message}`, 'danger');
+            this.showAlert(`❌ Erreur: ${error.message}`, 'danger');
         }
     }
 
@@ -626,7 +1049,14 @@ class AffectationManager {
         const affectationsTerminees = this.allAffectations.filter(a => a.status === 0);
         
         // Vendeurs sans affectation active - utiliser managerId
-        const vendeursAffectes = new Set(affectationsActives.map(a => a.vendeurId || a.managerId).filter(id => id));
+        const vendeursAffectes = new Set(affectationsActives.map(a => {
+            let vendeurId = a.vendeurId || a.managerId;
+            if (typeof vendeurId === 'object' && vendeurId !== null) {
+                vendeurId = vendeurId._id;
+            }
+            return vendeurId;
+        }).filter(id => id));
+        
         const vendeursSansAffectation = this.allVendeurs.filter(v => !vendeursAffectes.has(v._id)).length;
 
         // Durée moyenne
@@ -637,12 +1067,65 @@ class AffectationManager {
         });
         const dureeAverage = durees.length > 0 ? Math.round(durees.reduce((a, b) => a + b) / durees.length) : 0;
 
-        $('#kpiActives').text(affectationsActives.length);
-        $('#kpiInactives').text(affectationsTerminees.length);
-        $('#kpiSansAffectation').text(vendeursSansAffectation);
-        $('#kpiDureeAverage').text(`${dureeAverage}j`);
+        // Calcul des couleurs KPI en fonction de la charge
+        const tauxOccupation = this.allVendeurs.length > 0 ? Math.round((vendeursAffectes.size / this.allVendeurs.length) * 100) : 0;
+        const taux = Math.min(100, Math.max(0, tauxOccupation));
+
+        // Mise à jour des KPIs avec animation
+        this.animateKPI('#kpiActives', affectationsActives.length, 'text');
+        this.animateKPI('#kpiInactives', affectationsTerminees.length, 'text');
+        this.animateKPI('#kpiSansAffectation', vendeursSansAffectation, 'text');
+        this.animateKPI('#kpiDureeAverage', `${dureeAverage}j`, 'text');
+        
+        // Mettre à jour la couleur des KPIs
+        this.updateKPIColors(affectationsActives.length, affectationsTerminees.length, vendeursSansAffectation);
+        
+        // KPI Total
+        const totalAffectations = this.allAffectations.length;
+        this.animateKPI('#kpiTotal', totalAffectations, 'text');
         
         $('#totalAffectations').text(affectationsActives.length);
+
+        // Mettre à jour le cercle de progression pour les affectations actives
+        const maxAffectations = this.allGuichets.length * 2; // Estimation max
+        const percentage = Math.min(100, Math.round((affectationsActives.length / maxAffectations) * 100));
+        const circumference = 2 * Math.PI * 45; // rayon = 45
+        const offset = circumference - (percentage / 100) * circumference;
+        $('.kpi-actives-circle').css('stroke-dashoffset', offset);
+    }
+
+    animateKPI(selector, endValue, type = 'text') {
+        const element = $(selector);
+        if (type === 'text') {
+            const currentValue = parseInt(element.text()) || 0;
+            const difference = endValue - currentValue;
+            const steps = 20;
+            let currentStep = 0;
+
+            const interval = setInterval(() => {
+                currentStep++;
+                const newValue = Math.round(currentValue + (difference * currentStep / steps));
+                element.text(newValue);
+                if (currentStep >= steps) {
+                    element.text(endValue);
+                    clearInterval(interval);
+                }
+            }, 30);
+        }
+    }
+
+    updateKPIColors(active, inactive, sansAffectation) {
+        // Actifs - Vert si > 0
+        const activeColor = active > 0 ? 'text-success' : 'text-muted';
+        $('#kpiActives').removeClass('text-success text-muted').addClass(activeColor);
+
+        // Inactifs - Orange si > 0
+        const inactiveColor = inactive > 0 ? 'text-warning' : 'text-muted';
+        $('#kpiInactives').removeClass('text-warning text-muted').addClass(inactiveColor);
+
+        // Sans affectation - Rouge si > 0
+        const sansAffectationColor = sansAffectation > 0 ? 'text-danger' : 'text-success';
+        $('#kpiSansAffectation').removeClass('text-danger text-success text-muted').addClass(sansAffectationColor);
     }
 
     // ==================== UTILITIES ====================

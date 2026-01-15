@@ -17,6 +17,7 @@
     <script src="assets/js/config.js"></script>
     <script src="vendors/is/is.min.js"></script>
     <script src="vendors/simplebar/simplebar.min.js"></script>
+    <script src="vendors/list.js/list.min.js"></script>
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,500,600,700%7cPoppins:300,400,500,600,700,800,900&display=swap" rel="stylesheet">
     <link href="vendors/simplebar/simplebar.min.css" rel="stylesheet">
     <link href="assets/css/theme-rtl.min.css" rel="stylesheet" id="style-rtl">
@@ -71,9 +72,9 @@
                                     <div class="small text-white-75">Assignez les vendeurs aux guichets</div>
                                 </div>
                                 <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
-                                    <span class="badge bg-white bg-opacity-20 text-white"><i class="fas fa-users me-1"></i><span id="totalVendeurs">0</span> Vendeurs</span>
-                                    <span class="badge bg-white bg-opacity-20 text-white"><i class="fas fa-cash-register me-1"></i><span id="totalGuichets">0</span> Guichets</span>
-                                    <span class="badge bg-white bg-opacity-20 text-white"><i class="fas fa-link me-1"></i><span id="totalAffectations">0</span> Actives</span>
+                                    <span class="badge bg-white bg-opacity-20 text-black"><i class="fas fa-users me-1"></i><span id="totalVendeurs">0</span> Vendeurs</span>
+                                    <span class="badge bg-white bg-opacity-20 text-black"><i class="fas fa-cash-register me-1"></i><span id="totalGuichets">0</span> Guichets</span>
+                                    <span class="badge bg-white bg-opacity-20 text-black"><i class="fas fa-link me-1"></i><span id="totalAffectations">0</span> Actives</span>
                                 </div>
                             </div>
                             <div class="col-auto text-end">
@@ -89,140 +90,187 @@
                 </div>
 
                 <!-- WIDGETS KPI -->
-                <div class="row g-3 mb-3">
-                    <div class="col-md-3">
-                        <div class="card h-100 p-3 text-center">
-                            <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                            <div class="fs-3 fw-bold" id="kpiActives">0</div>
-                            <div class="small text-muted">Affectations Actives</div>
+                <div class="row justify-content-between g-2 mb-3">
+                    <div class="col-lg-2 col-md-4 col-sm-6 p">
+                        <div class="card h-100 p-2 text-center border-0 shadow-sm">
+                            <i class="fas fa-check-circle fa-lg text-success mb-1"></i>
+                            <div class="fs-5 fw-bold text-success" id="kpiActives">0</div>
+                            <div class="tiny text-muted">Actifs</div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card h-100 p-3 text-center">
-                            <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-                            <div class="fs-3 fw-bold" id="kpiInactives">0</div>
-                            <div class="small text-muted">Affectations Terminées</div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="card h-100 p-2 text-center border-0 shadow-sm">
+                            <i class="fas fa-stop-circle fa-lg text-warning mb-1"></i>
+                            <div class="fs-5 fw-bold text-warning" id="kpiInactives">0</div>
+                            <div class="tiny text-muted">Terminés</div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card h-100 p-3 text-center">
-                            <i class="fas fa-users-slash fa-2x text-danger mb-2"></i>
-                            <div class="fs-3 fw-bold" id="kpiSansAffectation">0</div>
-                            <div class="small text-muted">Vendeurs Non Affectés</div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="card h-100 p-2 text-center border-0 shadow-sm">
+                            <i class="fas fa-user-slash fa-lg text-danger mb-1"></i>
+                            <div class="fs-5 fw-bold text-danger" id="kpiSansAffectation">0</div>
+                            <div class="tiny text-muted">Non Affectés</div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card h-100 p-3 text-center">
-                            <i class="fas fa-calendar-alt fa-2x text-info mb-2"></i>
-                            <div class="fs-3 fw-bold" id="kpiDureeAverage">0j</div>
-                            <div class="small text-muted">Durée Moyenne</div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="card h-100 p-2 text-center border-0 shadow-sm">
+                            <i class="fas fa-hourglass-half fa-lg text-info mb-1"></i>
+                            <div class="fs-5 fw-bold text-info" id="kpiDureeAverage">0j</div>
+                            <div class="tiny text-muted">Durée Moy</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="card h-100 p-2 text-center border-0 shadow-sm">
+                            <i class="fas fa-list fa-lg text-primary mb-1"></i>
+                            <div class="fs-5 fw-bold text-primary" id="kpiTotal">0</div>
+                            <div class="tiny text-muted">Total</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- SECTION PRINCIPALE -->
-                <div class="row g-3">
-                    <!-- FILTRES -->
-                    <div class="col-lg-3">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-header bg-light p-3">
-                                <h6 class="mb-0 fw-bold"><i class="fas fa-filter me-2 text-primary"></i>Filtres</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Entreprise</label>
-                                    <select id="filterEntreprise" class="form-select form-select-sm">
-                                        <option value="">Toutes les entreprises</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Magasin</label>
-                                    <select id="filterMagasin" class="form-select form-select-sm">
-                                        <option value="">Tous les magasins</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Guichet</label>
-                                    <select id="filterGuichet" class="form-select form-select-sm">
-                                        <option value="">Tous les guichets</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Vendeur</label>
-                                    <select id="filterVendeur" class="form-select form-select-sm">
-                                        <option value="">Tous les vendeurs</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Statut</label>
-                                    <select id="filterStatut" class="form-select form-select-sm">
-                                        <option value="">Tous les statuts</option>
-                                        <option value="1">Actifs</option>
-                                        <option value="0">Terminés</option>
-                                    </select>
-                                </div>
-
-                                <div class="input-group input-group-sm">
-                                    <input type="text" id="searchAffectation" class="form-control" placeholder="Rechercher...">
-                                    <button class="btn btn-outline-secondary" id="btnSearch" type="button">
-                                        <i class="fas fa-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                <div class="card h-100 border-0 shadow-sm">
+                    <!-- HEADER -->
+                    <div class="card-header bg-light p-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-list me-2 text-primary"></i>Affectations</h6>
+                        <span class="badge bg-primary" id="countAffectations">0</span>
                     </div>
 
-                    <!-- TABLE AFFECTATIONS -->
-                    <div class="col-lg-9">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-header bg-light p-3 d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 fw-bold"><i class="fas fa-list me-2 text-primary"></i>Affectations</h6>
-                                <span class="badge bg-primary" id="countAffectations">0</span>
-                            </div>
-                            <div class="card-body p-0">
-                                <!-- Table -->
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0" id="affectationsTable">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th style="width: 15%;"><i class="fas fa-user me-2"></i>Vendeur</th>
-                                                <th style="width: 12%;"><i class="fas fa-cash-register me-2"></i>Guichet</th>
-                                                <th style="width: 12%;"><i class="fas fa-store me-2"></i>Magasin</th>
-                                                <th style="width: 12%;"><i class="fas fa-building me-2"></i>Entreprise</th>
-                                                <th style="width: 12%;"><i class="fas fa-calendar me-2"></i>Depuis</th>
-                                                <th style="width: 10%;"><i class="fas fa-info-circle me-2"></i>Statut</th>
-                                                <th style="width: 17%;" class="text-end"><i class="fas fa-cogs me-2"></i>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="affectationsTableBody">
-                                            <!-- Loading Spinner in tbody -->
-                                            <tr id="affectationSpinner" style="display: none;">
-                                                <td colspan="7" class="text-center py-4">
-                                                    <div class="spinner-border spinner-border-sm text-primary mb-2" role="status">
-                                                        <span class="visually-hidden">Chargement...</span>
-                                                    </div>
-                                                    <p class="text-muted small">Chargement des affectations...</p>
-                                                </td>
-                                            </tr>
-                                            <tr id="affectationEmpty" style="display: none;">
-                                                <td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-inbox me-2"></i>Aucune affectation</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                  
+                    <div class="card-body p-3">
+                        <div id="affectationsTable">
+                            <!-- FILTRES & SEARCH -->
+                            <div class="row justify-content-between g-3 mb-3">
+                                <div class="col-lg-8">
+                                    <div class="row g-2">
+                                        <div class="col-lg-2">
+                                            <label class="form-label small fw-semibold mb-2">Entreprise</label>
+                                            <select id="filterEntreprise" class="form-select form-select-sm">
+                                                <option value="">Toutes</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-lg-2">
+                                            <label class="form-label small fw-semibold mb-2">Magasin</label>
+                                            <select id="filterMagasin" class="form-select form-select-sm">
+                                                <option value="">Tous</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-lg-2">
+                                            <label class="form-label small fw-semibold mb-2">Guichet</label>
+                                            <select id="filterGuichet" class="form-select form-select-sm">
+                                                <option value="">Tous</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-lg-2">
+                                            <label class="form-label small fw-semibold mb-2">Vendeur</label>
+                                            <select id="filterVendeur" class="form-select form-select-sm">
+                                                <option value="">Tous</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-lg-2">
+                                            <label class="form-label small fw-semibold mb-2">Recherche</label>
+                                            <input type="text" class="form-control form-control-sm search" id="searchAffectation" placeholder="Rechercher...">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-4">
+                                    <div class="row g-2">
+                                        <div class="col-lg-6">
+                                            <label class="form-label small fw-semibold mb-2">Filtre Statut</label>
+                                            <select id="filterStatut" class="form-select form-select-sm">
+                                                <option value="">Tous les statuts</option>
+                                                <option value="1">Actifs</option>
+                                                <option value="0">Terminés</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-6 d-flex align-items-end gap-2">
+                                            <button id="btnCreateAffectation" class="btn btn-sm btn-primary flex-grow-1">
+                                                <i class="fas fa-plus me-2"></i>Ajouter
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="card-footer bg-light p-3">
+
+                            <!-- ACTIONS EN MASSE (cachées par défaut) -->
+                            <div id="bulkActionsBar" class="alert alert-info mb-3" style="display: none;">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted" id="affectationInfo">Affichage 0 sur 0</small>
-                                    <nav aria-label="pagination">
-                                        <ul class="pagination pagination-sm mb-0" id="paginationAffectations">
-                                        </ul>
-                                    </nav>
+                                    <div>
+                                        <strong id="bulkSelectedCount">0</strong> sélectionné(s)
+                                    </div>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" id="btnBulkTerminer" class="btn btn-warning" title="Terminer les affectations sélectionnées">
+                                            <i class="fas fa-stop-circle me-1"></i>Terminer
+                                        </button>
+                                        <button type="button" id="btnBulkDelete" class="btn btn-danger" title="Supprimer les affectations sélectionnées">
+                                            <i class="fas fa-trash me-1"></i>Supprimer
+                                        </button>
+                                        <button type="button" id="btnBulkExport" class="btn btn-success" title="Exporter les affectations sélectionnées">
+                                            <i class="fas fa-download me-1"></i>Exporter
+                                        </button>
+                                        <button type="button" id="btnBulkCancel" class="btn btn-secondary" title="Annuler">
+                                            <i class="fas fa-times me-1"></i>Annuler
+                                        </button>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <!-- TABLE AFFECTATIONS -->
+                            <div class="table-responsive scrollbar">
+                                <table class="table table-sm table-striped table-hover fs--1 mb-0 overflow-hidden">
+                                    <thead class="bg-200 text-900 sticky-top">
+                                        <tr>
+                                            <th class="align-middle text-nowrap" style="width: 40px;">
+                                                <input type="checkbox" id="checkAllAffectations" class="form-check-input" title="Sélectionner tous">
+                                            </th>
+                                            <th class="sort pe-3 align-middle text-nowrap" data-sort="vendeur-name" style="min-width: 150px;">
+                                                <i class="fas fa-user me-2"></i>Vendeur
+                                            </th>
+                                            <th class="sort pe-3 align-middle text-nowrap" data-sort="guichet-name" style="min-width: 120px;">
+                                                <i class="fas fa-cash-register me-2"></i>Guichet
+                                            </th>
+                                            <th class="sort pe-3 align-middle text-nowrap" data-sort="magasin-name" style="min-width: 120px;">
+                                                <i class="fas fa-store me-2"></i>Magasin
+                                            </th>
+                                            <th class="sort pe-3 align-middle text-nowrap" data-sort="entreprise-name" style="min-width: 120px;">
+                                                <i class="fas fa-building me-2"></i>Entreprise
+                                            </th>
+                                            <th class="sort pe-3 align-middle text-nowrap" data-sort="date-affectation" style="min-width: 110px;">
+                                                <i class="fas fa-calendar me-2"></i>Depuis
+                                            </th>
+                                            <th class="sort pe-3 align-middle text-nowrap" data-sort="statut" style="min-width: 90px;">
+                                                <i class="fas fa-info-circle me-2"></i>Statut
+                                            </th>
+                                            <th class="align-middle text-nowrap text-end pe-3" style="min-width: 100px;"><i class="fas fa-cogs me-2"></i>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="affectationsTableBody" class="list">
+                                        <!-- Loading Spinner -->
+                                        <tr id="affectationSpinner" style="display: none;">
+                                            <td colspan="8" class="text-center py-4">
+                                                <div class="spinner-border spinner-border-sm text-primary mb-2" role="status">
+                                                    <span class="visually-hidden">Chargement...</span>
+                                                </div>
+                                                <p class="text-muted small">Chargement des affectations...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- PAGINATION -->
+                            <div class="d-flex flex-column align-items-center gap-3 mt-4">
+                                <small class="text-muted" id="affectationInfo">Affichage 0 affectations</small>
+                                <nav aria-label="pagination">
+                                    <ul class="pagination pagination-sm mb-0" id="paginationAffectations">
+                                        <!-- Pagination générée par list.js -->
+                                    </ul>
+                                </nav>
                             </div>
                         </div>
                     </div>
@@ -241,6 +289,9 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
+                    <!-- MESSAGES DE VALIDATION -->
+                    <div id="validationMessages" class="mb-3"></div>
+
                     <form id="formCreateAffectation">
                         <div class="row g-3">
                             <div class="col-12">

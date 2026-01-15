@@ -1096,17 +1096,27 @@ router.put('/affectations/:id', authMiddleware, async (req, res) => {
     }
 
     const affectationId = req.params.id;
-    const { statut, notes } = req.body;
+    const { vendeurId, guichetId, magasinId, entrepriseId, dateAffectation, observations, status, statut, notes } = req.body;
 
     const affectation = await Affectation.findById(affectationId);
     if (!affectation) {
       return res.status(404).json({ message: 'Affectation non trouvée' });
     }
 
-    if (statut) affectation.statut = statut;
+    // Mettre à jour les champs disponibles
+    if (vendeurId) affectation.vendeurId = vendeurId;
+    if (guichetId) affectation.guichetId = guichetId;
+    if (magasinId) affectation.magasinId = magasinId;
+    if (entrepriseId) affectation.entrepriseId = entrepriseId;
+    if (dateAffectation) affectation.dateAffectation = dateAffectation;
+    if (observations) affectation.observations = observations;
+    
+    // Support des deux formats: statut/status
+    if (status !== undefined) affectation.status = status;
+    if (statut !== undefined) affectation.status = statut; // Mapper statut vers status
     if (notes) affectation.notes = notes;
 
-    if (statut === 'inactive' && !affectation.dateFinAffectation) {
+    if ((statut === 'inactive' || status === 0) && !affectation.dateFinAffectation) {
       affectation.dateFinAffectation = new Date();
     }
 
@@ -1120,7 +1130,7 @@ router.put('/affectations/:id', authMiddleware, async (req, res) => {
         action: 'MODIFIER_AFFECTATION',
         entite: 'Affectation',
         entiteId: affectationId,
-        description: `Affectation de '${vendeur?.prenom} ${vendeur?.nom}' modifiée (statut: ${statut})`,
+        description: `Affectation modifiée${vendeur ? ` (${vendeur.prenom} ${vendeur.nom})` : ''}`,
         icon: 'fas fa-edit'
       });
       await activity.save();
