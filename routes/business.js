@@ -4,6 +4,7 @@ const Business = require('../models/business');
 const Magasin = require('../models/magasin');
 const Guichet = require('../models/guichet');
 const Vente = require('../models/vente');
+const Produit = require('../models/produit');
 const Affectation = require('../models/affectation');
 const Activity = require('../models/activity');
 const authenticateToken = require('../middlewares/authenticateToken'); // Middleware JWT
@@ -102,46 +103,148 @@ router.get('/:id', authenticateToken, async (req, res) => {
     let ventes = [];
     try {
       ventes = await Vente.find({ entrepriseId: businessId })
-        .populate('vendeurId', 'nom prenom')
+        .populate('vendeurId', 'nom prenom email')
+        .populate('magasinId', 'nom adresse')
         .setOptions({ strictPopulate: false })
-        .limit(10);
+        .sort({ dateVente: -1 })
+        .limit(50);
     } catch(popErr) {
       console.warn('Vente populate error, fetching without populate:', popErr.message);
-      ventes = await Vente.find({ empresaId: businessId }).limit(10);
+      ventes = await Vente.find({ entrepriseId: businessId }).sort({ dateVente: -1 }).limit(50);
     }
     
-    const transactions = ventes.map(v => ({
-      _id: v._id,
-      productName: v.productName || v.product?.nom || 'Produit',
-      amount: v.amount || v.montant || v.prix || 0,
-      date: v.createdAt || v.date,
-      vendeur: v.vendeurId?.prenom || v.vendeurId?.nom || 'N/A',
-      magasin: v.magasinId?.nom || 'N/A',
-      status: v.status || 'completed'
-    }));
+    // Extraire les transactions à partir des articles des ventes
+    const transactions = [];
+    for (const vente of ventes) {
+      if (vente.articles && Array.isArray(vente.articles)) {
+        for (const article of vente.articles) {
+          transactions.push({
+            _id: article._id || vente._id + '_' + Math.random(),
+            ventId: vente._id,
+            productName: article.nomProduit || 'Produit',
+            produitId: article.produitId,
+            amount: article.montantUSD || 0,
+            quantite: article.quantite || 0,
+            prixUnitaire: article.prixUnitaire || 0,
+            date: vente.dateVente || vente.createdAt,
+            vendeur: vente.utilisateurId?.prenom || vente.utilisateurId?.nom || 'N/A',
+            vendeurComplet: {
+              _id: vente.utilisateurId?._id,
+              nom: vente.utilisateurId?.nom,
+              prenom: vente.utilisateurId?.prenom,
+              email: vente.utilisateurId?.email
+            },
+            magasin: vente.magasinId?.nom || 'N/A',
+            magasinComplet: {
+              _id: vente.magasinId?._id,
+              nom: vente.magasinId?.nom,
+              adresse: vente.magasinId?.adresse
+            },
+            statut: vente.statut || 'VALIDÉE',
+            modePaiement: vente.modePaiement || 'CASH'
+          });
+        }
+      } else if (!vente.articles || vente.articles.length === 0) {
+        // Fallback si vente sans articles
+        transactions.push({
+          _id: vente._id,
+          ventId: vente._id,
+          productName: 'Vente',
+          amount: vente.montantTotalUSD || 0,
+          quantite: 0,
+          date: vente.dateVente || vente.createdAt,
+          vendeur: vente.utilisateurId?.prenom || vente.utilisateurId?.nom || 'N/A',
+          magasin: vente.magasinId?.nom || 'N/A',
+          statut: vente.statut || 'VALIDÉE',
+          modePaiement: vente.modePaiement || 'CASH'
+        });
+      }
+    }
 
-    const totalSalesAmount = ventes.reduce((sum, v) => sum + (v.amount || v.montant || v.prix || 0), 0);
+    const totalSalesAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
 
-    // 3. Charger les produits vendus
-    let productsSoldData = [];
+    // 3. Charger les produits vendus (depuis Vente.articles, pas Affectation)
+    let ventesWithProducts = [];
     try {
-      productsSoldData = await Affectation.find({ entrepriseId: businessId })
-        .populate('vendeurId', 'nom prenom')
-        .setOptions({ strictPopulate: false })
-        .limit(20);
+      ventesWithProducts = await Vente.find({ 
+        entrepriseId: businessId,
+        statut: 'VALIDÉE'
+      })
+      .populate('utilisateurId', 'nom prenom email')
+      .populate('magasinId', 'nom adresse')
+      .setOptions({ strictPopulate: false })
+      .lean()
+      .sort({ dateVente: -1 })
+      .limit(50);
     } catch(popErr) {
-      console.warn('Affectation populate error:', popErr.message);
-      productsSoldData = await Affectation.find({ entrepriseId: businessId }).limit(20);
+      console.warn('Vente fetch error:', popErr.message);
+      ventesWithProducts = [];
     }
-    
-    const productsSold = productsSoldData.map(a => ({
-      nom: a.productName || a.product?.nom || 'Produit',
-      quantite: a.quantite || 0,
-      prix: a.prix || a.montant || 0,
-      date: a.createdAt || a.date,
-      vendeur: a.vendeurId?.prenom || a.vendeurId?.nom || 'N/A',
-      magasin: a.magasinId?.nom || 'N/A'
-    }));
+
+    // Extraire tous les produits des ventes avec infos complètes
+    const productsSold = [];
+    for (const vente of ventesWithProducts) {
+      if (vente.articles && Array.isArray(vente.articles)) {
+        for (const article of vente.articles) {
+          // Charger les infos COMPLÈTES du produit
+          let produit = null;
+          if (article.produitId) {
+            try {
+              produit = await Produit.findById(article.produitId)
+                .populate('typeProduitId', 'nomType unitePrincipale')
+                .populate('rayonId', 'nomRayon codeRayon typeRayon')
+                .lean();
+            } catch(e) {
+              console.warn('Produit fetch error:', e.message);
+            }
+          }
+          
+          productsSold.push({
+            _id: article.produitId || 'unknown',
+            // Infos produit
+            reference: produit?.reference || 'N/A',
+            designation: article.nomProduit || produit?.designation || 'Produit',
+            typeProduit: produit?.typeProduitId?.nomType || 'N/A',
+            rayon: produit?.rayonId?.nomRayon || 'N/A',
+            
+            // Vente/Article
+            quantite: article.quantite || 0,
+            prixUnitaire: article.prixUnitaire || produit?.prixUnitaire || 0,
+            montantVente: article.montantUSD || (article.quantite * article.prixUnitaire) || 0,
+            
+            // Stock/État
+            etatStock: produit?.etat || 'Neuf',
+            quantiteActuelle: produit?.quantiteActuelle || 0,
+            seuilAlerte: produit?.seuilAlerte || 0,
+            prixTotal: produit?.prixTotal || 0,
+            
+            // Media
+            photoUrl: produit?.photoUrl || 'https://via.placeholder.com/60?text=No+Image',
+            
+            // Audit
+            date: vente.dateVente || vente.createdAt,
+            vendeur: vente.utilisateurId?.prenom || vente.utilisateurId?.nom || 'N/A',
+            vendeurComplet: {
+              _id: vente.utilisateurId?._id,
+              nom: vente.utilisateurId?.nom,
+              prenom: vente.utilisateurId?.prenom,
+              email: vente.utilisateurId?.email
+            },
+            magasin: vente.magasinId?.nom || 'N/A',
+            magasinComplet: {
+              _id: vente.magasinId?._id,
+              nom: vente.magasinId?.nom,
+              adresse: vente.magasinId?.adresse
+            },
+            
+            // Statut
+            statut: produit?.statut || 'stocke',
+            priorite: produit?.priorite || 'normale',
+            status: produit?.status || 1
+          });
+        }
+      }
+    }
 
     // 4. Charger les activités (affectations + ventes + mouvements)
     let activities = [];

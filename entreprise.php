@@ -1160,7 +1160,35 @@
                 if(kpiProcessing) kpiProcessing.textContent = (biz.kpis.processing || 0).toLocaleString();
               }
               
-              // ===== 3. METTRE À JOUR GROSS REVENUE =====
+              // ===== 3. CALCULER TOTAL SALES AUTOMATIQUEMENT =====
+              if(biz.productsSold && Array.isArray(biz.productsSold)){
+                const totalSalesAmount = biz.productsSold.reduce((sum, prod) => sum + (prod.montantVente || 0), 0);
+                const totalQuantity = biz.productsSold.reduce((sum, prod) => sum + (prod.quantite || 0), 0);
+                
+                console.log('💰 Total Sales calculé:', totalSalesAmount, '| Total Quantité:', totalQuantity);
+                
+                // Auto-remplir le KPI Gross Sale
+                const kpiGrossSaleEl = document.getElementById('kpiGrossSale');
+                if(kpiGrossSaleEl && totalSalesAmount > 0){
+                  kpiGrossSaleEl.textContent = '$' + totalSalesAmount.toFixed(2);
+                }
+                
+                // Auto-remplir le graphique Total Sales s'il existe
+                const totalSalesValue = document.querySelector('#totalSalesValue, [id*="totalSales"]');
+                if(totalSalesValue){
+                  totalSalesValue.textContent = '$' + totalSalesAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                }
+                
+                // Sauvegarder en localStorage pour persistance
+                localStorage.setItem(getBizKey() + '_totalSales_current', JSON.stringify({
+                  total: totalSalesAmount,
+                  quantity: totalQuantity,
+                  savedAt: Date.now(),
+                  productsCount: biz.productsSold.length
+                }));
+              }
+              
+              // ===== 4. METTRE À JOUR GROSS REVENUE =====
               if(document.getElementById('grossRevenueValue')){
                 const revenue = biz.financialStatus?.totalRevenue || biz.chiffre_affaires || 0;
                 document.getElementById('grossRevenueValue').textContent = '$' + revenue.toLocaleString('en-US', {minimumFractionDigits: 2});
@@ -1172,17 +1200,29 @@
                 const tbody = document.querySelector('#paymentHistoryTable tbody.list');
                 if(tbody){
                   tbody.innerHTML = '';
-                  biz.transactions.slice(0, 5).forEach((t, idx) => {
-                    const html = `
-                      <tr class="fw-semi-bold">
-                        <td class="align-middle pe-5 py-3 course"><a href="#">${t.magasin || 'Transaction'}</a></td>
-                        <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#${t._id.substring(0, 8).toUpperCase()}</td>
-                        <td class="align-middle white-space-nowrap pe-6 py-3 date">${new Date(t.date).toLocaleDateString()}</td>
-                        <td class="align-middle white-space-nowrap py-3 text-end amount">$${(t.amount || 0).toFixed(2)}</td>
-                        <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-success">${t.status || 'Completed'}</td>
-                      </tr>`;
-                    tbody.insertAdjacentHTML('beforeend', html);
-                  });
+                  if(biz.transactions.length === 0){
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Aucune transaction</td></tr>';
+                  } else {
+                    biz.transactions.slice(0, 10).forEach((t, idx) => {
+                      const statusBadge = t.statut === 'VALIDÉE' ? 'badge-success' : 'badge-warning';
+                      const statusText = t.statut === 'VALIDÉE' ? 'Validée' : t.statut || 'En cours';
+                      const html = `
+                        <tr class="fw-semi-bold">
+                          <td class="align-middle pe-5 py-3 course">
+                            <a href="#">${t.productName || 'Produit'}</a>
+                            <small class="text-muted d-block">${t.magasin || 'N/A'}</small>
+                          </td>
+                          <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#${t._id.substring(0, 8).toUpperCase()}</td>
+                          <td class="align-middle white-space-nowrap pe-6 py-3 date">${new Date(t.date).toLocaleDateString('fr-FR')}</td>
+                          <td class="align-middle white-space-nowrap py-3 text-end amount">$${(t.amount || 0).toFixed(2)}</td>
+                          <td class="align-middle text-end fw-medium font-sans-serif py-3 status">
+                            <span class="badge ${statusBadge}">${statusText}</span>
+                            <small class="text-muted d-block">${t.vendeur || 'N/A'}</small>
+                          </td>
+                        </tr>`;
+                      tbody.insertAdjacentHTML('beforeend', html);
+                    });
+                  }
                 }
               }
               
@@ -1193,23 +1233,26 @@
                 if(tbody){
                   tbody.innerHTML = '';
                   biz.productsSold.slice(0, 6).forEach((prod, idx) => {
+                    const placeholderSvg = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22%3E%3Crect fill=%22%23e9ecef%22 width=%2260%22 height=%2260%22/%3E%3Ctext x=%2230%22 y=%2230%22 font-size=%2212%22 fill=%22%23999%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22%3ENo Image%3C/text%3E%3C/svg%3E';
+                    const imgSrc = prod.photoUrl && prod.photoUrl.startsWith('http') ? prod.photoUrl : placeholderSvg;
                     const html = `
                       <tr class="btn-reveal-trigger fw-semi-bold">
                         <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
                           <div class="d-flex gap-3 align-items-center position-relative">
-                            <img class="rounded-1 border border-200" src="assets/img/elearning/courses/course${(idx % 8) + 1}.png" width="60" alt="" />
-                            <a class="stretched-link text-truncate" href="#">${prod.nom}</a>
+                            <img class="rounded-1 border border-200" src="${imgSrc}" width="60" height="60" alt="${prod.nom}" onerror="this.src='${placeholderSvg}'" />
+                            <a class="stretched-link text-truncate" href="#">${prod.designation || prod.nom}</a>
                           </div>
                         </td>
                         <td class="align-middle text-nowrap trainer"><a class="text-800" href="#">${prod.vendeur}</a></td>
-                        <td class="align-middle date">${new Date(prod.date).toLocaleDateString()}</td>
+                        <td class="align-middle date">${new Date(prod.date).toLocaleDateString('fr-FR')}</td>
                         <td class="align-middle time">${prod.quantite}</td>
                         <td class="align-middle">
                           <div class="progress rounded-3 worked" style="height: 5px; width:5rem">
-                            <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 80%"></div>
+                            <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: ${Math.min(100, (prod.quantiteActuelle / 100) * 100)}%"></div>
                           </div>
+                          <small class="text-muted">${prod.etatStock} (${prod.quantiteActuelle} en stock)</small>
                         </td>
-                        <td class="align-middle text-end price">$${(prod.prix || 0).toFixed(2)}</td>
+                        <td class="align-middle text-end price">$${(prod.montant || 0).toFixed(2)}</td>
                         <td class="align-middle text-end"></td>
                       </tr>`;
                     tbody.insertAdjacentHTML('beforeend', html);
