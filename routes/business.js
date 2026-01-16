@@ -346,7 +346,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       summary: {
         totalRevenue: totalSalesAmount,
         totalAffectations: totalOrders,
-        totalProducts: productsSoldData.length,
+        totalProducts: productsSold.length,
         totalMagasins: totalMagasins,
         totalUtilisateurs: utilisateurs.length
       }
