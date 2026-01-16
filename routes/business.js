@@ -99,7 +99,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const itemsSold = affectations.reduce((sum, a) => sum + (a.quantite || 0), 0);
     
     // 2. Charger les ventes/transactions
-    const ventes = await Vente.find({ entrepriseId: businessId }).populate('vendeurId', 'nom prenom').populate('magasinId', 'nom').limit(10);
+    let ventes = [];
+    try {
+      ventes = await Vente.find({ entrepriseId: businessId })
+        .populate('vendeurId', 'nom prenom')
+        .setOptions({ strictPopulate: false })
+        .limit(10);
+    } catch(popErr) {
+      console.warn('Vente populate error, fetching without populate:', popErr.message);
+      ventes = await Vente.find({ empresaId: businessId }).limit(10);
+    }
+    
     const transactions = ventes.map(v => ({
       _id: v._id,
       productName: v.productName || v.product?.nom || 'Produit',
@@ -113,10 +123,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const totalSalesAmount = ventes.reduce((sum, v) => sum + (v.amount || v.montant || v.prix || 0), 0);
 
     // 3. Charger les produits vendus
-    const productsSoldData = await Affectation.find({ entrepriseId: businessId })
-      .populate('vendeurId', 'nom prenom')
-      .populate('magasinId', 'nom')
-      .limit(20);
+    let productsSoldData = [];
+    try {
+      productsSoldData = await Affectation.find({ entrepriseId: businessId })
+        .populate('vendeurId', 'nom prenom')
+        .setOptions({ strictPopulate: false })
+        .limit(20);
+    } catch(popErr) {
+      console.warn('Affectation populate error:', popErr.message);
+      productsSoldData = await Affectation.find({ entrepriseId: businessId }).limit(20);
+    }
     
     const productsSold = productsSoldData.map(a => ({
       nom: a.productName || a.product?.nom || 'Produit',
@@ -128,18 +144,23 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }));
 
     // 4. Charger les activités (affectations + ventes + mouvements)
-    const activities = await Activity.find({ businessId: businessId })
-      .populate('userId', 'nom prenom')
-      .populate('magasinId', 'nom')
-      .sort({ createdAt: -1 })
-      .limit(50);
+    let activities = [];
+    try {
+      activities = await Activity.find({ businessId: businessId })
+        .setOptions({ strictPopulate: false })
+        .sort({ createdAt: -1 })
+        .limit(50);
+    } catch(popErr) {
+      console.warn('Activity populate error:', popErr.message);
+      activities = await Activity.find({ businessId: businessId }).sort({ createdAt: -1 }).limit(50);
+    }
 
     const activitiesFormatted = activities.map(act => ({
       type: act.type || 'activity',
       title: act.title || 'Activité',
       description: act.description || '',
-      magasin: act.magasinId?.nom || 'N/A',
-      user: act.userId?.prenom || act.userId?.nom || 'N/A',
+      magasin: typeof act.magasinId === 'object' ? (act.magasinId?.nom || 'N/A') : (typeof act.magasin === 'string' ? act.magasin : 'N/A'),
+      user: typeof act.userId === 'object' ? (act.userId?.prenom || act.userId?.nom || 'N/A') : (typeof act.user === 'string' ? act.user : 'N/A'),
       date: act.createdAt || act.date,
       icon: act.icon || 'fas fa-info-circle'
     }));

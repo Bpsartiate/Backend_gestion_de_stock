@@ -1260,35 +1260,36 @@
               alert('Erreur: ' + e.message);
             }
                 
-                // Charger les affectations, ventes, et mouvements de stock pour les activités récentes
+            // Charger les affectations, ventes, et mouvements de stock pour les activités récentes
+            try{
+              const allActivities = [];
+              const magasinCache = {};
+              
+              // Helper function to fetch magasin name by ID
+              async function getMagasinName(magasinId){
                 try{
-                  const allActivities = [];
-                  const magasinCache = {};
-                  
-                  // Helper function to fetch magasin name by ID
-                  async function getMagasinName(magasinId){
-                    // Activities déjà formatées depuis le backend enrichi
-                    if(biz.activities && Array.isArray(biz.activities)){
-                      const formattedActivities = biz.activities.map(a => ({
-                        ts: new Date(a.date).getTime(),
-                        title: a.title || 'Activité',
-                        description: a.description || '',
-                        icon: a.icon || 'fas fa-circle',
-                        magasin: a.magasin,
-                        user: a.user,
-                        type: a.type
-                      }));
-                      
-                      saveActivities(formattedActivities.slice(0, 50));
-                      renderActivities();
-                      console.log('✅ Activités chargées depuis API enrichie:', formattedActivities.length);
-                    }
-                  }catch(e){ console.warn('Erreur chargement activités:', e); }
-                
-                // Sauvegarder l'ID de l'entreprise pour la persistance
-                localStorage.setItem('businessId', businessId);
+                  // Activities déjà formatées depuis le backend enrichi
+                  if(biz.activities && Array.isArray(biz.activities)){
+                    const formattedActivities = biz.activities.map(a => ({
+                      ts: new Date(a.date).getTime(),
+                      title: a.title || 'Activité',
+                      description: a.description || '',
+                      icon: a.icon || 'fas fa-circle',
+                      magasin: a.magasin,
+                      user: a.user,
+                      type: a.type
+                    }));
+                    
+                    saveActivities(formattedActivities.slice(0, 50));
+                    renderActivities();
+                    console.log('✅ Activités chargées depuis API enrichie:', formattedActivities.length);
+                  }
+                }catch(e){ console.warn('Erreur chargement activités:', e); }
               }
-            }catch(e){ console.warn('Erreur chargement entreprise:', e && e.message); }
+            
+              // Sauvegarder l'ID de l'entreprise pour la persistance
+              localStorage.setItem('businessId', businessId);
+            }catch(e){ console.warn('Erreur chargement activités serveur:', e && e.message); }
           });
 
           renderActivities();
