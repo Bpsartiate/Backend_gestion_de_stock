@@ -5,7 +5,7 @@
 let CURRENT_MAGASIN_ID = null;
 let MAGASINS_CACHE = {};
 let ventesChart = null;
-let API_BASE = 'https://backend-gestion-de-stock.onrender.com'; // ✅ API hébergée
+let API_BASE = 'https://backend-gestion-de-stock.onrender.com'; //  API hébergée
 
 // SPINNER GLOBAL (utilisé partout)
 function showSpinner(selector = null) {
@@ -19,7 +19,7 @@ function showSpinner(selector = null) {
     `;
     
     if (selector === '#magasinDetailsContent') {
-        // ✅ SPINNER UNIQUEMENT pour détails
+        //  SPINNER UNIQUEMENT pour détails
         $(selector).html(spinnerHtml);
     } else if (selector) {
         $(selector).html(spinnerHtml);
@@ -130,7 +130,7 @@ $(document).ready(function() {
     // Always start expanded
     panelMagasins.removeClass('collapsed');
     toggleIcon.removeClass('fa-chevron-right').addClass('fa-chevron-left');
-    console.log('✅ Panel initialized as EXPANDED');
+    console.log(' Panel initialized as EXPANDED');
     
     loadDashboardData()
         .then(() => {
@@ -180,7 +180,7 @@ async function loadDashboardData() {
         
         renderMagasins(magasins);
         updateGlobalStats(stats);
-        showToast(`✅ ${magasins.length} magasins chargés`, 'success');
+        showToast(` ${magasins.length} magasins chargés`, 'success');
         
     } catch (err) {
         console.error('💥', err);
@@ -250,7 +250,7 @@ function renderMagasins(magasins) {
         $('#magasinsList').html(html);
         renderMagasinAvatars(magasins); // Render avatars for collapsed view
         $('#searchMagasins').val('').trigger('keyup');
-        console.log('✅', magasins.length, 'magasins rendus');
+        console.log('', magasins.length, 'magasins rendus');
     }, 300);
 }
 
@@ -262,7 +262,7 @@ async function loadMagasinDetails(id) {
     
     console.log('🔄 Chargement magasin:', id);
     
-    // ✅ 1. AFFICHER SPINNER + CACHER PLACEHOLDER ET DONNÉES
+    //  1. AFFICHER SPINNER + CACHER PLACEHOLDER ET DONNÉES
     $('#magasinDetailsSpinner').show();
     $('#magasinDetailsPlaceholder').addClass('hidden-element');
     $('#magasinDetailsData').removeClass('shown-element').hide();
@@ -279,7 +279,7 @@ async function loadMagasinDetails(id) {
             MAGASINS_CACHE[id] = m;
         }
         
-        // ✅ 2. HEADER PHOTO (SANS ERREUR)
+        //  2. HEADER PHOTO (SANS ERREUR)
         const photo = m.photoUrl || m.photo;
         const $header = $('#magasinHeader');
         if (photo) {
@@ -297,20 +297,20 @@ async function loadMagasinDetails(id) {
             $('#magasinAvatar').html('<i class="fas fa-store fa-2x text-white"></i>');
         }
         
-        // ✅ 3. TITRE + MANAGER
+        //  3. TITRE + MANAGER
         $('#magasinName').text(m.nom_magasin || 'Magasin sans nom');
         $('#magasinSubtitle').text(
             m.managerId ? `${m.managerId.prenom || ''} ${m.managerId.nom || ''}`.trim() || 'Gestionnaire' : 
             '📊 Informations rapides'
         );
         
-        // ✅ 4. KPI
+        //  4. KPI
         $('#guichetsCount').text(m.guichets?.length || 0);
         $('#vendeursCount').text(m.vendeursCount || 0);
         $('#magasinCA').text((m.caMensuel || 0).toLocaleString() + ' CDF');
         $('#stockAlertes').text(m.stockAlertes || 0);
         
-        // ✅ 5. INFOS
+        //  5. INFOS
         $('#magasinAdresse').text(m.adresse || 'Non renseigné');
         $('#magasinTelephone').text(m.telephone || 'Non renseigné');
         $('#magasinCreated').text(m.createdAt ? new Date(m.createdAt).toLocaleDateString('fr-FR') : 'Non daté');
@@ -318,14 +318,14 @@ async function loadMagasinDetails(id) {
             .removeClass('bg-secondary bg-success')
             .addClass(m.status === 1 ? 'bg-success' : 'bg-secondary');
         
-        // ✅ 6. TAGS
+        //  6. TAGS
         $('#magasinStatusBadges').html(
             (m.tags || []).slice(0, 4).map(t => 
                 `<span class="badge bg-light text-dark fs--2 px-2 py-1">${t}</span>`
             ).join('')
         );
         
-        // ✅ 7. CHART SÉCURISÉ (FIX ERREUR AXIS)
+        //  7. CHART SÉCURISÉ (FIX ERREUR AXIS)
         setTimeout(() => {
             try {
                 const canvas = document.getElementById('ventesChartDetails');
@@ -340,7 +340,7 @@ async function loadMagasinDetails(id) {
                     ventesChartDetails = null;
                 }
                 
-                // ✅ CONFIG CHART.JS V4+ SANS ERREUR AXIS
+                //  CONFIG CHART.JS V4+ SANS ERREUR AXIS
                 ventesChartDetails = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -385,7 +385,7 @@ async function loadMagasinDetails(id) {
                     }
                 });
                 
-                console.log('✅ Chart créé');
+                console.log(' Chart créé');
                 
             } catch (chartErr) {
                 console.error('❌ Chart erreur:', chartErr);
@@ -400,7 +400,7 @@ async function loadMagasinDetails(id) {
             }
         }, 100);
         
-        // ✅ 8. CHARGER ET AFFICHER LES GUICHETS (PANEL 3)
+        //  8. CHARGER ET AFFICHER LES GUICHETS (PANEL 3)
         try {
             const guichets = await loadGuichetsForMagasin(id);
             renderGuichets(guichets || []);
@@ -409,16 +409,16 @@ async function loadMagasinDetails(id) {
             renderGuichets([]);
         }
         
-        // ✅ 9. ANIMATION FINALE
+        //  9. ANIMATION FINALE
         setTimeout(() => {
             $('#magasinDetailsSpinner').hide();
-            $('#magasinDetailsPlaceholder').addClass('hidden-element');  // ✅ Ajouter classe pour forcer display: none
-            $('#magasinDetailsData').addClass('shown-element').show();  // ✅ Ajouter classe pour forcer display: block
+            $('#magasinDetailsPlaceholder').addClass('hidden-element');  //  Ajouter classe pour forcer display: none
+            $('#magasinDetailsData').addClass('shown-element').show();  //  Ajouter classe pour forcer display: block
         }, 600);
         
         CURRENT_MAGASIN_ID = id;
-        sessionStorage.setItem('currentMagasinId', id); // ✅ Sauvegarder ID pour les autres pages (comme stock)
-        sessionStorage.setItem('currentMagasinNom', m.nom_magasin); // ✅ Sauvegarder le nom aussi
+        sessionStorage.setItem('currentMagasinId', id); //  Sauvegarder ID pour les autres pages (comme stock)
+        sessionStorage.setItem('currentMagasinNom', m.nom_magasin); //  Sauvegarder le nom aussi
         updateAddGuichetButtonState(); // 🟢 Active les boutons "Ajouter Guichet"
         showToast(`${m.nom_magasin} chargé`, 'success', 2000);
         
@@ -457,7 +457,7 @@ function initPanelToggle() {
                 e.preventDefault();
             }
             e.stopPropagation();
-            console.log('✅ Toggle button clicked - calling togglePanel1()');
+            console.log(' Toggle button clicked - calling togglePanel1()');
             togglePanel1();
         };
         
@@ -466,7 +466,7 @@ function initPanelToggle() {
             e.preventDefault();
         });
         
-        console.log('✅ Toggle button listener attached');
+        console.log(' Toggle button listener attached');
     } else {
         console.warn('⚠️ Toggle button #togglePanelMagasins not found');
     }
@@ -521,7 +521,7 @@ function togglePanel1() {
         // ⚠️ NE PAS remettre CURRENT_MAGASIN_ID à null ! 
         // Les boutons "Ajouter Guichet" doivent rester actifs même si les détails sont masqués
         // CURRENT_MAGASIN_ID reste défini pour que les boutons restent actifs
-        console.log('✅ Details masqués (collapse) - CURRENT_MAGASIN_ID conservé:', CURRENT_MAGASIN_ID);
+        console.log(' Details masqués (collapse) - CURRENT_MAGASIN_ID conservé:', CURRENT_MAGASIN_ID);
     }
 }
 
@@ -548,7 +548,7 @@ function renderMagasinAvatars(magasins) {
         selectMagasinAvatar(magasinId);
     });
     
-    console.log('✅ Avatars rendus:', magasins.length);
+    console.log(' Avatars rendus:', magasins.length);
 }
 
 // Select magasin from avatar and auto-collapse
@@ -565,7 +565,7 @@ function selectMagasinAvatar(magasinId) {
     
     // Load details
     loadMagasinDetails(magasinId).then(() => {
-        // ✅ Auto-expand SEULEMENT sur desktop/tablet (>767px)
+        //  Auto-expand SEULEMENT sur desktop/tablet (>767px)
         const isMobile = window.innerWidth <= 767;
         if (!isMobile) {
             const dashboard = $('#dashboardMagasins');
@@ -579,7 +579,7 @@ function selectMagasinAvatar(magasinId) {
 }
 
 /**
- * ✅ Contrôle l'état des boutons "Ajouter Guichet"
+ *  Contrôle l'état des boutons "Ajouter Guichet"
  * Les guichets appartiennent à un magasin, donc le bouton
  * ne doit être actif que si un magasin est sélectionné
  */
@@ -608,7 +608,7 @@ function updateAddGuichetButtonState() {
             btn.style.opacity = '1';
             btn.style.cursor = 'pointer';
             btn.style.pointerEvents = 'auto';
-            console.log(`✅ Bouton ${idx} activé - CURRENT_MAGASIN_ID: ${CURRENT_MAGASIN_ID}`);
+            console.log(` Bouton ${idx} activé - CURRENT_MAGASIN_ID: ${CURRENT_MAGASIN_ID}`);
         } else {
             // 🔴 PAS DE MAGASIN = BOUTON DÉSACTIVÉ
             btn.disabled = true;
@@ -638,7 +638,7 @@ function bindEvents() {
         
         // Charger les détails et collapse SAUF sur mobile
         loadMagasinDetails(id).then(() => {
-            // ✅ Auto-collapse SEULEMENT sur desktop/tablet (>767px)
+            //  Auto-collapse SEULEMENT sur desktop/tablet (>767px)
             setTimeout(() => {
                 const isMobile = window.innerWidth <= 767;
                 if (!isMobile) {
@@ -657,24 +657,24 @@ function bindEvents() {
     // Les listeners pour le modal de création de guichet sont maintenant consolidés dans le PHP
     // pour éviter les doublons et les appels de fetch multiples
     
-    // ✅ BOUTON EDIT MAGASIN (inchangé)
+    //  BOUTON EDIT MAGASIN (inchangé)
     $(document).on('click', '#btnEditMagasin', function() {
         if (CURRENT_MAGASIN_ID) {
             openEditModal(CURRENT_MAGASIN_ID);
         }
     });
     
-    // ✅ SOUMETTRE MODIFICATION (inchangé)
+    //  SOUMETTRE MODIFICATION (inchangé)
     $(document).on('click', '#btnUpdateMagasin', function() {
         submitUpdateMagasin();
     });
     
-    // ✅ REAL-TIME PHOTO PREVIEW (inchangé)
+    //  REAL-TIME PHOTO PREVIEW (inchangé)
     $(document).on('click', '#editMagasinPhotoInput', function(e) {
         // ... votre code photo ...
     });
     
-    // ✅ GUICHET CORRIGÉ 👇 (REMPLACEZ lignes 28-34)
+    //  GUICHET CORRIGÉ 👇 (REMPLACEZ lignes 28-34)
     $(document).on('click', '[data-guichet-id]', function() {
         const id = $(this).data('guichet-id');
         console.log('💰 GUICHET CLIC:', id);
@@ -682,7 +682,7 @@ function bindEvents() {
         
         // OUVRIR MODAL AU LIEU DE PANEL 2
         $('#modalGuichetDetails').modal('show');
-        loadGuichetDetails(id);  // ✅ SPINNER GUICHET dans MODAL
+        loadGuichetDetails(id);  //  SPINNER GUICHET dans MODAL
     });
     
     // REFRESH (inchangé)
@@ -762,15 +762,15 @@ let CURRENT_GUICHET_ID = null;
 let GUICHETS_CACHE = {};
 let guichetChart = null;
 
-// ✅ 1. RENDER GUICHETS (DESIGN PREMIUM)
+//  1. RENDER GUICHETS (DESIGN PREMIUM)
 function renderGuichets(guichets) {
     const guichetsList = document.getElementById('guichetsList');
     if(!guichetsList) return;
     
-    // ✅ SAVE guichets data for later use (edit modal, etc)
+    //  SAVE guichets data for later use (edit modal, etc)
     window.lastLoadedGuichets = guichets;
     
-    // ✅ Add to global allGuichets cache for fallback searches
+    //  Add to global allGuichets cache for fallback searches
     if (!window.allGuichets) window.allGuichets = [];
     guichets.forEach(g => {
         if (!window.allGuichets.find(gu => gu._id === g._id)) {
@@ -796,7 +796,7 @@ function renderGuichets(guichets) {
     }
     
     guichetsList.innerHTML = guichets.map((g, idx) => {
-        // ✅ NORMALISER LES DONNÉES (gérer les deux formats)
+        //  NORMALISER LES DONNÉES (gérer les deux formats)
         const nomGuichet = g.nomGuichet || g.nom_guichet || 'Guichet';
         const codeGuichet = g.codeGuichet || g.code || '';
         
@@ -888,15 +888,15 @@ function renderGuichets(guichets) {
         `;
     }).join('');
     
-    console.log('✅', guichets.length, 'guichets rendus avec design premium');
+    console.log('', guichets.length, 'guichets rendus avec design premium');
 }
 
-// ✅ 2. OUVRIR MODAL + CHARGER
+//  2. OUVRIR MODAL + CHARGER
 function openGuichetModal(id) {
     console.log('🚀 OUVERTURE MODAL GUICHET:', id);
     CURRENT_GUICHET_ID = id;
     
-    // ✅ INITIALISER L'ÉTAT DU MODAL
+    //  INITIALISER L'ÉTAT DU MODAL
     document.getElementById('guichetSpinner').style.setProperty('display', 'flex', 'important');
     document.getElementById('guichetPlaceholder').style.setProperty('display', 'none', 'important');
     document.getElementById('guichetContent').style.setProperty('display', 'none', 'important');
@@ -905,7 +905,7 @@ function openGuichetModal(id) {
     loadGuichetDetails(id);
 }
 
-// ✅ 3. CHARGEMENT COMPLET GUICHET (AVEC API)
+//  3. CHARGEMENT COMPLET GUICHET (AVEC API)
 async function loadGuichetDetails(id) {
     console.log('🔄 Guichet details:', id);
     
@@ -933,7 +933,7 @@ async function loadGuichetDetails(id) {
                 
                 if (response.ok) {
                     g = await response.json();
-                    console.log('✅ Guichet chargé via API directe');
+                    console.log(' Guichet chargé via API directe');
                 } else {
                     apiError = new Error(`API ${response.status}`);
                     throw apiError;
@@ -943,29 +943,29 @@ async function loadGuichetDetails(id) {
                 console.warn('⚠️ API endpoint échoué:', err.message);
                 console.warn('🔍 FALLBACK DIAGNOSTICS - Cherchant guichet ID:', id);
                 
-                // ✅ FALLBACK 1: Chercher dans les derniers guichets chargés
+                //  FALLBACK 1: Chercher dans les derniers guichets chargés
                 console.log('📋 Fallback 1: lastLoadedGuichets exists?', !!window.lastLoadedGuichets, 'Count:', window.lastLoadedGuichets?.length || 0);
                 if (window.lastLoadedGuichets && Array.isArray(window.lastLoadedGuichets)) {
                     g = window.lastLoadedGuichets.find(gu => gu._id === id);
                     if (g) {
-                        console.log('✅ Guichet trouvé dans lastLoadedGuichets (Fallback 1)');
+                        console.log(' Guichet trouvé dans lastLoadedGuichets (Fallback 1)');
                     } else {
                         console.log('❌ Guichet NOT found in lastLoadedGuichets. Available IDs:', window.lastLoadedGuichets.map(x => x._id));
                     }
                 }
                 
-                // ✅ FALLBACK 2: Chercher dans TOUS les magasins (si données accessibles)
+                //  FALLBACK 2: Chercher dans TOUS les magasins (si données accessibles)
                 console.log('📋 Fallback 2: allGuichets exists?', !!window.allGuichets, 'Count:', window.allGuichets?.length || 0);
                 if (!g && window.allGuichets && Array.isArray(window.allGuichets)) {
                     g = window.allGuichets.find(gu => gu._id === id);
                     if (g) {
-                        console.log('✅ Guichet trouvé dans allGuichets (Fallback 2)');
+                        console.log(' Guichet trouvé dans allGuichets (Fallback 2)');
                     } else {
                         console.log('❌ Guichet NOT found in allGuichets. Available IDs:', window.allGuichets.map(x => x._id));
                     }
                 }
                 
-                // ✅ FALLBACK 3: Charger la liste des guichets du magasin courant
+                //  FALLBACK 3: Charger la liste des guichets du magasin courant
                 console.log('📋 Fallback 3: CURRENT_MAGASIN_ID?', CURRENT_MAGASIN_ID);
                 if (!g && typeof CURRENT_MAGASIN_ID !== 'undefined' && CURRENT_MAGASIN_ID) {
                     try {
@@ -980,7 +980,7 @@ async function loadGuichetDetails(id) {
                             console.log('📦 Got', guichets.length, 'guichets from magasin list');
                             g = guichets.find(gu => gu._id === id);
                             if (g) {
-                                console.log('✅ Guichet trouvé dans liste magasin (Fallback 3)');
+                                console.log(' Guichet trouvé dans liste magasin (Fallback 3)');
                                 // Sauvegarder pour réutilisation future
                                 if (!window.allGuichets) window.allGuichets = [];
                                 if (!window.allGuichets.find(gu => gu._id === id)) {
@@ -999,7 +999,7 @@ async function loadGuichetDetails(id) {
                     console.log('❌ Fallback 3 skipped: CURRENT_MAGASIN_ID not set');
                 }
                 
-                // ✅ FALLBACK 4: Essayer de récupérer depuis la page magasin (si on y est)
+                //  FALLBACK 4: Essayer de récupérer depuis la page magasin (si on y est)
                 console.log('📋 Fallback 4: Chercher magasinId depuis le DOM ou contexte page');
                 if (!g) {
                     try {
@@ -1029,7 +1029,7 @@ async function loadGuichetDetails(id) {
                                 console.log('📦 Got', guichets.length, 'guichets from magasin list');
                                 g = guichets.find(gu => gu._id === id);
                                 if (g) {
-                                    console.log('✅ Guichet trouvé dans liste magasin (Fallback 4)');
+                                    console.log(' Guichet trouvé dans liste magasin (Fallback 4)');
                                     if (!window.allGuichets) window.allGuichets = [];
                                     if (!window.allGuichets.find(gu => gu._id === id)) {
                                         window.allGuichets.push(g);
@@ -1064,7 +1064,7 @@ async function loadGuichetDetails(id) {
         console.log('📊 Avant updateGuichetHeader() - guichet:', g.nomGuichet);
         try {
             updateGuichetHeader(g);
-            console.log('✅ updateGuichetHeader() complété');
+            console.log(' updateGuichetHeader() complété');
         } catch (e) {
             console.error('❌ ERREUR updateGuichetHeader():', e.message, e);
             throw e;
@@ -1073,7 +1073,7 @@ async function loadGuichetDetails(id) {
         console.log('📊 Avant updateGuichetStats()');
         try {
             updateGuichetStats(g);
-            console.log('✅ updateGuichetStats() complété');
+            console.log(' updateGuichetStats() complété');
         } catch (e) {
             console.error('❌ ERREUR updateGuichetStats():', e.message, e);
             throw e;
@@ -1082,7 +1082,7 @@ async function loadGuichetDetails(id) {
         console.log('📊 Avant updateProduitsVendus()');
         try {
             updateProduitsVendus(g);
-            console.log('✅ updateProduitsVendus() complété');
+            console.log(' updateProduitsVendus() complété');
         } catch (e) {
             console.error('❌ ERREUR updateProduitsVendus():', e.message, e);
             throw e;
@@ -1091,7 +1091,7 @@ async function loadGuichetDetails(id) {
         console.log('📊 Avant updateTransactionsRecentes()');
         try {
             updateTransactionsRecentes(g);
-            console.log('✅ updateTransactionsRecentes() complété');
+            console.log(' updateTransactionsRecentes() complété');
         } catch (e) {
             console.error('❌ ERREUR updateTransactionsRecentes():', e.message, e);
             throw e;
@@ -1100,7 +1100,7 @@ async function loadGuichetDetails(id) {
         console.log('📊 Avant initGuichetChart()');
         try {
             initGuichetChart();
-            console.log('✅ initGuichetChart() complété');
+            console.log(' initGuichetChart() complété');
         } catch (e) {
             console.error('❌ ERREUR initGuichetChart():', e.message, e);
             throw e;
@@ -1114,10 +1114,10 @@ async function loadGuichetDetails(id) {
             document.getElementById('guichetContent').style.setProperty('display', 'block', 'important');
             // Fade in animation via jQuery
             $('#guichetContent').fadeIn(400);
-            console.log('✅ DOM updated - placeholder hidden, content shown');
+            console.log(' DOM updated - placeholder hidden, content shown');
         }, 400);
         
-        showToast(`✅ ${g.nomGuichet || g.nom} chargé`, 'success', 2000);
+        showToast(` ${g.nomGuichet || g.nom} chargé`, 'success', 2000);
         
     } catch (err) {
         console.error('❌', err);
@@ -1135,7 +1135,7 @@ async function loadGuichetDetails(id) {
     }
 }
 
-// ✅ UPDATE FONCTIONS (Remplissage du template existant)
+//  UPDATE FONCTIONS (Remplissage du template existant)
 
 function updateGuichetHeader(g) {
     // Gérer les différents formats de noms (avec ou sans underscore)
@@ -1149,7 +1149,7 @@ function updateGuichetHeader(g) {
     
     // 🎯 Status badge avec couleur dynamique
     const statusColor = g.status === 1 ? 'bg-success' : 'bg-danger';
-    const statusText = g.status === 1 ? '✅ Actif' : '❌ Inactif';
+    const statusText = g.status === 1 ? ' Actif' : '❌ Inactif';
     $('#guichetStatus').removeClass('bg-success bg-danger').addClass(statusColor).text(statusText);
     
     // 🎯 NOUVEAU: Afficher les vendeurs affectés au lieu du vendeur principal
@@ -1359,7 +1359,7 @@ function initGuichetChart() {
     });
 }
 
-// ✅ 7. ACTIONS
+//  7. ACTIONS
 function deleteGuichet(id) {
     if (confirm('Supprimer ce guichet définitivement ?')) {
         // VOTRE API DELETE
@@ -1369,7 +1369,7 @@ function deleteGuichet(id) {
     }
 }
 
-// ✅ 8. ÉVÉNEMENTS GLOBAUX (AJOUTEZ DANS bindEvents())
+//  8. ÉVÉNEMENTS GLOBAUX (AJOUTEZ DANS bindEvents())
 function bindGuichetEvents() {
     $(document).on('click', '[data-guichet-id]', function(e) {
         e.preventDefault();
@@ -1398,7 +1398,7 @@ async function loadGuichetsForMagasin(magasinId) {
         if (!response.ok) throw new Error('Erreur API');
         let guichets = await response.json();
         
-        // ✅ NORMALISER tous les guichets (convertir underscore → camelCase)
+        //  NORMALISER tous les guichets (convertir underscore → camelCase)
         guichets = guichets.map(g => ({
             ...g,
             nomGuichet: g.nomGuichet || g.nom_guichet || g.nom || 'Guichet',
@@ -1434,7 +1434,7 @@ async function createGuichet(magasinId, data) {
         });
         if (!response.ok) throw new Error('Erreur création');
         const result = await response.json();
-        showToast('✅ Guichet créé', 'success');
+        showToast(' Guichet créé', 'success');
         return result.guichet;
     } catch (error) {
         console.error('Erreur:', error);
@@ -1457,7 +1457,7 @@ async function updateGuichet(guichetId, data) {
         });
         if (!response.ok) throw new Error('Erreur modification');
         const result = await response.json();
-        showToast('✅ Guichet modifié', 'success');
+        showToast(' Guichet modifié', 'success');
         return result.guichet;
     } catch (error) {
         console.error('Erreur:', error);
@@ -1477,7 +1477,7 @@ async function deleteGuichet(guichetId) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('Erreur suppression');
-        showToast('✅ Guichet supprimé', 'success');
+        showToast(' Guichet supprimé', 'success');
         return true;
     } catch (error) {
         console.error('Erreur:', error);
@@ -1500,7 +1500,7 @@ async function affectVendeurToGuichet(guichetId, vendeurId) {
         });
         if (!response.ok) throw new Error('Erreur affectation');
         const result = await response.json();
-        showToast('✅ Vendeur affecté', 'success');
+        showToast(' Vendeur affecté', 'success');
         return result.affectation;
     } catch (error) {
         console.error('Erreur:', error);
@@ -1547,7 +1547,7 @@ function autoRefresh() {
     if (document.visibilityState === 'visible') loadDashboardData();
 }
 
-function toastSuccess(msg) { showToast('✅ ' + msg, 'success', 3000); }
+function toastSuccess(msg) { showToast(' ' + msg, 'success', 3000); }
 
 // ==================== EDIT MAGASIN FUNCTIONS ====================
 
@@ -1557,7 +1557,7 @@ async function loadManagers() {
         const token = getTokenLocal();
         if (!token) throw new Error('Non authentifié');
         
-        // ✅ Essayer d'abord /members (utilisé dans le modal create)
+        //  Essayer d'abord /members (utilisé dans le modal create)
         try {
             const response = await fetch(`${API_BASE}/api/protected/members`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -1576,7 +1576,7 @@ async function loadManagers() {
             console.log('⚠️ /members endpoint échoué, trying /utilisateurs...');
         }
         
-        // ✅ Sinon essayer /utilisateurs
+        //  Sinon essayer /utilisateurs
         const response = await fetch(`${API_BASE}/api/protected/utilisateurs`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1662,7 +1662,7 @@ async function openEditModal(magasinId) {
     
     const managers = await loadManagers();
     
-    console.log('✅ Gestionnaires chargés:', managers.length, managers);
+    console.log(' Gestionnaires chargés:', managers.length, managers);
     
     // Remplir le select
     $select.html('<option value="">Sélectionner un gestionnaire...</option>');
@@ -1672,7 +1672,7 @@ async function openEditModal(magasinId) {
         showToast('⚠️ Aucun gestionnaire trouvé', 'warning', 3000);
     } else {
         managers.forEach(m => {
-            // ✅ Gérer le cas où managerId est un objet ou une string
+            //  Gérer le cas où managerId est un objet ou une string
             const currentManagerId = magasin.managerId?._id || magasin.managerId;
             const isSelected = currentManagerId && (currentManagerId === m._id || currentManagerId.toString() === m._id.toString());
             const selected = isSelected ? 'selected' : '';
@@ -1705,7 +1705,7 @@ async function submitUpdateMagasin() {
         return;
     }
     
-    // ✅ Extraction robuste de l'entrepriseId
+    //  Extraction robuste de l'entrepriseId
     let entrepriseId = null;
     if (magasin.businessId) {
         // Si businessId est un objet avec _id
@@ -1722,7 +1722,7 @@ async function submitUpdateMagasin() {
         entrepriseId = magasin.entrepriseId;
     }
     
-    // ✅ Validation stricte
+    //  Validation stricte
     if (!entrepriseId || entrepriseId === 'undefined' || entrepriseId === 'null' || entrepriseId === '') {
         console.error('❌ ERREUR CRITIQUE: Impossible d\'extraire entrepriseId:', {
             businessId: magasin.businessId,
@@ -1747,12 +1747,12 @@ async function submitUpdateMagasin() {
     formData.append('telephone', $('#editMagasinTelephone').val());
     formData.append('description', $('#editMagasinDescription').val());
     
-    // ✅ Append entrepriseId (déjà validé ci-dessus)
+    //  Append entrepriseId (déjà validé ci-dessus)
     console.log('🔍 Avant append - entrepriseId:', entrepriseId, 'String:', String(entrepriseId));
     formData.append('entrepriseId', String(entrepriseId));
-    // ✅ ALSO append as businessId for compatibility
+    //  ALSO append as businessId for compatibility
     formData.append('businessId', String(entrepriseId));
-    console.log('✅ entrepriseId et businessId ajoutés à FormData:', String(entrepriseId));
+    console.log(' entrepriseId et businessId ajoutés à FormData:', String(entrepriseId));
     
     if (managerId) {
         formData.append('managerId', managerId);
@@ -1770,7 +1770,7 @@ async function submitUpdateMagasin() {
         const token = getTokenLocal();
         if (!token) throw new Error('Non authentifié');
         
-        // ✅ LOG FormData avant envoi
+        //  LOG FormData avant envoi
         console.log('📤 FormData à envoyer:');
         const formDataEntries = [];
         for (let [key, value] of formData.entries()) {
@@ -1811,7 +1811,7 @@ async function submitUpdateMagasin() {
             }
         }
         
-        // ✅ Recharger COMPLÈTEMENT le magasin depuis l'API avec tous les détails populés
+        //  Recharger COMPLÈTEMENT le magasin depuis l'API avec tous les détails populés
         setTimeout(async () => {
             try {
                 const freshRes = await fetch(`${API_BASE}/api/protected/magasins/${magasinId}`, { 
@@ -1838,7 +1838,7 @@ async function submitUpdateMagasin() {
     }
 }
 
-// ✅ ACTIONS RAPIDES MODAL GUICHET
+//  ACTIONS RAPIDES MODAL GUICHET
 $(document).on('click', '#btnExportGuichet', function() {
     const nomGuichet = $('#guichetNom').text();
     const caJour = $('#guichetCaJour').text();
@@ -1851,7 +1851,7 @@ $(document).on('click', '#btnExportGuichet', function() {
     a.href = url;
     a.download = `${nomGuichet}-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
-    showToast('✅ Données exportées', 'success');
+    showToast(' Données exportées', 'success');
 });
 
 $(document).on('click', '#btnImprimerGuichet', function() {
@@ -1873,7 +1873,7 @@ $(document).on('click', '#btnCloturerCaissier', function() {
     }
 });
 
-// ✅ Fonction pour ouvrir modal édition depuis liste de guichets
+//  Fonction pour ouvrir modal édition depuis liste de guichets
 function openGuichetEditModal(guichetId) {
     console.log('🖊️ Ouverture modal d\'édition pour:', guichetId);
     if (typeof window.editGuichetModal === 'function') {
@@ -1884,7 +1884,7 @@ function openGuichetEditModal(guichetId) {
     }
 }
 
-// ✅ BOUTON MODIFIER GUICHET - Dans le modal de détails
+//  BOUTON MODIFIER GUICHET - Dans le modal de détails
 $(document).on('click', '#editGuichetModal', function() {
     if (CURRENT_GUICHET_ID) {
         console.log('🖊️ Ouverture modal d\'édition pour:', CURRENT_GUICHET_ID);
@@ -1908,7 +1908,7 @@ function populatePhotoGrid() {
     if (Object.keys(MAGASINS_CACHE).length > 0) {
         const magasins = Object.values(MAGASINS_CACHE);
         renderMagasinAvatars(magasins);
-        console.log('✅ Photo grid populated with', magasins.length, 'avatars');
+        console.log(' Photo grid populated with', magasins.length, 'avatars');
     } else {
         console.log('⚠️  No magasins in cache for photo grid');
     }

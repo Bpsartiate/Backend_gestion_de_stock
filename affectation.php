@@ -370,6 +370,80 @@
         </div>
     </div>
 
+    <!-- Modal Reprendre Affectation -->
+    <div class="modal fade" id="modalReprendreAffectation" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-play-circle me-2"></i>Lever la suspension</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-3">Êtes-vous sûr de vouloir lever la suspension de cette affectation ?</p>
+                    <div class="alert alert-success">
+                        <small><i class="fas fa-info-circle me-2"></i>Le vendeur pourra à nouveau accéder à ce guichet après confirmation.</small>
+                    </div>
+                    <label class="form-label fw-semibold">Raison (optionnel)</label>
+                    <textarea id="reprendreRaison" class="form-control" rows="3" placeholder="Raison de la reprise..."></textarea>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success" id="btnConfirmReprendre">
+                        <i class="fas fa-check me-2"></i>Confirmer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Historique Affectation -->
+    <div class="modal fade" id="modalHistoriqueAffectation" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-info text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-history me-2"></i>Historique des Modifications</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="historiqueAffectationContent">
+                        <!-- Historique généré par JS -->
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmation (générique) -->
+    <div class="modal fade" id="modalConfirmation" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0" id="confirmHeaderContainer">
+                    <h5 class="modal-title fw-bold" id="confirmTitle">Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <p id="confirmMessage" class="mb-0"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmAction">
+                        <i class="fas fa-trash me-2"></i>Confirmer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ===============================================-->
     <!--    JavaScripts-->
     <!-- ===============================================-->

@@ -371,50 +371,50 @@
               <div class="row g-0">
                 <div class="col-6 col-md-4 border-200 border-bottom border-end pb-4">
                   <h6 class="pb-1 text-700">Orders </h6>
-                  <p class="font-sans-serif lh-1 mb-1 fs-2">15,450 </p>
+                  <p id="kpiOrders" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-primary"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                    <h6 class="fs--1 text-500 mb-0">— </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-primary"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 border-200 border-md-200 border-bottom border-md-end pb-4 ps-3">
                   <h6 class="pb-1 text-700">Items sold </h6>
-                  <p class="font-sans-serif lh-1 mb-1 fs-2">1,054 </p>
+                  <p id="kpiItemsSold" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-warning"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                    <h6 class="fs--1 text-500 mb-0">— </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-warning"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 border-200 border-bottom border-end border-md-end-0 pb-4 pt-4 pt-md-0 ps-md-3">
                   <h6 class="pb-1 text-700">Refunds </h6>
-                  <p class="font-sans-serif lh-1 mb-1 fs-2">$145.65 </p>
+                  <p id="kpiRefunds" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                    <h6 class="fs--1 text-500 mb-0">— </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 border-200 border-md-200 border-bottom border-md-bottom-0 border-md-end pt-4 pb-md-0 ps-3 ps-md-0">
                   <h6 class="pb-1 text-700">Gross sale </h6>
-                  <p class="font-sans-serif lh-1 mb-1 fs-2">$100.26 </p>
+                  <p id="kpiGrossSale" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">$109.65 </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-danger"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                    <h6 class="fs--1 text-500 mb-0">— </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-danger"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 border-200 border-md-bottom-0 border-end pt-4 pb-md-0 ps-md-3">
                   <h6 class="pb-1 text-700">Shipping </h6>
-                  <p class="font-sans-serif lh-1 mb-1 fs-2">$365.53 </p>
+                  <p id="kpiShipping" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                    <h6 class="fs--1 text-500 mb-0">— </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 pb-0 pt-4 ps-3">
                   <h6 class="pb-1 text-700">Processing </h6>
-                  <p class="font-sans-serif lh-1 mb-1 fs-2">861 </p>
+                  <p id="kpiProcessing" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">13,675 </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-info"><span class="me-1 fas fa-caret-up"></span>21.8%</h6>
+                    <h6 class="fs--1 text-500 mb-0">— </h6>
+                    <h6 class="fs--2 ps-3 mb-0 text-info"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
               </div>
@@ -432,7 +432,7 @@
                     <div class="col-auto">
                       <h1 class="fs-0 text-900">Revenue Global</h1>
                       <div class="d-flex">
-                        <h4 id="grossRevenueValue" class="text-primary mb-0">$165.50</h4>
+                        <h4 id="grossRevenueValue" class="text-primary mb-0">—</h4>
                         <div class="ms-3"><span class="badge rounded-pill badge-soft-primary"><span class="fas fa-caret-up"></span> 5%</span></div>
                       </div>
                     </div>
@@ -455,27 +455,8 @@
                   </div>
                 </div>
                 <div class="card-body pt-0 pb-3 h-100">
-                  <div class="mx-ncard">
-                    <table class="table table-borderless font-sans-serif fw-medium fs--1">
-                      <tr>
-                        <td class="pb-2 pt-0">Point of sale</td>
-                        <td class="pb-2 pt-0 text-end" style="width: 20%">$791.64</td>
-                        <td class="pb-2 pt-0 text-end text-700" style="max-width: 20%"><span class="me-1 fas fa-long-arrow-alt-down text-danger"></span>13%</td>
-                      </tr>
-                      <tr>
-                        <td class="pb-2 pt-0">Online Store</td>
-                        <td class="pb-2 pt-0 text-end" style="width: 20%">$113.86</td>
-                        <td class="pb-2 pt-0 text-end text-700" style="max-width: 20%"><span class="me-1 fas fa-long-arrow-alt-up text-success"></span>178%</td>
-                      </tr>
-                      <tr>
-                        <td class="pb-2 pt-0">Online Store</td>
-                        <td class="pb-2 pt-0 text-end" style="width: 20%">$0.00</td>
-                        <td class="pb-2 pt-0 text-end text-700" style="max-width: 20%"><span class="me-1 false text-success"></span>-</td>
-                      </tr>
-                    </table>
-                    <!-- Find the JS file for the following calendar at: src/js/charts/echarts/gross-revenue.js-->
-                    <!-- If you are not using gulp based workflow, you can find the transpiled code at: public/assets/js/theme.js-->
-                    <div class="echart-gross-revenue-chart px-3 h-100" data-echart-responsive="true" data-options='{"target":"gross-revenue-footer","monthSelect":"select-gross-revenue-month","optionOne":"currentMonth","optionTwo":"prevMonth"}'></div>
+                  <div class="mx-ncard d-flex align-items-center justify-content-center" style="min-height: 250px;">
+                    <p class="text-muted text-center">Sélectionnez une entreprise pour voir le graphique</p>
                   </div>
                 </div>
                 <div class="card-footer border-top py-2 d-flex flex-between-center">
@@ -520,54 +501,8 @@
                         </tr>
                       </thead>
                       <tbody class="list">
-                        <tr class="fw-semi-bold">
-                          <td class="align-middle pe-5 py-3 course"><a href="app/e-learning/course/course-details.html">Course#123232</a></td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#FA613145</td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 date">01/10/21</td>
-                          <td class="align-middle white-space-nowrap py-3 text-end amount">$39.99</td>
-                          <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-warning">Pending</td>
-                        </tr>
-                        <tr class="fw-semi-bold">
-                          <td class="align-middle pe-5 py-3 course"><a href="app/e-learning/course/course-details.html">Course#147832</a></td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#LC014357</td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 date">12/12/21</td>
-                          <td class="align-middle white-space-nowrap py-3 text-end amount">$19.99</td>
-                          <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-success">Successful</td>
-                        </tr>
-                        <tr class="fw-semi-bold">
-                          <td class="align-middle pe-5 py-3 course"><a href="app/e-learning/course/course-details.html">Course#965473</a></td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#FC657916</td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 date">23/08/21</td>
-                          <td class="align-middle white-space-nowrap py-3 text-end amount">$35.99</td>
-                          <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-warning">Pending</td>
-                        </tr>
-                        <tr class="fw-semi-bold">
-                          <td class="align-middle pe-5 py-3 course"><a href="app/e-learning/course/course-details.html">Course#854763</a></td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#TN654236</td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 date">09/04/21</td>
-                          <td class="align-middle white-space-nowrap py-3 text-end amount">$20.99</td>
-                          <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-danger">Denied</td>
-                        </tr>
-                        <tr class="fw-semi-bold">
-                          <td class="align-middle pe-5 py-3 course"><a href="app/e-learning/course/course-details.html">Course#232645</a></td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#ON820965</td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 date">03/09/21</td>
-                          <td class="align-middle white-space-nowrap py-3 text-end amount">$45.49</td>
-                          <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-success">Successful</td>
-                        </tr>
-                        <tr class="fw-semi-bold">
-                          <td class="align-middle pe-5 py-3 course"><a href="app/e-learning/course/course-details.html">Course#232471</a></td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#TN755429</td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 date">31/12/21</td>
-                          <td class="align-middle white-space-nowrap py-3 text-end amount">$99.95</td>
-                          <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-danger">Denied</td>
-                        </tr>
-                        <tr class="fw-semi-bold">
-                          <td class="align-middle pe-5 py-3 course"><a href="app/e-learning/course/course-details.html">Course#232558</a></td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#TN789426</td>
-                          <td class="align-middle white-space-nowrap pe-6 py-3 date">31/12/21</td>
-                          <td class="align-middle white-space-nowrap py-3 text-end amount">$55.95</td>
-                          <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-warning">Pending</td>
+                        <tr class="fw-semi-bold text-center">
+                          <td colspan="5" class="align-middle py-4 text-muted">Sélectionnez une entreprise pour voir les transactions</td>
                         </tr>
                       </tbody>
                     </table>
@@ -726,10 +661,8 @@
                     </div>
                   </div>
                 </div>
-                <div class="card-body h-100 pe-0">
-                  <!-- Find the JS file for the following chart at: src\js\charts\echarts\total-sales.js-->
-                  <!-- If you are not using gulp based workflow, you can find the transpiled code at: public\assets\js\theme.js-->
-                  <div class="echart-line-total-sales h-100" data-echart-responsive="true"></div>
+                <div class="card-body h-100 pe-0 d-flex align-items-center justify-content-center" style="min-height: 300px;">
+                  <p class="text-muted text-center">Sélectionnez une entreprise pour voir le graphique</p>
                 </div>
                 <div class="card-footer text-end">
                   <button id="saveTotalSalesBtn" class="btn btn-sm btn-primary">Enregistrer</button>
@@ -758,137 +691,8 @@
                     </tr>
                   </thead>
                   <tbody class="list">
-                    <tr class="btn-reveal-trigger fw-semi-bold">
-                      <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
-                        <div class="d-flex gap-3 align-items-center position-relative"><img class="rounded-1 border border-200" src="assets/img/elearning/courses/course3.png" width="60" alt="" /><a class="stretched-link text-truncate" href="app/e-learning/course/course-details.html">Advanced Design Tools for Modern Designs</a></div>
-                      </td>
-                      <td class="align-middle text-nowrap trainer"><a class="text-800" href="app/e-learning/trainer-profile.html">Bill finger</a></td>
-                      <td class="align-middle date">01/10/21</td>
-                      <td class="align-middle time">12h:50m:00s</td>
-                      <td class="align-middle">
-                        <div class="progress rounded-3 worked" style="height: 5px; width:5rem">
-                          <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 75%" aria-valuenow="43.72" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                      </td>
-                      <td class="align-middle text-end price">$39.99</td>
-                      <td class="align-middle text-end">
-                        <div class="dropdown font-sans-serif position-static d-inline-block btn-reveal-trigger">
-                          <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal dropdown-caret-none float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
-                          <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a>
-                            <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr class="btn-reveal-trigger fw-semi-bold">
-                      <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
-                        <div class="d-flex gap-3 align-items-center position-relative"><img class="rounded-1 border border-200" src="assets/img/elearning/courses/course8.png" width="60" alt="" /><a class="stretched-link text-truncate" href="app/e-learning/course/course-details.html">Character Design Masterclass: Your First Superhero</a></div>
-                      </td>
-                      <td class="align-middle text-nowrap trainer"><a class="text-800" href="app/e-learning/trainer-profile.html">Bruce Timm</a></td>
-                      <td class="align-middle date">01/10/21</td>
-                      <td class="align-middle time">10h:40m:50s</td>
-                      <td class="align-middle">
-                        <div class="progress rounded-3 worked" style="height: 5px; width:5rem">
-                          <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 60%" aria-valuenow="43.72" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                      </td>
-                      <td class="align-middle text-end price">$69.99</td>
-                      <td class="align-middle text-end">
-                        <div class="dropdown font-sans-serif position-static d-inline-block btn-reveal-trigger">
-                          <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal dropdown-caret-none float-end" type="button" id="dropdown1" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
-                          <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown1"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a>
-                            <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr class="btn-reveal-trigger fw-semi-bold">
-                      <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
-                        <div class="d-flex gap-3 align-items-center position-relative"><img class="rounded-1 border border-200" src="assets/img/elearning/courses/course1.png" width="60" alt="" /><a class="stretched-link text-truncate" href="app/e-learning/course/course-details.html">Script Writing Masterclass: Introdution to Industry Cliches</a></div>
-                      </td>
-                      <td class="align-middle text-nowrap trainer"><a class="text-800" href="app/e-learning/trainer-profile.html">Bill finger</a></td>
-                      <td class="align-middle date">01/10/21</td>
-                      <td class="align-middle time">12h:50m:00s</td>
-                      <td class="align-middle">
-                        <div class="progress rounded-3 worked" style="height: 5px; width:5rem">
-                          <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 55%" aria-valuenow="43.72" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                      </td>
-                      <td class="align-middle text-end price">$69.55</td>
-                      <td class="align-middle text-end">
-                        <div class="dropdown font-sans-serif position-static d-inline-block btn-reveal-trigger">
-                          <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal dropdown-caret-none float-end" type="button" id="dropdown2" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
-                          <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown2"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a>
-                            <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr class="btn-reveal-trigger fw-semi-bold">
-                      <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
-                        <div class="d-flex gap-3 align-items-center position-relative"><img class="rounded-1 border border-200" src="assets/img/elearning/courses/course5.png" width="60" alt="" /><a class="stretched-link text-truncate" href="app/e-learning/course/course-details.html">Abstract Painting: Zero to Mastery in Traditional Medium</a></div>
-                      </td>
-                      <td class="align-middle text-nowrap trainer"><a class="text-800" href="app/e-learning/trainer-profile.html">J. H. Williams III</a></td>
-                      <td class="align-middle date">03/09/21</td>
-                      <td class="align-middle time">38h:10m:09s</td>
-                      <td class="align-middle">
-                        <div class="progress rounded-3 worked" style="height: 5px; width:5rem">
-                          <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 85%" aria-valuenow="43.72" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                      </td>
-                      <td class="align-middle text-end price">$45.49</td>
-                      <td class="align-middle text-end">
-                        <div class="dropdown font-sans-serif position-static d-inline-block btn-reveal-trigger">
-                          <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal dropdown-caret-none float-end" type="button" id="dropdown3" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
-                          <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown3"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a>
-                            <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr class="btn-reveal-trigger fw-semi-bold">
-                      <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
-                        <div class="d-flex gap-3 align-items-center position-relative"><img class="rounded-1 border border-200" src="assets/img/elearning/courses/course7.png" width="60" alt="" /><a class="stretched-link text-truncate" href="app/e-learning/course/course-details.html">Character Design Masterclass: Your First Supervillain</a></div>
-                      </td>
-                      <td class="align-middle text-nowrap trainer"><a class="text-800" href="app/e-learning/trainer-profile.html">Bill finger</a></td>
-                      <td class="align-middle date">01/10/21</td>
-                      <td class="align-middle time">02h:29m:00s</td>
-                      <td class="align-middle">
-                        <div class="progress rounded-3 worked" style="height: 5px; width:5rem">
-                          <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 25%" aria-valuenow="43.72" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                      </td>
-                      <td class="align-middle text-end price">$39.99</td>
-                      <td class="align-middle text-end">
-                        <div class="dropdown font-sans-serif position-static d-inline-block btn-reveal-trigger">
-                          <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal dropdown-caret-none float-end" type="button" id="dropdown4" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
-                          <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown4"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a>
-                            <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr class="btn-reveal-trigger fw-semi-bold">
-                      <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
-                        <div class="d-flex gap-3 align-items-center position-relative"><img class="rounded-1 border border-200" src="assets/img/elearning/courses/course2.png" width="60" alt="" /><a class="stretched-link text-truncate" href="app/e-learning/course/course-details.html">Composition in Comics: Easy to Read Between Panels</a></div>
-                      </td>
-                      <td class="align-middle text-nowrap trainer"><a class="text-800" href="app/e-learning/trainer-profile.html">Bill finger</a></td>
-                      <td class="align-middle date">31/12/21</td>
-                      <td class="align-middle time">00h:50m:30s</td>
-                      <td class="align-middle">
-                        <div class="progress rounded-3 worked" style="height: 5px; width:5rem">
-                          <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 15%" aria-valuenow="43.72" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                      </td>
-                      <td class="align-middle text-end price">$99.99</td>
-                      <td class="align-middle text-end">
-                        <div class="dropdown font-sans-serif position-static d-inline-block btn-reveal-trigger">
-                          <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal dropdown-caret-none float-end" type="button" id="dropdown5" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
-                          <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown5"><a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a>
-                            <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
-                          </div>
-                        </div>
-                      </td>
+                    <tr class="btn-reveal-trigger fw-semi-bold text-center">
+                      <td colspan="7" class="align-middle py-4 text-muted">Sélectionnez une entreprise pour voir les produits</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1291,55 +1095,212 @@
 
         // Populate initial data on load
         document.addEventListener('DOMContentLoaded', async function(){
-          // Try to load from server if possible
-          const businessId = localStorage.getItem('businessId') || null;
-          const token = getToken();
-
-          if(businessId && token){
+          console.log('✅ DOMContentLoaded event fired - attaching company.selected listener');
+          
+          // Écouter les changements d'entreprise sélectionnée depuis entreprise.js
+          window.addEventListener('company.selected', async (ev) => {
+            const businessId = ev?.detail?.businessId;
+            if(!businessId) {
+              console.warn('⚠️ company.selected event received but no businessId provided');
+              return;
+            }
+            
+            console.log('💼 Entreprise sélectionnée changée:', businessId);
+            
+            // UN SEUL appel API qui retourne TOUTES les données enrichies
             try{
-              // fetch business details
-              const res = await fetch('/api/business/' + businessId, { headers: { 'Authorization': 'Bearer ' + token } });
-              if(res.ok){
-                const biz = await res.json();
-                // Fill fields if present
-                if(biz.nomEntreprise) document.getElementById('companyName').textContent = biz.nomEntreprise;
-                if(biz.description) document.getElementById('companyInfo').textContent = biz.description;
-                if(biz.budget !== undefined) document.getElementById('companyBudget').textContent = biz.budget;
-                if(biz.devise) document.getElementById('companyDevise').textContent = biz.devise;
-                if(biz.email) document.getElementById('companyEmail').textContent = biz.email;
-                if(biz.telephone) document.getElementById('companyTelephone').textContent = biz.telephone;
-                if(biz.adresse) document.getElementById('companyAddress').textContent = biz.adresse;
-                if(biz.rccm) document.getElementById('companyRCCM').textContent = biz.rccm;
-                if(biz.idNat) document.getElementById('companyIDNat').textContent = biz.idNat;
-                if(biz.siteWeb) document.getElementById('companySiteWeb').textContent = biz.siteWeb;
-                if(biz.formeJuridique) document.getElementById('companyFormeJuridique').textContent = biz.formeJuridique;
-                if(biz.capitalSocial !== undefined) document.getElementById('companyCapitalSocial').textContent = biz.capitalSocial;
-                if(biz.siegeSocial) document.getElementById('companySiegeSocial').textContent = biz.siegeSocial;
-                if(biz.createdAt) document.getElementById('companyCreatedAt').textContent = new Date(biz.createdAt).toLocaleString();
-                if(biz.updatedAt && document.getElementById('companyUpdatedAt')) document.getElementById('companyUpdatedAt').textContent = new Date(biz.updatedAt).toLocaleString();
-                if(biz.updatedAt && document.getElementById('companyUpdatedAtDetail')) document.getElementById('companyUpdatedAtDetail').textContent = new Date(biz.updatedAt).toLocaleString();
-                // logo
-                if(biz.logoUrl && document.getElementById('companyLogo')) document.getElementById('companyLogo').src = biz.logoUrl;
+              const token = getToken();
+              if(!token) throw new Error('No token');
+              
+              const res = await fetch('https://backend-gestion-de-stock.onrender.com/api/business/' + businessId, { 
+                headers: { 'Authorization': 'Bearer ' + token } 
+              });
+              
+              if(!res.ok) throw new Error('Failed to fetch business data: ' + res.status);
+              
+              const biz = await res.json();
+              console.log('📊 Données COMPLÈTES entreprise chargées:', biz);
+              
+              // ===== 1. REMPLIR LES INFORMATIONS GÉNÉRALES =====
+              if(biz.nomEntreprise) { const el = document.getElementById('companyName'); if(el) el.textContent = biz.nomEntreprise; }
+              if(biz.description) { const el = document.getElementById('companyInfo'); if(el) el.textContent = biz.description; }
+              if(biz.budget !== undefined) { const el = document.getElementById('companyBudget'); if(el) el.textContent = '$' + biz.budget.toLocaleString(); }
+              if(biz.devise) { const el = document.getElementById('companyDevise'); if(el) el.textContent = biz.devise; }
+              if(biz.email) { const el = document.getElementById('companyEmail'); if(el) el.textContent = biz.email; }
+              if(biz.telephone) { const el = document.getElementById('companyTelephone'); if(el) el.textContent = biz.telephone; }
+              if(biz.adresse) { const el = document.getElementById('companyAddress'); if(el) el.textContent = biz.adresse; }
+              if(biz.rccm) { const el = document.getElementById('companyRCCM'); if(el) el.textContent = biz.rccm; }
+              if(biz.idNat) { const el = document.getElementById('companyIDNat'); if(el) el.textContent = biz.idNat; }
+              if(biz.siteWeb) { const el = document.getElementById('companySiteWeb'); if(el) el.textContent = biz.siteWeb; }
+              if(biz.formeJuridique) { const el = document.getElementById('companyFormeJuridique'); if(el) el.textContent = biz.formeJuridique; }
+              if(biz.capitalSocial !== undefined) { const el = document.getElementById('companyCapitalSocial'); if(el) el.textContent = '$' + biz.capitalSocial.toLocaleString(); }
+              if(biz.siegeSocial) { const el = document.getElementById('companySiegeSocial'); if(el) el.textContent = biz.siegeSocial; }
+              if(biz.createdAt) { const el = document.getElementById('companyCreatedAt'); if(el) el.textContent = new Date(biz.createdAt).toLocaleString(); }
+              if(biz.updatedAt) { const el = document.getElementById('companyUpdatedAt'); if(el) el.textContent = new Date(biz.updatedAt).toLocaleString(); }
+              if(biz.updatedAt) { const el = document.getElementById('companyUpdatedAtDetail'); if(el) el.textContent = new Date(biz.updatedAt).toLocaleString(); }
+              if(biz.logoUrl) { const el = document.getElementById('companyLogo'); if(el) el.src = biz.logoUrl; }
+              
+              // ===== 2. METTRE À JOUR LES KPIs (depuis biz.kpis) =====
+              if(biz.kpis){
+                console.log('📈 KPIs chargés:', biz.kpis);
+                const { kpiOrders, kpiItemsSold, kpiRefunds, kpiGrossSale, kpiShipping, kpiProcessing } = {
+                  kpiOrders: document.getElementById('kpiOrders'),
+                  kpiItemsSold: document.getElementById('kpiItemsSold'),
+                  kpiRefunds: document.getElementById('kpiRefunds'),
+                  kpiGrossSale: document.getElementById('kpiGrossSale'),
+                  kpiShipping: document.getElementById('kpiShipping'),
+                  kpiProcessing: document.getElementById('kpiProcessing')
+                };
+                
+                if(kpiOrders) kpiOrders.textContent = (biz.kpis.totalOrders || 0).toLocaleString();
+                if(kpiItemsSold) kpiItemsSold.textContent = (biz.kpis.itemsSold || 0).toLocaleString();
+                if(kpiRefunds) kpiRefunds.textContent = '$' + (biz.kpis.refunds || 0).toFixed(2);
+                if(kpiGrossSale) kpiGrossSale.textContent = '$' + (biz.kpis.grossSale || 0).toFixed(2);
+                if(kpiShipping) kpiShipping.textContent = '$' + (biz.kpis.shipping || 0).toFixed(2);
+                if(kpiProcessing) kpiProcessing.textContent = (biz.kpis.processing || 0).toLocaleString();
               }
-            }catch(e){ console.warn('Failed to fetch business details', e && e.message); }
-
-            // fetch activities from server and merge with local
-            try{
-              const serverActivities = await fetchActivitiesFromServer(businessId);
-              if(Array.isArray(serverActivities)){
-                // store as local copy for UI
-                saveActivities(serverActivities.map(a=>({ ts: a.ts||Date.now(), title: a.title, description: a.description, icon: a.icon })));
+              
+              // ===== 3. METTRE À JOUR GROSS REVENUE =====
+              if(document.getElementById('grossRevenueValue')){
+                const revenue = biz.financialStatus?.totalRevenue || biz.chiffre_affaires || 0;
+                document.getElementById('grossRevenueValue').textContent = '$' + revenue.toLocaleString('en-US', {minimumFractionDigits: 2});
               }
-            }catch(e){ /* ignore */ }
-          }
+              
+              // ===== 4. CHARGER LES TRANSACTIONS (depuis biz.transactions) =====
+              if(biz.transactions && Array.isArray(biz.transactions)){
+                console.log('💰 Transactions chargées:', biz.transactions.length);
+                const tbody = document.querySelector('#paymentHistoryTable tbody.list');
+                if(tbody){
+                  tbody.innerHTML = '';
+                  biz.transactions.slice(0, 5).forEach((t, idx) => {
+                    const html = `
+                      <tr class="fw-semi-bold">
+                        <td class="align-middle pe-5 py-3 course"><a href="#">${t.magasin || 'Transaction'}</a></td>
+                        <td class="align-middle white-space-nowrap pe-6 py-3 invoice">#${t._id.substring(0, 8).toUpperCase()}</td>
+                        <td class="align-middle white-space-nowrap pe-6 py-3 date">${new Date(t.date).toLocaleDateString()}</td>
+                        <td class="align-middle white-space-nowrap py-3 text-end amount">$${(t.amount || 0).toFixed(2)}</td>
+                        <td class="align-middle text-end fw-medium font-sans-serif py-3 status text-success">${t.status || 'Completed'}</td>
+                      </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', html);
+                  });
+                }
+              }
+              
+              // ===== 5. CHARGER LES PRODUITS VENDUS (depuis biz.productsSold) =====
+              if(biz.productsSold && Array.isArray(biz.productsSold)){
+                console.log('📦 Produits vendus chargés:', biz.productsSold.length);
+                const tbody = document.querySelector('.table-enrolled-courses tbody.list');
+                if(tbody){
+                  tbody.innerHTML = '';
+                  biz.productsSold.slice(0, 6).forEach((prod, idx) => {
+                    const html = `
+                      <tr class="btn-reveal-trigger fw-semi-bold">
+                        <td class="align-middle white-space-nowrap title" style="max-width: 23rem;">
+                          <div class="d-flex gap-3 align-items-center position-relative">
+                            <img class="rounded-1 border border-200" src="assets/img/elearning/courses/course${(idx % 8) + 1}.png" width="60" alt="" />
+                            <a class="stretched-link text-truncate" href="#">${prod.nom}</a>
+                          </div>
+                        </td>
+                        <td class="align-middle text-nowrap trainer"><a class="text-800" href="#">${prod.vendeur}</a></td>
+                        <td class="align-middle date">${new Date(prod.date).toLocaleDateString()}</td>
+                        <td class="align-middle time">${prod.quantite}</td>
+                        <td class="align-middle">
+                          <div class="progress rounded-3 worked" style="height: 5px; width:5rem">
+                            <div class="progress-bar bg-progress-gradient rounded-pill" role="progressbar" style="width: 80%"></div>
+                          </div>
+                        </td>
+                        <td class="align-middle text-end price">$${(prod.prix || 0).toFixed(2)}</td>
+                        <td class="align-middle text-end"></td>
+                      </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', html);
+                  });
+                }
+              }
+              
+              // ===== 6. CHARGER LES ACTIVITÉS RÉCENTES (depuis biz.activities) =====
+              if(biz.activities && Array.isArray(biz.activities)){
+                console.log('🔔 Activités chargées:', biz.activities.length);
+                const allActivities = biz.activities.map(act => ({
+                  ts: new Date(act.date).getTime(),
+                  title: act.title,
+                  description: act.description,
+                  icon: act.icon || 'fas fa-info-circle'
+                }));
+                saveActivities(allActivities.slice(0, 50));
+                renderActivities();
+              }
+              
+              // ===== 7. AFFICHER LA SITUATION DE L'ENTREPRISE (businessStatus) =====
+              if(biz.businessStatus){
+                console.log('💼 Situation entreprise:', biz.businessStatus);
+                
+                // Afficher la santé budgétaire
+                if(biz.financialStatus){
+                  const budgetPercent = biz.financialStatus.budgetUsagePercent || 0;
+                  const profitMargin = biz.financialStatus.profitMargin || 0;
+                  console.log(`📊 Budget: ${budgetPercent}% utilisé | Profit Margin: ${profitMargin}%`);
+                  
+                  // On peut ajouter des badges visuels ici
+                  const healthBadge = biz.businessStatus.budgetHealth === 'healthy' ? '✅ Sain' : '⚠️ Critique';
+                  console.log(`💰 Santé financière: ${healthBadge}`);
+                }
+                
+                // Afficher la structure organisationnelle
+                if(biz.structure){
+                  console.log(`🏢 Magasins: ${biz.structure.magasins.total} | Utilisateurs: ${biz.structure.utilisateurs.total}`);
+                  console.log(`👨 Vendeurs: ${biz.structure.utilisateurs.vendeurs} | Gestionnaires: ${biz.structure.utilisateurs.gestionnaires}`);
+                }
+              }
+              
+              console.log('✅ Toutes les données chargées avec succès!');
+              localStorage.setItem('businessId', businessId);
+              
+            } catch(e){ 
+              console.error('❌ Erreur chargement données entreprise:', e.message); 
+              alert('Erreur: ' + e.message);
+            }
+                
+                // Charger les affectations, ventes, et mouvements de stock pour les activités récentes
+                try{
+                  const allActivities = [];
+                  const magasinCache = {};
+                  
+                  // Helper function to fetch magasin name by ID
+                  async function getMagasinName(magasinId){
+                    // Activities déjà formatées depuis le backend enrichi
+                    if(biz.activities && Array.isArray(biz.activities)){
+                      const formattedActivities = biz.activities.map(a => ({
+                        ts: new Date(a.date).getTime(),
+                        title: a.title || 'Activité',
+                        description: a.description || '',
+                        icon: a.icon || 'fas fa-circle',
+                        magasin: a.magasin,
+                        user: a.user,
+                        type: a.type
+                      }));
+                      
+                      saveActivities(formattedActivities.slice(0, 50));
+                      renderActivities();
+                      console.log('✅ Activités chargées depuis API enrichie:', formattedActivities.length);
+                    }
+                  }catch(e){ console.warn('Erreur chargement activités:', e); }
+                
+                // Sauvegarder l'ID de l'entreprise pour la persistance
+                localStorage.setItem('businessId', businessId);
+              }
+            }catch(e){ console.warn('Erreur chargement entreprise:', e && e.message); }
+          });
 
           renderActivities();
           renderProducts();
 
           // populate gross revenue if saved
           try{
-            const gr = JSON.parse(localStorage.getItem(getBizKey() + '_grossRevenue'));
-            if(gr && document.getElementById('grossRevenueValue')) document.getElementById('grossRevenueValue').textContent = '$' + (gr.amount||0).toFixed(2);
+            const businessId = localStorage.getItem('businessId');
+            if(businessId){
+              const gr = JSON.parse(localStorage.getItem(getBizKey() + '_grossRevenue'));
+              if(gr && document.getElementById('grossRevenueValue')) document.getElementById('grossRevenueValue').textContent = '$' + (gr.amount||0).toFixed(2);
+            }
           }catch(e){}
         });
 

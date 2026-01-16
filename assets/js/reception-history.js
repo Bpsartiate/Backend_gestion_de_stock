@@ -8,14 +8,14 @@ let RECEPTIONS_DATA = [];
 let CURRENT_PAGE = 1;
 let ITEMS_PER_PAGE = 20;
 
-// ✅ Attendre que MAGASIN_ID soit défini
+//  Attendre que MAGASIN_ID soit défini
 async function waitForMagasinIdHistory(maxWait = 10000) {
   const startTime = Date.now();
   const checkInterval = 100; // vérifier toutes les 100ms
   
   while (Date.now() - startTime < maxWait) {
     if (typeof MAGASIN_ID !== 'undefined' && MAGASIN_ID) {
-      console.log(`✅ MAGASIN_ID détecté: ${MAGASIN_ID}`);
+      console.log(` MAGASIN_ID détecté: ${MAGASIN_ID}`);
       return true;
     }
     await new Promise(resolve => setTimeout(resolve, checkInterval));
@@ -93,7 +93,7 @@ async function chargerHistoriqueReceptions(filters = {}) {
     const data = await response.json();
     RECEPTIONS_DATA = data.receptions || data || [];
 
-    console.log(`✅ ${RECEPTIONS_DATA.length} réceptions chargées`);
+    console.log(` ${RECEPTIONS_DATA.length} réceptions chargées`);
     console.log('📊 Données reçues:', data);
     console.log('📊 Stats reçues:', data.stats);
 
@@ -262,11 +262,11 @@ async function afficherDetailReception(receptionId) {
     console.log('📋 Ouverture détail réception:', receptionId);
     
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-    // ✅ IMPORTANT: Ajouter magasinId en query param pour passer le middleware
+    //  IMPORTANT: Ajouter magasinId en query param pour passer le middleware
     const url = `${API_CONFIG.BASE_URL}/api/protected/receptions/${receptionId}?magasinId=${MAGASIN_ID}`;
     
     console.log('📡 URL:', url);
-    console.log('🔑 Token:', token ? '✅ Présent' : '❌ Absent');
+    console.log('🔑 Token:', token ? ' Présent' : '❌ Absent');
     console.log('🏢 MAGASIN_ID:', MAGASIN_ID);
 
     const response = await fetch(url, {
@@ -374,7 +374,7 @@ function afficherModalDetailReception(reception) {
               
                 <div class="card border-0 bg-light mb-4" style="cursor: pointer; position: relative;" onclick="showImageLightbox('${reception.photoUrl}', '${produit.designation}')">
                   <div style="width: 100%; height: 400px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; overflow: hidden;">
-                    ${reception.photoUrl ? `<img src="${reception.photoUrl}" style="width: 100%; height: 100%; object-fit: contain;" onerror="console.log('❌ Erreur chargement image:', this.src)" onload="console.log('✅ Image chargée:', this.src)" />` : '<i class="fas fa-box" style="font-size: 80px; color: #ccc;"></i>'}
+                    ${reception.photoUrl ? `<img src="${reception.photoUrl}" style="width: 100%; height: 100%; object-fit: contain;" onerror="console.log('❌ Erreur chargement image:', this.src)" onload="console.log(' Image chargée:', this.src)" />` : '<i class="fas fa-box" style="font-size: 80px; color: #ccc;"></i>'}
                   </div>
                   <div style="position: absolute; top: 80%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
                     <i class="fas fa-search" style="font-size: 48px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);"></i>
@@ -1045,9 +1045,9 @@ async function sauvegarderReception(receptionId) {
     console.log('📊 Données réponse:', responseData);
     
     const updatedReception = responseData.reception;
-    console.log('✅ Réception mise à jour reçue:', updatedReception?._id);
+    console.log(' Réception mise à jour reçue:', updatedReception?._id);
 
-    showToast('✅ Réception modifiée avec succès', 'success');
+    showToast(' Réception modifiée avec succès', 'success');
     
     // Fermer le modal d'édition
     const modalEdit = bootstrap.Modal.getInstance(document.getElementById('modalEditReception'));
@@ -1346,12 +1346,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  console.log('✅ MAGASIN_ID prêt, ajout listeners...');
+  console.log(' MAGASIN_ID prêt, ajout listeners...');
 
   // Écouter les clics sur l'onglet historique
   const tabHistorique = document.getElementById('tabHistoriqueReceptions');
   if (tabHistorique) {
-    console.log('✅ Tab historique trouvé');
+    console.log(' Tab historique trouvé');
     tabHistorique.addEventListener('shown.bs.tab', function(e) {
       console.log('📑 Tab historique affiché');
       chargerHistoriqueReceptions();
@@ -1382,20 +1382,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (filterStatut) {
     filterStatut.addEventListener('change', filtrerReceptions);
-    console.log('✅ Event listener ajouté à filterStatut');
+    console.log(' Event listener ajouté à filterStatut');
   }
   if (filterFournisseur) {
     filterFournisseur.addEventListener('input', filtrerReceptions);
-    console.log('✅ Event listener ajouté à filterFournisseur');
+    console.log(' Event listener ajouté à filterFournisseur');
   }
   if (filterDateDebut) {
     filterDateDebut.addEventListener('change', filtrerReceptions);
-    console.log('✅ Event listener ajouté à filterDateDebut');
+    console.log(' Event listener ajouté à filterDateDebut');
   }
   if (filterDateFin) {
     filterDateFin.addEventListener('change', filtrerReceptions);
-    console.log('✅ Event listener ajouté à filterDateFin');
+    console.log(' Event listener ajouté à filterDateFin');
   }
 });
 
-console.log('✅ Module historique des réceptions chargé');
+console.log(' Module historique des réceptions chargé');

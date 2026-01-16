@@ -82,17 +82,156 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/business/:id - Récupérer une business par ID (admin)
+// GET /api/business/:id - Récupérer une business par ID avec tous les data (admin)
 router.get('/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès admin requis' });
 
   try {
     const business = await Business.findById(req.params.id).populate('ownerId', 'nom prenom email');
     if (!business) return res.status(404).json({ message: 'Entreprise non trouvée' });
-    return res.json(business);
+
+    // Charger les données enrichies
+    const businessId = req.params.id;
+
+    // 1. Charger les KPIs depuis affectations
+    const affectations = await Affectation.find({ entrepriseId: businessId });
+    const totalOrders = affectations.length;
+    const itemsSold = affectations.reduce((sum, a) => sum + (a.quantite || 0), 0);
+    
+    // 2. Charger les ventes/transactions
+    const ventes = await Vente.find({ entrepriseId: businessId }).populate('vendeurId', 'nom prenom').populate('magasinId', 'nom').limit(10);
+    const transactions = ventes.map(v => ({
+      _id: v._id,
+      productName: v.productName || v.product?.nom || 'Produit',
+      amount: v.amount || v.montant || v.prix || 0,
+      date: v.createdAt || v.date,
+      vendeur: v.vendeurId?.prenom || v.vendeurId?.nom || 'N/A',
+      magasin: v.magasinId?.nom || 'N/A',
+      status: v.status || 'completed'
+    }));
+
+    const totalSalesAmount = ventes.reduce((sum, v) => sum + (v.amount || v.montant || v.prix || 0), 0);
+
+    // 3. Charger les produits vendus
+    const productsSoldData = await Affectation.find({ entrepriseId: businessId })
+      .populate('vendeurId', 'nom prenom')
+      .populate('magasinId', 'nom')
+      .limit(20);
+    
+    const productsSold = productsSoldData.map(a => ({
+      nom: a.productName || a.product?.nom || 'Produit',
+      quantite: a.quantite || 0,
+      prix: a.prix || a.montant || 0,
+      date: a.createdAt || a.date,
+      vendeur: a.vendeurId?.prenom || a.vendeurId?.nom || 'N/A',
+      magasin: a.magasinId?.nom || 'N/A'
+    }));
+
+    // 4. Charger les activités (affectations + ventes + mouvements)
+    const activities = await Activity.find({ businessId: businessId })
+      .populate('userId', 'nom prenom')
+      .populate('magasinId', 'nom')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    const activitiesFormatted = activities.map(act => ({
+      type: act.type || 'activity',
+      title: act.title || 'Activité',
+      description: act.description || '',
+      magasin: act.magasinId?.nom || 'N/A',
+      user: act.userId?.prenom || act.userId?.nom || 'N/A',
+      date: act.createdAt || act.date,
+      icon: act.icon || 'fas fa-info-circle'
+    }));
+
+    // 5. Charger les MAGASINS et GUICHETS pour voir la structure
+    const magasins = await Magasin.find({ entrepriseId: businessId });
+    const totalMagasins = magasins.length;
+    const magasinDetails = await Promise.all(
+      magasins.map(async (mag) => {
+        const guichets = await Guichet.find({ magasinId: mag._id });
+        return {
+          _id: mag._id,
+          nom: mag.nom,
+          adresse: mag.adresse,
+          totalGuichets: guichets.length,
+          status: mag.status || 1
+        };
+      })
+    );
+
+    // 6. Charger les UTILISATEURS (vendeurs, gestionnaires)
+    const Utilisateur = require('../models/utilisateur');
+    const utilisateurs = await Utilisateur.find({ entrepriseId: businessId });
+    const totalVendeurs = utilisateurs.filter(u => u.role === 'vendeur').length;
+    const totalGestionnaires = utilisateurs.filter(u => u.role === 'gestionnaire').length;
+
+    // 7. Calculer les statistiques financières et de santé
+    const budgetRemaining = business.budget - business.totalSpendings;
+    const budgetUsagePercent = business.budget > 0 ? Math.round((business.totalSpendings / business.budget) * 100) : 0;
+    const profitMargin = totalSalesAmount > 0 ? Math.round(((totalSalesAmount - business.totalSpendings) / totalSalesAmount) * 100) : 0;
+
+    // 8. Calculer les statistiques de performance
+    const kpis = {
+      totalOrders: totalOrders,
+      itemsSold: itemsSold,
+      refunds: business.refunds || 0,
+      grossSale: business.chiffre_affaires || totalSalesAmount || 0,
+      shipping: business.shipping || 0,
+      processing: affectations.filter(a => a.status === 'pending').length
+    };
+
+    // 9. Status de l'entreprise (état général)
+    const businessStatus = {
+      isActive: business.status === 1,
+      budgetHealth: budgetRemaining >= 0 ? 'healthy' : 'critical',
+      budgetRemaining: budgetRemaining,
+      budgetUsagePercent: budgetUsagePercent,
+      profitMargin: profitMargin,
+      lastActivityDate: activities.length > 0 ? activities[0].createdAt : null,
+      operationDaysCount: Math.floor((Date.now() - new Date(business.createdAt)) / (1000 * 60 * 60 * 24))
+    };
+
+    // Retourner toutes les données enrichies
+    const enrichedBusiness = {
+      ...business.toObject(),
+      kpis: kpis,
+      transactions: transactions,
+      productsSold: productsSold,
+      activities: activitiesFormatted,
+      structure: {
+        magasins: {
+          total: totalMagasins,
+          details: magasinDetails
+        },
+        utilisateurs: {
+          total: utilisateurs.length,
+          vendeurs: totalVendeurs,
+          gestionnaires: totalGestionnaires
+        }
+      },
+      financialStatus: {
+        totalRevenue: totalSalesAmount,
+        totalExpenses: business.totalSpendings,
+        budgetAllocated: business.budget,
+        budgetRemaining: budgetRemaining,
+        budgetUsagePercent: budgetUsagePercent,
+        profitMargin: profitMargin
+      },
+      businessStatus: businessStatus,
+      summary: {
+        totalRevenue: totalSalesAmount,
+        totalAffectations: totalOrders,
+        totalProducts: productsSoldData.length,
+        totalMagasins: totalMagasins,
+        totalUtilisateurs: utilisateurs.length
+      }
+    };
+
+    return res.json(enrichedBusiness);
   } catch(err) {
     console.error('business.get.error', err);
-    return res.status(500).json({ message: 'Erreur serveur' });
+    return res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 });
 

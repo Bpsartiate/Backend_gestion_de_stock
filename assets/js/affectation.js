@@ -21,13 +21,49 @@ class AffectationManager {
         this.loadAllData();
     }
 
+    // Gestion du loading des boutons
+    setButtonLoading(selector, isLoading = true, originalText = null) {
+        const $btn = $(selector);
+        console.log('🔄 setButtonLoading - Selector:', selector, 'isLoading:', isLoading, 'Button exists:', $btn.length > 0);
+        
+        if (!isLoading) {
+            // Restaurer l'état normal
+            $btn.prop('disabled', false);
+            if (originalText) {
+                $btn.html(originalText);
+                console.log('✅ Button restauré avec:', originalText);
+            }
+        } else {
+            // État de chargement
+            if (!$btn.data('original-text') && originalText) {
+                $btn.data('original-text', originalText);
+            }
+            $btn.prop('disabled', true);
+            $btn.html('<i class="fas fa-spinner fa-spin me-2"></i>Veuillez patienter...');
+            console.log('⏳ Loading lancé sur:', selector);
+        }
+    }
+
+    restoreButtonLoading(selector) {
+        const $btn = $(selector);
+        const originalText = $btn.data('original-text');
+        if (originalText) {
+            this.setButtonLoading(selector, false, originalText);
+        }
+    }
+
     initializeListJs() {
         if (typeof List !== 'undefined' && document.getElementById('affectationsTable')) {
             try {
-                // Détruire l'ancienne instance si elle existe
-                if (this.listInstance) {
-                    this.listInstance.destroy();
+                // Détruire l'ancienne instance si elle existe et a une méthode destroy
+                if (this.listInstance && typeof this.listInstance.destroy === 'function') {
+                    try {
+                        this.listInstance.destroy();
+                    } catch(e) {
+                        console.warn('Avertissement destruction list:', e);
+                    }
                 }
+                this.listInstance = null;
                 
                 // Configuration personnalisée pour éviter les problèmes avec le tri
                 this.listInstance = new List('affectationsTable', {
@@ -36,12 +72,13 @@ class AffectationManager {
                     pagination: true,
                     listClass: 'list'
                 });
-                console.log('✅ List.js initialisé avec succès');
+                console.log('OK List.js initialise avec succes');
             } catch(e) {
-                console.error('❌ Erreur initialisation list.js:', e);
+                console.error('Erreur initialisation list.js:', e);
+                this.listInstance = null;
             }
         } else {
-            console.warn('⚠️ List.js ou le tableau non trouvé');
+            console.warn('List.js ou le tableau non trouve');
         }
     }
 
@@ -67,6 +104,7 @@ class AffectationManager {
         // Modal actions
         $('#btnSaveAffectation').on('click', () => this.saveAffectation());
         $('#btnConfirmTerminer').on('click', () => this.confirmTerminerAffectation());
+        $('#btnConfirmReprendre').on('click', () => this.confirmReprendreAffectation());
 
         // Validation en temps réel quand vendeur/guichet change
         $('#affectVendeur').on('change', () => this.validateFormChanges());
@@ -113,7 +151,7 @@ class AffectationManager {
                 if (affectRes.ok) {
                     const affectData = await affectRes.json();
                     this.allAffectations = affectData.affectations || affectData || [];
-                    console.log('✅ Affectations chargées:', this.allAffectations.length);
+                    console.log(' Affectations chargées:', this.allAffectations.length);
                 }
             } catch (e) {
                 console.error('Erreur affectations:', e);
@@ -160,7 +198,7 @@ class AffectationManager {
                 
                 this.allVendeurs = mergedUsers; // Tous les utilisateurs + managers des affectations
                 this.vendeursFiltres = mergedUsers.filter(v => v.role === 'vendeur' || v.role === 'manager') || [];
-                console.log('✅ Tous les utilisateurs chargés:', this.allVendeurs.length, '(incluant managers des affectations)');
+                console.log(' Tous les utilisateurs chargés:', this.allVendeurs.length, '(incluant managers des affectations)');
                 console.log('🔍 IDs disponibles:', this.allVendeurs.map(v => ({ id: v._id, role: v.role, nom: (v.prenom || '') + ' ' + (v.nom || '') })).slice(0, 5));
             } catch (e) {
                 console.error('Erreur vendeurs:', e);
@@ -174,7 +212,7 @@ class AffectationManager {
                 if (magRes.ok) {
                     const magData = await magRes.json();
                     this.allMagasins = Array.isArray(magData) ? magData : magData.magasins || [];
-                    console.log('✅ Magasins chargés:', this.allMagasins.length);
+                    console.log(' Magasins chargés:', this.allMagasins.length);
                     if (this.allMagasins.length > 0) {
                         console.log('🔍 PREMIER MAGASIN - TOUS LES CHAMPS:', this.allMagasins[0]);
                         console.log('📋 Clés magasin disponibles:', Object.keys(this.allMagasins[0]));
@@ -197,7 +235,7 @@ class AffectationManager {
                         this.allGuichets = [...this.allGuichets, ...guichets];
                     }
                 }
-                console.log('✅ Guichets chargés:', this.allGuichets.length);
+                console.log(' Guichets chargés:', this.allGuichets.length);
                 if (this.allGuichets.length > 0) {
                     console.log('🔍 PREMIER GUICHET - TOUS LES CHAMPS:', this.allGuichets[0]);
                     console.log('📋 Clés guichet disponibles:', Object.keys(this.allGuichets[0]));
@@ -231,7 +269,7 @@ class AffectationManager {
                     if (this.allEntreprises.length === 0) {
                         console.warn('⚠️ Aucune entreprise trouvée. Vérifiez la structure des données:', entData);
                     } else {
-                        console.log('✅ Entreprises chargées:', this.allEntreprises.length);
+                        console.log(' Entreprises chargées:', this.allEntreprises.length);
                         console.log('📋 Première entreprise complète:', this.allEntreprises[0]);
                         console.log('🔑 Clés disponibles dans l\'entreprise:', Object.keys(this.allEntreprises[0]));
                         console.log('📌 Valeur du champ "nom":', this.allEntreprises[0].nom);
@@ -347,6 +385,28 @@ class AffectationManager {
         });
     }
 
+    // Récupérer les vendeurs sans affectation active
+    getVendeursSansAffectation() {
+        // Récupérer les IDs des vendeurs avec affectation active
+        const vendeurIdsAffectes = new Set(
+            this.allAffectations
+                .filter(a => a.status === 1 || a.status === true) // Seulement les actifs
+                .map(a => {
+                    let vendeurId = a.vendeurId || a.managerId;
+                    if (typeof vendeurId === 'object' && vendeurId !== null) {
+                        vendeurId = vendeurId._id;
+                    }
+                    return vendeurId;
+                })
+                .filter(id => id)
+        );
+        
+        console.log('🔍 Vendeurs affectés:', vendeurIdsAffectes.size, Array.from(vendeurIdsAffectes));
+        
+        // Filtrer les vendeurs disponibles
+        return this.allVendeurs.filter(v => !vendeurIdsAffectes.has(v._id));
+    }
+
     populateFormOptions() {
         console.log('🔧 populateFormOptions() appelée');
         console.log('   - allEntreprises:', this.allEntreprises);
@@ -362,7 +422,7 @@ class AffectationManager {
                 console.log(`   [${idx}] ID: ${e._id}, Nom: ${nomEntreprise}`);
                 $('#affectEntreprise').append(`<option value="${e._id}">${nomEntreprise}</option>`);
             });
-            console.log('✅ Entreprises remplies:', this.allEntreprises.length);
+            console.log(' Entreprises remplies:', this.allEntreprises.length);
         } else {
             console.warn('⚠️ allEntreprises vide ou undefined');
         }
@@ -376,7 +436,7 @@ class AffectationManager {
                 console.log(`   [${idx}] ID: ${m._id}, Nom: ${nomMagasin}`);
                 $('#affectMagasin').append(`<option value="${m._id}">${nomMagasin}</option>`);
             });
-            console.log('✅ Magasins remplis:', this.allMagasins.length);
+            console.log(' Magasins remplis:', this.allMagasins.length);
         } else {
             console.warn('⚠️ allMagasins vide ou undefined');
         }
@@ -390,21 +450,22 @@ class AffectationManager {
                 console.log(`   [${idx}] ID: ${g._id}, Nom: ${nomGuichet}`);
                 $('#affectGuichet').append(`<option value="${g._id}">${nomGuichet}</option>`);
             });
-            console.log('✅ Guichets remplis:', this.allGuichets.length);
+            console.log(' Guichets remplis:', this.allGuichets.length);
         }
 
-        // Form: Vendeurs - utiliser vendeursFiltres pour les formulaires
+        // Form: Vendeurs - FILTRER pour n'afficher que ceux SANS affectation active
+        const vendeursSansAffect = this.getVendeursSansAffectation();
         $('#affectVendeur').html('<option value="">Sélectionner un vendeur</option>');
-        if (this.vendeursFiltres && this.vendeursFiltres.length > 0) {
-            console.log('📝 Remplissage Vendeurs...');
-            this.vendeursFiltres.forEach((v, idx) => {
+        if (vendeursSansAffect && vendeursSansAffect.length > 0) {
+            console.log('📝 Remplissage Vendeurs disponibles...');
+            vendeursSansAffect.forEach((v, idx) => {
                 const nomVendeur = `${v.prenom || ''} ${v.nom || ''}`.trim() || 'Sans nom';
                 console.log(`   [${idx}] ID: ${v._id}, Nom: ${nomVendeur}`);
                 $('#affectVendeur').append(`<option value="${v._id}">${nomVendeur}</option>`);
             });
-            console.log('✅ Vendeurs remplis:', this.vendeursFiltres.length);
+            console.log(' Vendeurs disponibles remplis:', vendeursSansAffect.length);
         } else {
-            console.warn('⚠️ vendeursFiltres vide ou undefined');
+            console.warn('⚠️ Aucun vendeur disponible (tous affectés)');
         }
     }
 
@@ -492,10 +553,15 @@ class AffectationManager {
             return;
         }
 
-        if (!confirm(`Êtes-vous sûr de vouloir terminer ${this.selectedAffectations.size} affectation(s) ?`)) {
-            return;
-        }
+        this.showConfirmation(
+            'Terminer les affectations',
+            `<strong>${this.selectedAffectations.size} affectation(s)</strong> seront terminées.<br><small class="text-muted">Les vendeurs ne pourront plus accéder à leurs guichets.</small>`,
+            'terminate-bulk',
+            () => this.executeBulkTerminer()
+        );
+    }
 
+    async executeBulkTerminer() {
         try {
             const headers = this.getAuthHeaders();
             headers['Content-Type'] = 'application/json';
@@ -516,7 +582,7 @@ class AffectationManager {
                 }
             }
 
-            this.showAlert(`✅ ${successCount} terminée(s) - ❌ ${errorCount} échouée(s)`, 'success');
+            this.showAlert(` ${successCount} terminée(s) - ❌ ${errorCount} échouée(s)`, 'success');
             this.loadAllData();
 
         } catch (error) {
@@ -531,10 +597,15 @@ class AffectationManager {
             return;
         }
 
-        if (!confirm(`Êtes-vous sûr de vouloir supprimer ${this.selectedAffectations.size} affectation(s) ? Cette action est irréversible.`)) {
-            return;
-        }
+        this.showConfirmation(
+            'Supprimer les affectations',
+            `<strong>${this.selectedAffectations.size} affectation(s)</strong> seront définitivement supprimées.<br><span class="badge bg-danger">⚠️ Action irréversible</span>`,
+            'delete-bulk',
+            () => this.executeBulkDelete()
+        );
+    }
 
+    async executeBulkDelete() {
         try {
             const headers = this.getAuthHeaders();
             let successCount = 0;
@@ -553,7 +624,7 @@ class AffectationManager {
                 }
             }
 
-            this.showAlert(`✅ ${successCount} supprimée(s) - ❌ ${errorCount} échouée(s)`, 'success');
+            this.showAlert(` ${successCount} supprimée(s) - ❌ ${errorCount} échouée(s)`, 'success');
             this.loadAllData();
 
         } catch (error) {
@@ -570,12 +641,12 @@ class AffectationManager {
 
         const selectedData = this.allAffectations.filter(a => this.selectedAffectations.has(a._id));
         this.exportToCSV(selectedData, `affectations_export_${new Date().getTime()}.csv`);
-        this.showAlert(`✅ ${selectedData.length} affectation(s) exportée(s) en CSV`, 'success');
+        this.showAlert(` ${selectedData.length} affectation(s) exportée(s) en CSV`, 'success');
     }
 
     exportToCSV(data, filename) {
-        // Préparer les en-têtes
-        const headers = ['Vendeur', 'Guichet', 'Magasin', 'Entreprise', 'Date Affectation', 'Statut'];
+        // Préparer les en-têtes complètes
+        const headers = ['ID', 'Vendeur', 'Téléphone', 'Email', 'Guichet', 'Magasin', 'Entreprise', 'Date Affectation', 'Date Fin', 'Durée (jours)', 'Statut', 'Observations'];
         
         // Préparer les lignes
         const rows = data.map(a => {
@@ -589,13 +660,23 @@ class AffectationManager {
             const entreprise = this.allEntreprises.find(e => e._id === (typeof a.entrepriseId === 'string' ? a.entrepriseId : a.entrepriseId?._id));
 
             const vendeurName = vendeur ? `${vendeur.prenom} ${vendeur.nom}` : 'N/A';
+            const vendeurPhone = vendeur?.telephone || 'N/A';
+            const vendeurEmail = vendeur?.email || 'N/A';
             const guichetName = guichet?.nom_guichet || guichet?.nom || 'N/A';
             const magasinName = magasin?.nom_magasin || magasin?.nom || 'N/A';
-            const entrepriseName = entreprise?.nom || 'N/A';
-            const dateStr = new Date(a.dateAffectation).toLocaleDateString('fr-FR');
+            const entrepriseName = entreprise?.nomEntreprise || entreprise?.nom || 'N/A';
+            const dateStart = new Date(a.dateAffectation).toLocaleDateString('fr-FR');
+            const dateEnd = a.dateFinAffectation ? new Date(a.dateFinAffectation).toLocaleDateString('fr-FR') : 'En cours';
+            
+            // Calculer la durée
+            const startDate = new Date(a.dateAffectation);
+            const endDate = a.dateFinAffectation ? new Date(a.dateFinAffectation) : new Date();
+            const dureeJours = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+            
             const statut = a.status === 1 ? 'Actif' : 'Terminé';
+            const observations = a.observations || 'Aucune';
 
-            return [vendeurName, guichetName, magasinName, entrepriseName, dateStr, statut];
+            return [a._id.substring(0, 8), vendeurName, vendeurPhone, vendeurEmail, guichetName, magasinName, entrepriseName, dateStart, dateEnd, dureeJours, statut, observations];
         });
 
         // Créer le CSV
@@ -659,7 +740,7 @@ class AffectationManager {
             const vendeurName = vendeur ? `${vendeur.prenom || ''} ${vendeur.nom || ''}`.trim() || 'N/A' : 'Inconnu';
             const guichetName = guichet?.nom_guichet || 'N/A';
             const magasinName = magasin?.nom_magasin || 'N/A';
-            const entrepriseName = entreprise?.nom || 'N/A';
+            const entrepriseName = entreprise?.nomEntreprise || 'N/A';
 
             const dateAffect = new Date(a.dateAffectation);
             const dateStr = dateAffect.toLocaleDateString('fr-FR');
@@ -705,12 +786,21 @@ class AffectationManager {
                     </td>
                     <td class="text-end">
                         <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-primary btnEditAffectation" data-id="${a._id}" title="Modifier">
+                            <button type="button" class="btn btn-outline-primary btnEditAffectation" data-id="${a._id}" title="Modifier" ${a.status === 0 ? 'disabled' : ''}>
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-danger btnTerminerAffectation" data-id="${a._id}" title="Terminer" ${a.status === 0 ? 'disabled' : ''}>
-                                <i class="fas fa-stop-circle"></i>
+                            <button type="button" class="btn btn-outline-info btnHistoriqueAffectation" data-id="${a._id}" title="Historique">
+                                <i class="fas fa-history"></i>
                             </button>
+                            ${a.status === 1 ? `
+                            <button type="button" class="btn btn-outline-danger btnTerminerAffectation" data-id="${a._id}" title="Suspendre">
+                                <i class="fas fa-pause-circle"></i>
+                            </button>
+                            ` : `
+                            <button type="button" class="btn btn-outline-success btnReprendreAffectation" data-id="${a._id}" title="Lever la suspension">
+                                <i class="fas fa-play-circle"></i>
+                            </button>
+                            `}
                             <button type="button" class="btn btn-outline-secondary btnDeleteAffectation" data-id="${a._id}" title="Supprimer">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -725,15 +815,21 @@ class AffectationManager {
         tbody.empty();
         tbody.html(rowsHtml);
         
-        console.log('✅ Affichage de', this.filteredAffectations.length, 'affectations');
-        console.log('✅ Checkboxes créées:', $('.affectation-checkbox').length);
+        console.log(' Affichage de', this.filteredAffectations.length, 'affectations');
+        console.log(' Checkboxes créées:', $('.affectation-checkbox').length);
 
         // Event listeners pour les checkboxes
         $('.affectation-checkbox').on('change', (e) => this.updateBulkSelection());
 
         // Event listeners pour les boutons d'action
         $('.btnEditAffectation').on('click', (e) => this.editAffectation($(e.target).closest('button').data('id')));
+        $('.btnHistoriqueAffectation').on('click', (e) => {
+            const idClic = $(e.target).closest('button').data('id');
+            console.log('CLIC SUR HISTORIQUE - ID:', idClic);
+            this.showHistoriqueAffectation(idClic);
+        });
         $('.btnTerminerAffectation').on('click', (e) => this.openTerminerModal($(e.target).closest('button').data('id')));
+        $('.btnReprendreAffectation').on('click', (e) => this.openReprendreModal($(e.target).closest('button').data('id')));
         $('.btnDeleteAffectation').on('click', (e) => this.deleteAffectation($(e.target).closest('button').data('id')));
 
         // Update info et cacher le spinner
@@ -850,13 +946,30 @@ class AffectationManager {
     resetFormCreateAffectation() {
         $('#formCreateAffectation')[0].reset();
         $('#affectDate').val(new Date().toISOString().split('T')[0]);
+        
+        // Réinitialiser les selects avec les bons noms de champs
         $('#affectEntreprise').html('<option value="">Sélectionner une entreprise</option>');
         this.allEntreprises.forEach(e => {
-            $('#affectEntreprise').append(`<option value="${e._id}">${e.nom}</option>`);
+            $('#affectEntreprise').append(`<option value="${e._id}">${e.nomEntreprise}</option>`);
         });
+        
         $('#affectMagasin').html('<option value="">Sélectionner un magasin</option>');
+        this.allMagasins.forEach(m => {
+            $('#affectMagasin').append(`<option value="${m._id}">${m.nom_magasin}</option>`);
+        });
+        
         $('#affectGuichet').html('<option value="">Sélectionner un guichet</option>');
+        this.allGuichets.forEach(g => {
+            $('#affectGuichet').append(`<option value="${g._id}">${g.nom_guichet}</option>`);
+        });
+        
+        // Afficher SEULEMENT les vendeurs sans affectation active
+        const vendeursSansAffect = this.getVendeursSansAffectation();
         $('#affectVendeur').html('<option value="">Sélectionner un vendeur</option>');
+        vendeursSansAffect.forEach(v => {
+            $('#affectVendeur').append(`<option value="${v._id}">${v.prenom} ${v.nom}</option>`);
+        });
+        
         $('#validationMessages').empty();
         
         // Réinitialiser le bouton et le mode
@@ -918,30 +1031,58 @@ class AffectationManager {
         container.empty();
 
         if (errors.length > 0) {
-            const errorDiv = $('<div class="alert alert-danger alert-dismissible fade show" role="alert"></div>');
-            errorDiv.html(`
-                <strong><i class="fas fa-exclamation-circle me-2"></i>Erreurs détectées:</strong><br>
-                ${errors.map(e => `<div class="mt-2">${e}</div>`).join('')}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            const errorDiv = $(`
+                <div class="alert alert-danger alert-dismissible fade show border-start border-4 border-danger" role="alert">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-danger me-3 mt-1"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Erreurs détectées:</strong>
+                            <div class="mt-2">
+                                ${errors.map(e => `<div class="mb-2"><small>${e}</small></div>`).join('')}
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
             `);
             container.append(errorDiv);
         }
 
         if (warnings.length > 0) {
-            const warningDiv = $('<div class="alert alert-warning alert-dismissible fade show" role="alert"></div>');
-            warningDiv.html(`
-                <strong><i class="fas fa-exclamation-triangle me-2"></i>Avertissements:</strong><br>
-                ${warnings.map(w => `<div class="mt-2">${w}</div>`).join('')}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            const warningDiv = $(`
+                <div class="alert alert-warning alert-dismissible fade show border-start border-4 border-warning" role="alert">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-warning me-3 mt-1"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Avertissements:</strong>
+                            <div class="mt-2">
+                                ${warnings.map(w => `<div class="mb-2"><small>${w}</small></div>`).join('')}
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
             `);
             container.append(warningDiv);
         }
 
         if (errors.length === 0 && warnings.length === 0) {
-            const successDiv = $('<div class="alert alert-success alert-dismissible fade show" role="alert"></div>');
-            successDiv.html(`
-                <i class="fas fa-check-circle me-2"></i><strong>Aucun conflit détecté!</strong> L'affectation peut être créée.
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            const successDiv = $(`
+                <div class="alert alert-success alert-dismissible fade show border-start border-4 border-success" role="alert">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle text-success me-3 mt-1"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong> Aucun conflit détecté!</strong> L'affectation peut être créée.
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
             `);
             container.append(successDiv);
         }
@@ -980,8 +1121,9 @@ class AffectationManager {
 
         // Désactiver le bouton et afficher le loader
         const btnSave = $('#btnSaveAffectation');
-        const originalHtml = btnSave.html();
-        btnSave.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Enregistrement...');
+        const originalHtml = btnSave.data('original-text') || btnSave.html();
+        btnSave.data('original-text', originalHtml);
+        this.setButtonLoading('#btnSaveAffectation', true, originalHtml);
 
         try {
             const payload = {
@@ -1003,12 +1145,12 @@ class AffectationManager {
                 // Mode MODIFICATION
                 method = 'PUT';
                 url = `${window.API_BASE}/api/protected/affectations/${this.editingAffectationId}`;
-                successMsg = '✅ Affectation modifiée avec succès';
+                successMsg = ' Affectation modifiée avec succès';
             } else {
                 // Mode CRÉATION
                 method = 'POST';
                 url = `${window.API_BASE}/api/protected/affectations`;
-                successMsg = '✅ Affectation créée avec succès';
+                successMsg = ' Affectation créée avec succès';
             }
 
             res = await fetch(url, {
@@ -1034,8 +1176,28 @@ class AffectationManager {
             }
 
             const responseData = await res.json();
-            console.log('✅ Affectation sauvegardée:', responseData);
-            this.showAlert(successMsg, 'success');
+            console.log(' Affectation sauvegardée:', responseData);
+            
+            // Log de l'action
+            console.log('DEBUG - editingAffectationId:', this.editingAffectationId);
+            if (this.editingAffectationId) {
+                console.log('MODE MODIFICATION - ID:', this.editingAffectationId);
+                this.logAffectationChange(this.editingAffectationId, 'update', {
+                    vendeur: this.getVendeurName($('#affectVendeur').val()),
+                    guichet: this.getGuichetName($('#affectGuichet').val()),
+                    observations: $('#affectObservations').val()
+                });
+                this.showSuccessAlert('Affectation modifiée avec succès');
+            } else {
+                const newId = responseData.data._id || responseData._id;
+                console.log('MODE CREATION - ID:', newId);
+                this.logAffectationChange(newId, 'create', {
+                    vendeur: this.getVendeurName($('#affectVendeur').val()),
+                    guichet: this.getGuichetName($('#affectGuichet').val())
+                });
+                this.showSuccessAlert('Affectation créée avec succès');
+            }
+            
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalCreateAffectation'));
             if (modal) {
                 modal.hide();
@@ -1052,9 +1214,9 @@ class AffectationManager {
 
         } catch (error) {
             console.error('Erreur save affectation:', error);
-            this.showAlert(`❌ Erreur: ${error.message}`, 'danger');
+            this.showErrorAlert(error.message);
             // Restaurer le bouton en cas d'erreur
-            btnSave.prop('disabled', false).html(originalHtml);
+            this.restoreButtonLoading('#btnSaveAffectation');
         }
     }
 
@@ -1062,39 +1224,70 @@ class AffectationManager {
         const affectation = this.allAffectations.find(a => a._id === affectationId);
         if (!affectation) return;
 
+        console.log('🔧 editAffectation - Affectation trouvée:', affectation);
+
         // Stocker l'ID de l'affectation à modifier
         this.editingAffectationId = affectationId;
 
-        // Charger les données
+        // Extraire les IDs (gérer les objets peuplés)
         let entrepriseId = affectation.entrepriseId;
-        if (typeof entrepriseId === 'object') entrepriseId = entrepriseId._id;
+        if (typeof entrepriseId === 'object' && entrepriseId !== null) entrepriseId = entrepriseId._id;
         
         let magasinId = affectation.magasinId;
-        if (typeof magasinId === 'object') magasinId = magasinId._id;
+        if (typeof magasinId === 'object' && magasinId !== null) magasinId = magasinId._id;
         
-        let vendeurId = affectation.vendeurId || affectation.managerId;
-        if (typeof vendeurId === 'object') vendeurId = vendeurId._id;
+        let guichetId = affectation.guichetId;
+        if (typeof guichetId === 'object' && guichetId !== null) guichetId = guichetId._id;
+        
+        let vendeurId = affectation.vendeurId;
+        if (typeof vendeurId === 'object' && vendeurId !== null) vendeurId = vendeurId._id;
 
-        $('#affectEntreprise').val(entrepriseId);
-        this.loadMagasinsForAffectation();
-        
+        console.log('🔑 IDs extraits:', { entrepriseId, magasinId, guichetId, vendeurId });
+
+        // D'abord, populer tous les champs
+        this.populateFormOptions();
+
+        // Ensuite, attacher les event listeners
+        $('#affectEntreprise').off('change').on('change', (e) => this.onEntrepriseChange());
+        $('#affectMagasin').off('change').on('change', (e) => this.onMagasinChange());
+
+        // Maintenant remplir avec les valeurs de l'affectation
         setTimeout(() => {
-            $('#affectMagasin').val(magasinId);
-            this.loadGuichetsForAffectation();
-            this.loadVendeursForAffectation();
+            console.log('📌 Setting enterprise:', entrepriseId);
+            $('#affectEntreprise').val(entrepriseId);
+            
+            // Déclencher le changement pour filtrer les magasins
+            $('#affectEntreprise').trigger('change');
+            
+            // Attendre que les magasins soient filtrés
+            setTimeout(() => {
+                console.log('📌 Setting magasin:', magasinId);
+                $('#affectMagasin').val(magasinId);
+                
+                // Déclencher le changement pour filtrer les guichets
+                $('#affectMagasin').trigger('change');
+                
+                // Attendre que les guichets soient filtrés
+                setTimeout(() => {
+                    console.log('📌 Setting guichet:', guichetId);
+                    console.log('📌 Setting vendeur:', vendeurId);
+                    $('#affectGuichet').val(guichetId);
+                    $('#affectVendeur').val(vendeurId);
+                    
+                    // Remplir les autres champs
+                    const dateStr = affectation.dateAffectation ? affectation.dateAffectation.split('T')[0] : '';
+                    $('#affectDate').val(dateStr);
+                    $('#affectObservations').val(affectation.notes || '');
+                    
+                    console.log(' Tous les champs remplis');
+                }, 100);
+            }, 100);
         }, 100);
 
-        setTimeout(() => {
-            $('#affectGuichet').val(affectation.guichetId);
-            $('#affectVendeur').val(vendeurId);
-            $('#affectDate').val(affectation.dateAffectation.split('T')[0]);
-            $('#affectObservations').val(affectation.observations || '');
-            
-            // Changer le titre et bouton du modal
-            $('#modalCreateAffectation .modal-title').html('<i class="fas fa-edit me-2"></i>Modifier Affectation');
-            $('#btnSaveAffectation').html('<i class="fas fa-save me-2"></i>Mettre à Jour');
-            $('#validationMessages').empty();
-        }, 200);
+        // Changer le titre et bouton du modal
+        $('#modalCreateAffectation .modal-title').html('<i class="fas fa-edit me-2"></i>Modifier Affectation');
+        $('#btnSaveAffectation').html('<i class="fas fa-save me-2"></i>Mettre à Jour');
+        $('#validationMessages').empty();
 
         const modal = new bootstrap.Modal(document.getElementById('modalCreateAffectation'));
         modal.show();
@@ -1128,8 +1321,31 @@ class AffectationManager {
         this.selectedAffectationId = null;
     }
 
-    async confirmTerminerAffectation() {
+    openReprendreModal(affectationId) {
+        this.selectedAffectationId = affectationId;
+        const affectation = this.allAffectations.find(a => a._id === affectationId);
+        
+        if (affectation) {
+            const vendeur = this.allVendeurs.find(v => v._id === affectation.vendeurId);
+            const guichet = this.allGuichets.find(g => g._id === affectation.guichetId);
+            if (vendeur && guichet) {
+                const info = document.createElement('div');
+                info.className = 'alert alert-success';
+                info.innerHTML = `<small><i class="fas fa-info-circle me-2"></i>
+                    <strong>${vendeur.prenom} ${vendeur.nom}</strong> - Guichet <strong>${guichet.nom}</strong></small>`;
+                
+                // Insérer après le premier p
+                const p = document.querySelector('#modalReprendreAffectation .modal-body p');
+                if (p) p.parentNode.insertBefore(info, p.nextSibling);
+            }
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('modalReprendreAffectation'));
+        modal.show();
+    }    async confirmTerminerAffectation() {
         if (!this.selectedAffectationId) return;
+
+        this.setButtonLoading('#btnConfirmTerminer', true, '<i class="fas fa-check me-2"></i>Confirmer');
 
         try {
             const headers = this.getAuthHeaders();
@@ -1138,14 +1354,20 @@ class AffectationManager {
             const res = await fetch(`${window.API_BASE}/api/protected/affectations/${this.selectedAffectationId}`, {
                 method: 'PUT',
                 headers,
-                body: JSON.stringify({ statut: 0 })
+                body: JSON.stringify({ status: 0 })
             });
 
             if (!res.ok) {
                 throw new Error('Erreur lors de la terminaison');
             }
 
-            this.showAlert('✅ Affectation terminée avec succès', 'success');
+            // Log de la terminaison
+            const raison = $('#terminerRaison').val() || 'Aucune raison spécifiée';
+            this.logAffectationChange(this.selectedAffectationId, 'terminate', {
+                raison: raison
+            });
+
+            this.showSuccessAlert('Affectation terminée avec succès');
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalTerminerAffectation'));
             if (modal) {
                 modal.hide();
@@ -1157,17 +1379,87 @@ class AffectationManager {
                 const backdrop = document.querySelector('.modal-backdrop');
                 if (backdrop) backdrop.remove();
                 this.loadAllData();
+                
+                // Ajouter log pour debug
+                console.log('🔄 DEBUG - Chargement des données après suspension...');
             }, 500);
+            
+            // Restaurer le bouton après 2 secondes (après loadAllData)
+            setTimeout(() => {
+                this.restoreButtonLoading('#btnConfirmTerminer');
+                console.log('✅ DEBUG - Bouton Terminer restauré');
+            }, 2500);
 
         } catch (error) {
             console.error('Erreur terminer affectation:', error);
-            this.showAlert(`❌ Erreur: ${error.message}`, 'danger');
+            this.showErrorAlert(error.message);
+            this.restoreButtonLoading('#btnConfirmTerminer');
         }
     }
 
-    async deleteAffectation(affectationId) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cette affectation ?')) return;
+    async confirmReprendreAffectation() {
+        if (!this.selectedAffectationId) return;
 
+        this.setButtonLoading('#btnConfirmReprendre', true, '<i class="fas fa-check me-2"></i>Confirmer');
+
+        try {
+            const headers = this.getAuthHeaders();
+            headers['Content-Type'] = 'application/json';
+
+            const res = await fetch(`${window.API_BASE}/api/protected/affectations/${this.selectedAffectationId}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({ status: 1 })
+            });
+
+            if (!res.ok) {
+                throw new Error('Erreur lors de la reprise');
+            }
+
+            // Log de la reprise
+            const raison = $('#reprendreRaison').val() || 'Suspension levée';
+            this.logAffectationChange(this.selectedAffectationId, 'resume', {
+                raison: raison
+            });
+
+            this.showSuccessAlert('Affectation reprise avec succès');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalReprendreAffectation'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Nettoyer le backdrop s'il reste
+            setTimeout(() => {
+                document.body.classList.remove('modal-open');
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
+                this.loadAllData();
+                
+                // Ajouter log pour debug
+                console.log('🔄 DEBUG - Chargement des données après reprise...');
+            }, 500);
+            
+            // Restaurer le bouton après 2 secondes (après loadAllData)
+            setTimeout(() => {
+                this.restoreButtonLoading('#btnConfirmReprendre');
+                console.log('✅ DEBUG - Bouton Reprendre restauré');
+            }, 2500);
+
+        } catch (error) {
+            console.error('Erreur reprendre affectation:', error);
+            this.showErrorAlert(error.message);
+            this.restoreButtonLoading('#btnConfirmReprendre');
+        }
+    }    async deleteAffectation(affectationId) {
+        this.showConfirmation(
+            'Supprimer l\'affectation',
+            'Cette affectation sera définitivement supprimée.<br><span class="badge bg-danger">⚠️ Action irréversible</span>',
+            'delete',
+            () => this.executeDelete(affectationId)
+        );
+    }
+
+    async executeDelete(affectationId) {
         try {
             const headers = this.getAuthHeaders();
 
@@ -1180,12 +1472,15 @@ class AffectationManager {
                 throw new Error('Erreur lors de la suppression');
             }
 
-            this.showAlert('Affectation supprimée avec succès', 'success');
+            // Log de la suppression
+            this.logAffectationChange(affectationId, 'delete', {});
+            
+            this.showSuccessAlert('Affectation supprimée avec succès');
             this.loadAllData();
 
         } catch (error) {
             console.error('Erreur delete affectation:', error);
-            this.showAlert(`Erreur: ${error.message}`, 'danger');
+            this.showErrorAlert(error.message);
         }
     }
 
@@ -1230,7 +1525,7 @@ class AffectationManager {
         const totalAffectations = this.allAffectations.length;
         this.animateKPI('#kpiTotal', totalAffectations, 'text');
         
-        console.log(`✅ KPIs mis à jour: ${affectationsActives.length} actifs, ${affectationsTerminees.length} terminés`);
+        console.log(` KPIs mis à jour: ${affectationsActives.length} actifs, ${affectationsTerminees.length} terminés`);
 
         // Mettre à jour le cercle de progression pour les affectations actives
         const maxAffectations = this.allGuichets.length * 2; // Estimation max
@@ -1295,23 +1590,199 @@ class AffectationManager {
     }
 
     showAlert(message, type = 'info') {
-        // Créer une alerte Bootstrap
+        // Créer un conteneur pour les alertes s'il n'existe pas
+        let alertContainer = document.getElementById('alertContainer');
+        if (!alertContainer) {
+            alertContainer = document.createElement('div');
+            alertContainer.id = 'alertContainer';
+            alertContainer.style.position = 'fixed';
+            alertContainer.style.top = '20px';
+            alertContainer.style.right = '20px';
+            alertContainer.style.zIndex = '9999';
+            alertContainer.style.width = '100%';
+            alertContainer.style.maxWidth = '400px';
+            alertContainer.style.pointerEvents = 'none';
+            document.body.appendChild(alertContainer);
+        }
+
+        // Créer l'alerte avec icône et style amélioré
         const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        alertDiv.style.zIndex = '9999';
-        alertDiv.style.top = '20px';
-        alertDiv.style.right = '20px';
-        alertDiv.style.minWidth = '300px';
+        
+        // Déterminer l'icône et la couleur selon le type
+        let icon = 'info-circle';
+        let bgColor = 'bg-info';
+        let textColor = 'text-info';
+        let borderColor = 'border-info';
+        
+        switch(type) {
+            case 'success':
+                icon = 'check-circle';
+                bgColor = 'bg-success';
+                textColor = 'text-success';
+                borderColor = 'border-success';
+                break;
+            case 'danger':
+                icon = 'exclamation-circle';
+                bgColor = 'bg-danger';
+                textColor = 'text-danger';
+                borderColor = 'border-danger';
+                break;
+            case 'warning':
+                icon = 'exclamation-triangle';
+                bgColor = 'bg-warning';
+                textColor = 'text-warning';
+                borderColor = 'border-warning';
+                break;
+            case 'primary':
+                icon = 'info-circle';
+                bgColor = 'bg-primary';
+                textColor = 'text-primary';
+                borderColor = 'border-primary';
+                break;
+        }
+        
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show mb-3 border-start border-4 ${borderColor}`;
+        alertDiv.style.pointerEvents = 'auto';
+        alertDiv.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+        alertDiv.style.borderRadius = '0.375rem';
+        
         alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="d-flex align-items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-${icon} ${textColor} me-3 mt-1"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-500">${message}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
         `;
         
-        document.body.appendChild(alertDiv);
+        // Ajouter au conteneur
+        alertContainer.appendChild(alertDiv);
         
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
+        // Ajouter l'animation Bootstrap
+        alertDiv.classList.add('animate-fadeInDown');
+        
+        // Ajouter un style CSS pour l'animation
+        if (!document.getElementById('alertStyles')) {
+            const style = document.createElement('style');
+            style.id = 'alertStyles';
+            style.textContent = `
+                @keyframes fadeInDown {
+                    from {
+                        opacity: 0;
+                        transform: translate(0, -20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translate(0, 0);
+                    }
+                }
+                .animate-fadeInDown {
+                    animation: fadeInDown 0.3s ease-out;
+                }
+                #alertContainer .alert {
+                    margin-bottom: 10px;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Auto-fermer après 5 secondes (sauf pour danger)
+        const duration = type === 'danger' ? 8000 : 5000;
+        const timeout = setTimeout(() => {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 150);
+        }, duration);
+        
+        // Permettre la fermeture manuelle
+        const closeBtn = alertDiv.querySelector('.btn-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                clearTimeout(timeout);
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 150);
+            });
+        }
+    }
+
+    // Méthode pour afficher une alerte de validation avec plusieurs erreurs
+    showValidationAlert(errors) {
+        if (!errors || errors.length === 0) return;
+        
+        const message = errors.length === 1 
+            ? errors[0]
+            : `<ul class="mb-0"><li>${errors.join('</li><li>')}</li></ul>`;
+        
+        this.showAlert(message, 'warning');
+    }
+
+    // Méthode pour afficher une alerte de succès avec son
+    showSuccessAlert(message) {
+        this.showAlert(`<strong> Succès!</strong><br>${message}`, 'success');
+    }
+
+    // Méthode pour afficher une alerte d'erreur avec son
+    showErrorAlert(message) {
+        this.showAlert(`<strong>❌ Erreur!</strong><br>${message}`, 'danger');
+    }
+
+    // Méthode pour afficher une modal de confirmation
+    showConfirmation(title, message, actionType = 'delete', callback) {
+        // Stocker le callback pour utilisation ultérieure
+        this.confirmationCallback = callback;
+        
+        // Mettre à jour le header
+        const headerContainer = document.getElementById('confirmHeaderContainer');
+        let headerColor = 'bg-danger';
+        let icon = 'trash';
+        let btnText = 'Supprimer';
+        
+        if (actionType === 'terminate') {
+            headerColor = 'bg-warning text-white';
+            icon = 'stop-circle';
+            btnText = 'Terminer';
+        } else if (actionType === 'delete-bulk') {
+            headerColor = 'bg-danger text-white';
+            icon = 'trash';
+            btnText = 'Supprimer tous';
+        } else if (actionType === 'terminate-bulk') {
+            headerColor = 'bg-warning text-white';
+            icon = 'stop-circle';
+            btnText = 'Terminer tous';
+        }
+        
+        headerContainer.className = `modal-header border-0 pb-0 ${headerColor}`;
+        
+        // Mettre à jour le titre
+        document.getElementById('confirmTitle').innerHTML = `<i class="fas fa-${icon} me-2"></i>${title}`;
+        
+        // Mettre à jour le message
+        document.getElementById('confirmMessage').innerHTML = message;
+        
+        // Mettre à jour le bouton
+        const confirmBtn = document.getElementById('btnConfirmAction');
+        confirmBtn.innerHTML = `<i class="fas fa-${icon} me-2"></i>${btnText}`;
+        confirmBtn.className = `btn ${actionType === 'terminate' || actionType === 'terminate-bulk' ? 'btn-warning' : 'btn-danger'}`;
+        
+        // Supprimer les anciens listeners
+        confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+        const newConfirmBtn = document.getElementById('btnConfirmAction');
+        
+        // Ajouter le nouveau listener
+        newConfirmBtn.addEventListener('click', () => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmation'));
+            if (modal) modal.hide();
+            
+            if (callback) {
+                callback();
+            }
+        });
+        
+        // Afficher la modal
+        const modal = new bootstrap.Modal(document.getElementById('modalConfirmation'));
+        modal.show();
     }
 
     // ==================== LOADERS KPI ====================
@@ -1370,6 +1841,384 @@ class AffectationManager {
             const nomGuichet = g.nom_guichet || 'Sans nom';
             $('#affectGuichet').append(`<option value="${g._id}">${nomGuichet}</option>`);
         });
+    }
+
+    // ==================== AUDIT TRAIL (HISTORIQUE) ====================
+    getCurrentUserInfo() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return { userId: 'unknown', userName: 'Unknown User', userEmail: '' };
+
+            // Décoder le JWT (base64 decode de la partie payload)
+            const parts = token.split('.');
+            if (parts.length !== 3) return { userId: 'unknown', userName: 'Unknown User', userEmail: '' };
+
+            const decoded = JSON.parse(atob(parts[1]));
+            return {
+                userId: decoded._id || decoded.id || 'unknown',
+                userName: decoded.prenom && decoded.nom 
+                    ? `${decoded.prenom} ${decoded.nom}` 
+                    : decoded.email || 'Unknown User',
+                userEmail: decoded.email || '',
+                userRole: decoded.role || 'user'
+            };
+        } catch (error) {
+            console.warn('⚠️ Impossible de décoder le token:', error);
+            return { userId: 'unknown', userName: 'Unknown User', userEmail: '' };
+        }
+    }
+
+    logAffectationChange(affectationId, action, details = {}) {
+        console.log('LOG ACTION - affectationId:', affectationId, 'action:', action);
+        const timestamp = new Date().toISOString();
+        const userInfo = this.getCurrentUserInfo();
+        
+        const log = {
+            affectationId,
+            action, // 'create', 'update', 'delete', 'terminate'
+            timestamp,
+            details,
+            userId: userInfo.userId,
+            userName: userInfo.userName,
+            userEmail: userInfo.userEmail,
+            userRole: userInfo.userRole
+        };
+        
+        // Sauvegarder dans localStorage (persiste dans le navigateur)
+        const storageKey = `affectationLogs_${affectationId}`;
+        let logs = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        logs.push(log);
+        localStorage.setItem(storageKey, JSON.stringify(logs));
+        console.log('SAUVEGARDE LOG - Clé:', storageKey, 'Total logs:', logs.length);
+        
+        // Aussi sauvegarder un index global
+        let allLogs = JSON.parse(localStorage.getItem('affectationLogs_all') || '[]');
+        allLogs.push(log);
+        localStorage.setItem('affectationLogs_all', JSON.stringify(allLogs));
+        
+        console.log('📝 Audit log enregistré:', log);
+        return log;
+    }
+
+    showHistoriqueAffectation(affectationId) {
+        console.log('===== AFFICHAGE HISTORIQUE =====');
+        console.log('ID RECU:', affectationId);
+        
+        const affectation = this.allAffectations.find(a => a._id === affectationId);
+        if (!affectation) {
+            this.showErrorAlert('Affectation introuvable');
+            return;
+        }
+
+        // Récupérer les logs de l'affectation depuis localStorage
+        const storageKey = `affectationLogs_${affectationId}`;
+        console.log('CLÉ STORAGE:', storageKey);
+        
+        let allLogs = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        console.log('LOGS BRUTS:', allLogs);
+        console.log('NOMBRE BRUT:', allLogs.length);
+        
+        let logs = allLogs.sort((a, b) => 
+            new Date(b.timestamp) - new Date(a.timestamp)
+        );
+        console.log('LOGS APRES TRI:', logs);
+        console.log('NOMBRE APRES TRI:', logs.length);
+
+        console.log('� Storage Key:', storageKey);
+        console.log('📜 Tous les logs trouvés:', allLogs);
+        console.log('📜 Logs triés:', logs);
+        console.log('📊 Nombre de logs:', logs.length);
+        
+        if (allLogs.length === 0) {
+            console.log('⚠️ Aucun log trouvé. Clés localStorage disponibles:');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.includes('affectationLogs')) {
+                    console.log(`  - ${key}: ${JSON.parse(localStorage.getItem(key) || '[]').length} logs`);
+                }
+            }
+        }
+
+        // Générer le HTML de l'historique - Style Falcon Timeline AMÉLIORÉ
+        let historiqueHTML = `
+            <div class="card-body position-relative" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%);">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+                            <div>
+                                <p class="text-muted small px-3"><i class="fas fa-info-circle me-1"></i>Toutes les modifications effectuées sur cette affectation</p>
+                            </div>
+                            <span class="badge bg-info bg-gradient fs-2 px-3 py-2">${logs.length} action(s)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="timeline mt-3">
+        `;
+        
+        if (logs.length === 0) {
+            // Si pas de logs en session, créer un log de création
+            historiqueHTML += `
+                    <div class=" col-m timeline-item">
+                        <div class="timeline-item-marker bg-success-soft">
+                            <div class="bg-success rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; color: white;">
+                                <i class="fas fa-check-circle fa-lg"></i>
+                            </div>
+                        </div>
+                        <div class="timeline-item-content ps-4">
+                            <h6 class="mb-1 fw-bold text-success">Création</h6>
+                            <p class="text-muted small mb-2">${new Date(affectation.dateAffectation).toLocaleString('fr-FR')}</p>
+                            <div class="bg-light p-3 rounded border border-light">
+                                <small>
+                                    <div class="mb-2"><strong>Vendeur:</strong> ${this.getVendeurName(affectation.vendeurId || affectation.managerId)}</div>
+                                    <div class="mb-2"><strong>Guichet:</strong> ${this.getGuichetName(affectation.guichetId)}</div>
+                                    <div class="mb-2"><strong>Magasin:</strong> ${this.getMagasinName(affectation.magasinId)}</div>
+                                    <div><strong>Entreprise:</strong> ${this.getEntrepriseName(affectation.entrepriseId)}</div>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+            `;
+        } else {
+            logs.forEach((log, index) => {
+                let iconClass = 'fa-info-circle';
+                let bgColorClass = 'bg-info-soft';
+                let textColorClass = 'text-info';
+                let actionText = log.action;
+                let actionIcon = 'fa-info-circle';
+
+                switch (log.action) {
+                    case 'create':
+                        iconClass = 'fa-plus-circle';
+                        bgColorClass = 'bg-success-soft';
+                        textColorClass = 'text-success';
+                        actionText = 'Création';
+                        actionIcon = 'fa-check-circle';
+                        break;
+                    case 'update':
+                        iconClass = 'fa-edit';
+                        bgColorClass = 'bg-primary-soft';
+                        textColorClass = 'text-primary';
+                        actionText = 'Modification';
+                        actionIcon = 'fa-pen';
+                        break;
+                    case 'terminate':
+                        iconClass = 'fa-stop-circle';
+                        bgColorClass = 'bg-warning-soft';
+                        textColorClass = 'text-warning';
+                        actionText = 'Suspension';
+                        actionIcon = 'fa-pause-circle';
+                        break;
+                    case 'resume':
+                        iconClass = 'fa-play-circle';
+                        bgColorClass = 'bg-success-soft';
+                        textColorClass = 'text-success';
+                        actionText = 'Reprise';
+                        actionIcon = 'fa-play-circle';
+                        break;
+                    case 'delete':
+                        iconClass = 'fa-trash';
+                        bgColorClass = 'bg-danger-soft';
+                        textColorClass = 'text-danger';
+                        actionText = 'Suppression';
+                        actionIcon = 'fa-trash-alt';
+                        break;
+                }
+
+                const dateTime = new Date(log.timestamp).toLocaleString('fr-FR');
+                const detailsHTML = Object.keys(log.details).length > 0 
+                    ? `<div class="mt-3 pt-3 border-top">
+                        <small class="d-block fw-bold text-muted mb-2"><i class="fas fa-note-sticky me-1"></i>Détails de la modification:</small>
+                        <div class="details-grid">
+                            ${Object.entries(log.details).map(([key, value]) => `
+                                <div class="detail-item mb-2 p-2" style="background: #f8f9fa; border-left: 3px solid #667eea; border-radius: 4px;">
+                                    <small class="text-muted"><strong>${key}:</strong></small>
+                                    <div class="text-dark fw-500" style="font-size: 0.85rem;">${value || '<em>non spécifié</em>'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`
+                    : '';
+
+                historiqueHTML += `
+                    <div class="timeline-item${index === logs.length - 1 ? '' : ''}">
+                        <div class="timeline-item-marker ${bgColorClass}">
+                            <div class="${textColorClass} rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: currentColor; color: white; opacity: 0.9; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <i class="fas ${actionIcon} fa-sm"></i>
+                            </div>
+                        </div>
+                        <div class="timeline-item-content ps-4">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="mb-0 fw-bold ${textColorClass}" style="font-size: 1rem;">${actionText}</h6>
+                                <span class="badge ${textColorClass === 'text-success' ? 'bg-success-soft text-success' : textColorClass === 'text-primary' ? 'bg-primary-soft text-primary' : textColorClass === 'text-warning' ? 'bg-warning-soft text-warning' : 'bg-danger-soft text-danger'} px-2 py-1 small">
+                                    ${log.userName}
+                                </span>
+                            </div>
+                            <p class="text-muted small mb-3" style="font-size: 0.8rem;">
+                                <i class="fas fa-clock me-1"></i>${dateTime}
+                            </p>
+                            <div class="bg-light p-3 rounded border border-200 mb-2">
+                                <div class="row g-2">
+                                    <div class="col-lg-6">
+                                        <small>
+                                            <div class="mb-2">
+                                                <strong><i class="fas fa-user me-1 text-info"></i>Utilisateur:</strong> 
+                                                <span class="fw-semibold">${log.userName}</span>
+                                            </div>
+                                            ${log.userEmail ? `
+                                            <div class="mb-2">
+                                                <strong><i class="fas fa-envelope me-1 text-info"></i>Email:</strong> 
+                                                <span class="text-truncate" title="${log.userEmail}">${log.userEmail}</span>
+                                            </div>
+                                            ` : ''}
+                                        </small>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <small>
+                                            <div>
+                                                <strong><i class="fas fa-shield-alt me-1 text-info"></i>Rôle:</strong> 
+                                                <span class="badge bg-secondary">${log.userRole || 'user'}</span>
+                                            </div>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            ${detailsHTML}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        historiqueHTML += `
+                </div>
+            </div>
+        `;
+
+        // Ajouter du CSS pour la timeline Falcon si pas déjà présent
+        if (!document.getElementById('timeline-styles')) {
+            const style = document.createElement('style');
+            style.id = 'timeline-styles';
+            style.innerHTML = `
+                .timeline {
+                    position: relative;
+                    padding: 10px 0;
+                }
+                
+                .timeline::before {
+                    content: '';
+                    position: absolute;
+                    left: 19px;
+                    top: 50px;
+                    bottom: 0;
+                    width: 2px;
+                    background: linear-gradient(180deg, #dee2e6 0%, #e9ecef 100%);
+                }
+                
+                .timeline-item {
+                    position: relative;
+                    padding-left: 50px;
+                    margin-bottom: 24px;
+                }
+                
+                .timeline-item:last-child {
+                    margin-bottom: 0;
+                }
+                
+                .timeline-item:last-child::after {
+                    content: '';
+                    position: absolute;
+                    left: 19px;
+                    top: 50px;
+                    bottom: -24px;
+                    width: 2px;
+                    background: transparent;
+                }
+                
+                .timeline-item-marker {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    z-index: 10;
+                }
+                
+                .timeline-item-content {
+                    position: relative;
+                    background: white;
+                    padding: 16px;
+                    border-radius: 8px;
+                    border: 1px solid #e9ecef;
+                    transition: all 0.3s ease;
+                }
+                
+                .timeline-item:hover .timeline-item-content {
+                    box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+                    border-color: #dee2e6;
+                }
+                
+                .timeline-item-content h6 {
+                    font-size: 0.95rem;
+                    margin-bottom: 0.5rem;
+                    letter-spacing: 0.5px;
+                }
+                
+                .timeline-item-content .bg-light {
+                    background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%) !important;
+                    border-left: 3px solid #667eea;
+                    transition: background 0.3s ease;
+                }
+                
+                .detail-item {
+                    animation: slideIn 0.3s ease;
+                }
+                
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateX(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+                
+                
+            `;
+            document.head.appendChild(style);
+        }
+
+        $('#historiqueAffectationContent').html(historiqueHTML);
+        const modal = new bootstrap.Modal(document.getElementById('modalHistoriqueAffectation'));
+        modal.show();
+    }
+
+    // Helper functions pour obtenir les noms
+    getVendeurName(vendeurId) {
+        if (!vendeurId) return 'N/A';
+        if (typeof vendeurId === 'object') vendeurId = vendeurId._id;
+        const vendeur = this.allVendeurs.find(v => v._id === vendeurId);
+        return vendeur ? `${vendeur.prenom} ${vendeur.nom}` : 'N/A';
+    }
+
+    getGuichetName(guichetId) {
+        if (!guichetId) return 'N/A';
+        if (typeof guichetId === 'object') guichetId = guichetId._id;
+        const guichet = this.allGuichets.find(g => g._id === guichetId);
+        return guichet ? (guichet.nom_guichet || guichet.nom) : 'N/A';
+    }
+
+    getMagasinName(magasinId) {
+        if (!magasinId) return 'N/A';
+        if (typeof magasinId === 'object') magasinId = magasinId._id;
+        const magasin = this.allMagasins.find(m => m._id === magasinId);
+        return magasin ? (magasin.nom_magasin || magasin.nom) : 'N/A';
+    }
+
+    getEntrepriseName(entrepriseId) {
+        if (!entrepriseId) return 'N/A';
+        if (typeof entrepriseId === 'object') entrepriseId = entrepriseId._id;
+        const entreprise = this.allEntreprises.find(e => e._id === entrepriseId);
+        return entreprise ? (entreprise.nomEntreprise || entreprise.nom) : 'N/A';
     }
 
     // ==================== MISE À JOUR COMPTEURS HEADER ====================

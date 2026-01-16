@@ -283,8 +283,8 @@ async function selectMagasin(magasinId, magasinNom) {
   // ⚡ Mettre à jour les KPIs avec les produits déjà chargés
   await updateDashboardKPIs(produits);
 
-  showToast(`✅ Magasin "${magasinNom}" chargé!`, 'success');
-  console.log('✅ Magasin sélectionné et données rechargées:', magasinNom);
+  showToast(` Magasin "${magasinNom}" chargé!`, 'success');
+  console.log(' Magasin sélectionné et données rechargées:', magasinNom);
 }
 
 // ================================
@@ -309,7 +309,7 @@ async function loadStockConfig() {
     populateTypesProduits();
     loadCategories();  // ← Charger les catégories
 
-    console.log('✅ Configuration chargée:', CURRENT_STOCK_CONFIG);
+    console.log(' Configuration chargée:', CURRENT_STOCK_CONFIG);
   } catch (err) {
     console.error('❌ Erreur config stock:', err);
     showToast('Erreur: ' + err.message, 'danger');
@@ -432,7 +432,7 @@ function selectCategorie(categorieId, categorieName) {
   // ===== AFFICHER LE MODE FIFO/LIFO DE LA CATÉGORIE =====
   updateFIFOLIFOInfo(categorieId);
   
-  console.log('✅ Catégorie sélectionnée:', categorieName);
+  console.log(' Catégorie sélectionnée:', categorieName);
 }
 
 // ===== AFFICHER LE MODE FIFO/LIFO DE LA CATÉGORIE =====
@@ -489,7 +489,7 @@ function updateFIFOLIFOInfo(categorieId) {
   html += '</small>';
 
   modeText.innerHTML = html;
-  console.log(`✅ Mode ${mode} activé pour catégorie:`, categorie.nom);
+  console.log(` Mode ${mode} activé pour catégorie:`, categorie.nom);
 }
 
 function updateSelectedCategoriesBadges() {
@@ -574,7 +574,7 @@ function attachCategorieHandlers() {
         renderCategoriesDropdown();
         searchInput.value = '';
         
-        showToast(`✅ Catégorie "${searchVal}" créée!`, 'success');
+        showToast(` Catégorie "${searchVal}" créée!`, 'success');
       } catch (err) {
         showToast('❌ Erreur: ' + err.message, 'danger');
       }
@@ -798,7 +798,7 @@ function getProduitsCached() {
   const now = Date.now();
   if (CACHE_PRODUITS && (now - CACHE_TIMESTAMP) < CACHE_DURATION) {
     console.log('📦 Cache produits utilisé');
-    return CACHE_PRODUITS;  // ✅ Retourner la data directement, pas une Promise!
+    return CACHE_PRODUITS;  //  Retourner la data directement, pas une Promise!
   }
   return null;
 }
@@ -904,7 +904,7 @@ async function addProduct() {
       // lors de la création du produit, donc on n'a pas besoin de le créer ici
     }
 
-    showToast('✅ Produit créé avec succès!', 'success');
+    showToast(' Produit créé avec succès!', 'success');
     form.reset();
     
     // Fermer le modal
@@ -984,7 +984,7 @@ function afficherTableProduits(produits) {
     return;
   }
 
-  console.log('✅ tbody trouvé:', tbody);
+  console.log(' tbody trouvé:', tbody);
 
   // 🔧 SÉCURITÉ: Si ce n'est pas un array, extraire le array
   if (!Array.isArray(produits)) {
@@ -1080,7 +1080,7 @@ function afficherTableProduits(produits) {
   console.log(`📤 Ajout du fragment (${produits.length} rows) au tbody`);
   tbody.appendChild(fragment);
 
-  console.log('✅ Table mise à jour avec fragment');
+  console.log(' Table mise à jour avec fragment');
   console.log('📋 Contenu tbody après update:', tbody.innerHTML);
   console.log('📋 Nombre de tr dans tbody:', tbody.querySelectorAll('tr').length);
 }
@@ -1300,7 +1300,7 @@ async function deleteProduct(produitId) {
       }
 
       const result = await response.json();
-      console.log('✅ Produit supprimé:', result);
+      console.log(' Produit supprimé:', result);
 
       // Mettre à jour le message à "Actualisation de la table..."
       // Chercher le conteneur des étapes (dernier div enfant du loadingBox)
@@ -1354,7 +1354,7 @@ async function deleteProduct(produitId) {
       loadingOverlay.remove();
 
       // Afficher le toast de succès
-      showToast(`✅ ${designation} supprimé avec succès`, 'success');
+      showToast(` ${designation} supprimé avec succès`, 'success');
 
       // Fermer les modales si ouvertes
       const modals = document.querySelectorAll('[role="dialog"]');
@@ -1533,7 +1533,7 @@ async function updateDashboardKPIs(produits = null) {
       }
     }
 
-    console.log('✅ KPIs mis à jour:', { totalStock, rayonsPleins });
+    console.log(' KPIs mis à jour:', { totalStock, rayonsPleins });
 
   } catch (err) {
     console.error('❌ Erreur KPIs:', err);
@@ -1583,7 +1583,7 @@ async function startInventaire() {
       { magasinId: MAGASIN_ID }
     );
 
-    showToast(`✅ Inventaire créé: ${rapport.numeroInventaire}`, 'success');
+    showToast(` Inventaire créé: ${rapport.numeroInventaire}`, 'success');
     return rapport;
 
   } catch (err) {
@@ -1603,7 +1603,7 @@ async function addLigneInventaire(rapportId, produitId, quantitePhysique) {
       { rapportId }
     );
 
-    console.log('✅ Ligne inventaire ajoutée:', ligne);
+    console.log(' Ligne inventaire ajoutée:', ligne);
     return ligne;
 
   } catch (err) {
@@ -1619,7 +1619,7 @@ async function validerInventaire(rapportId) {
       { rapportId }
     );
 
-    showToast('✅ Inventaire validé!', 'success');
+    showToast(' Inventaire validé!', 'success');
     console.log('📊 Résumé:', rapport.resume);
     return rapport;
 
@@ -1882,7 +1882,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (spinner) spinner.style.display = 'none';
         if (table) table.style.display = 'block';
         
-        showToast('✅ Filtres réinitialisés', 'success');
+        showToast(' Filtres réinitialisés', 'success');
         console.log('🔄 Filtres réinitialisés et tableau rechargé');
       } catch (err) {
         console.error('❌ Erreur réinitialisation:', err);
@@ -1898,7 +1898,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateDashboardKPIs(cached);
   }, 60000);
 
-  console.log('✅ Stock Management System initialized');
+  console.log(' Stock Management System initialized');
 });
 
 // ================================

@@ -47,7 +47,7 @@ async function openProductEditModal(produitId) {
       if (enrichedResponse.ok) {
         const enrichedData = await enrichedResponse.json();
         produit = enrichedData.data || enrichedData;
-        console.log('✅ Endpoint enrichi utilisé pour édition');
+        console.log(' Endpoint enrichi utilisé pour édition');
       }
     } catch (enrichedErr) {
       console.warn('⚠️ Endpoint enrichi non disponible, fallback...');
@@ -66,7 +66,7 @@ async function openProductEditModal(produitId) {
       return;
     }
 
-    console.log('✅ Produit enrichi chargé pour édition:', produit);
+    console.log(' Produit enrichi chargé pour édition:', produit);
     console.log('📊 Réceptions:', produit.receptions);
     console.log('📋 Mouvements:', produit.mouvements);
     console.log('🗓️ Audit logs:', produit.audit?.logs?.length || 0);
@@ -94,7 +94,7 @@ async function openProductEditModal(produitId) {
       formContainer.style.pointerEvents = 'auto';
     }
 
-    console.log('✅ Modal édition chargée');
+    console.log(' Modal édition chargée');
   } catch (err) {
     console.error('❌ Erreur ouverture édition:', err);
     showToast('❌ Erreur: ' + err.message, 'danger');
@@ -470,9 +470,9 @@ async function sauvegarderEditProduit() {
     }
 
     const result = await response.json();
-    console.log('✅ Produit sauvegardé:', result);
+    console.log(' Produit sauvegardé:', result);
 
-    showToast('✅ Produit modifié avec succès', 'success');
+    showToast(' Produit modifié avec succès', 'success');
 
     // Fermer la modal
     bootstrap.Modal.getInstance(document.getElementById('modalEditProduit')).hide();

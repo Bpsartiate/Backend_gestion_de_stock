@@ -87,7 +87,7 @@ class VenteManager {
             await this.loadMagasins();
             this.attachEventListeners();
             await this.loadVentesHistorique();
-            console.log('✅ Module Vente initialisé');
+            console.log(' Module Vente initialisé');
         } catch (error) {
             console.error('❌ Erreur initialisation Vente:', error);
             this.showKPIsLoading(false);
@@ -166,7 +166,7 @@ class VenteManager {
             const decoded = atob(paddedPayload);
             const result = JSON.parse(decoded);
             
-            console.log('✅ JWT décodé avec succès');
+            console.log(' JWT décodé avec succès');
             return result;
         } catch (e) {
             console.error('❌ Erreur décodage JWT:', e);
@@ -865,7 +865,7 @@ class VenteManager {
         
         this.panier.push(panierItem);
 
-        console.log(`✅ Article ajouté au panier:`, {
+        console.log(` Article ajouté au panier:`, {
             produit: produit.designation,
             quantite: quantite,
             magasin: nomMagasin,
@@ -1063,8 +1063,8 @@ class VenteManager {
 
                 const result = await response.json();
                 
-                console.log(`✅ Vente créée: ${result.vente._id}`);
-                alert(`✅ Vente enregistrée!\nMontant: ${totalMontant.toFixed(2)} USD${tauxFC > 0 ? ' (' + (totalMontant * tauxFC).toFixed(0) + ' FC)' : ''}`);
+                console.log(` Vente créée: ${result.vente._id}`);
+                alert(` Vente enregistrée!\nMontant: ${totalMontant.toFixed(2)} USD${tauxFC > 0 ? ' (' + (totalMontant * tauxFC).toFixed(0) + ' FC)' : ''}`);
                 
                 // Réinitialiser
                 this.panier = [];
@@ -1073,7 +1073,7 @@ class VenteManager {
                 document.getElementById('venteTauxFC').value = '';
                 await this.loadVentesHistorique();
                 
-                console.log('✅ Vente finalisée');
+                console.log(' Vente finalisée');
                 restoreButton();
             } catch (error) {
                 console.error('❌ Erreur vente:', error);
@@ -1126,7 +1126,7 @@ class VenteManager {
             if (response.ok) {
                 const data = await response.json();
                 const ventes = data.ventes || data || [];
-                console.log(`✅ ${ventes.length} vente(s) chargée(s)`);
+                console.log(` ${ventes.length} vente(s) chargée(s)`);
                 this.displayVentesHistorique(ventes);
             } else {
                 console.error('❌ Erreur réponse:', response.status);
@@ -1437,7 +1437,7 @@ class VenteManager {
         
         try {
             await this.loadVentesHistorique();
-            console.log('✅ Actualisation terminée');
+            console.log(' Actualisation terminée');
         } catch (error) {
             console.error('❌ Erreur actualisation:', error);
         } finally {
@@ -1583,7 +1583,7 @@ class VenteManager {
                 }
             }
 
-            console.log('✅ Vente chargée:', vente);
+            console.log(' Vente chargée:', vente);
 
             // Petit délai pour effet de chargement
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -2226,7 +2226,7 @@ class VenteManager {
 
                     <!-- Footer -->
                     <div class="footer">
-                        <div class="thank-you">✅ Merci de votre achat!</div>
+                        <div class="thank-you"> Merci de votre achat!</div>
                         <p class="timestamp">Reçu généré le ${new Date().toLocaleString('fr-FR')}</p>
                         <p style="margin-top: 10px; font-size: 0.8em;">Veuillez conserver ce reçu</p>
                     </div>

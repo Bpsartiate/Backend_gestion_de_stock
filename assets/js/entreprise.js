@@ -242,8 +242,13 @@
         a.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
         a.dataset.id = b._id;
                 a.innerHTML = `<div class="d-flex align-items-center"><div class="me-2" style="width:44px;height:44px;flex-shrink:0;"><img src="${escapeHtml(b.logoUrl || b.photoUrl || 'assets/img/elearning/avatar/student.png')}" alt="logo" class="rounded-circle" style="width:100%;height:100%;object-fit:cover;" /></div><div><strong>${escapeHtml(b.nomEntreprise || b.nom || 'Sans nom')}</strong><div class="text-500 small">${escapeHtml(b.adresse || '')}</div></div></div><span class="badge bg-primary">${formatCurrency(b.budget||0,b.devise||'USD')}</span>`;
-        a.addEventListener('click', (ev)=>{ ev.preventDefault(); selectCompany(b._id); });
+        a.addEventListener('click', (ev)=>{ 
+          console.log('🖱️ Company click handler triggered for:', b._id, b.nomEntreprise);
+          ev.preventDefault(); 
+          selectCompany(b._id); 
+        });
         list.appendChild(a);
+        console.log('✅ Click handler attached to company:', b._id, b.nomEntreprise);
       }
       if(countEl) countEl.textContent = String(businesses.length);
       showAlert('Entreprises chargées avec succès', 'success', 2000);
@@ -627,10 +632,21 @@
 
   async function selectCompany(id){
     if(!id) return;
+    console.log('🔧 selectCompany() called with id:', id);
     try{
+      console.log('📥 Fetching business data for:', id);
       const business = await fetchJson(apiBase + '/api/business/' + id);
+      console.log('✅ Business data fetched:', business);
       // store current business for edit population
       window.CURRENT_BUSINESS = business;
+      
+      // Émettre un événement personnalisé pour que d'autres pages (comme entreprise.php) puissent réagir
+      try{
+        console.log('🔔 About to dispatch company.selected event for ID:', id);
+        window.dispatchEvent(new CustomEvent('company.selected', { detail: { businessId: id, business: business } }));
+        console.log('🔔 Événement company.selected émis pour ID:', id);
+      }catch(e){ console.warn('Erreur dispatch company.selected:', e); }
+      
       renderCompany(business);
       // Hide the companies list pane for a cleaner single-item view
       // This improves design by focusing on the selected company's details

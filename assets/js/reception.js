@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   
-  console.log(`✅ MAGASIN_ID disponible: ${MAGASIN_ID}`);
+  console.log(` MAGASIN_ID disponible: ${MAGASIN_ID}`);
   
   // Charger les produits et rayons
   await chargerProduitsReception();
@@ -124,7 +124,7 @@ async function chargerProduitsReception() {
         select.appendChild(option);
       });
 
-      console.log('✅ Produits chargés pour réception:', PRODUITS_RECEPTION.length);
+      console.log(' Produits chargés pour réception:', PRODUITS_RECEPTION.length);
     }
   } catch (err) {
     console.error('❌ Erreur chargement produits réception:', err);
@@ -161,7 +161,7 @@ async function chargerRayonsReception() {
         select.appendChild(option);
       });
 
-      console.log('✅ Rayons chargés pour réception:', RAYONS_RECEPTION.length);
+      console.log(' Rayons chargés pour réception:', RAYONS_RECEPTION.length);
     } else {
       console.warn('⚠️ Aucun rayon trouvé');
     }
@@ -284,7 +284,7 @@ function onProduitSelected() {
     uniteLabel.textContent = produit.typeUnite || 'unités';
   }
 
-  // ✅ PRÉREMPLIR LE RAYON AUTOMATIQUEMENT depuis le produit
+  //  PRÉREMPLIR LE RAYON AUTOMATIQUEMENT depuis le produit
   if (produit.rayonId) {
     const rayonSelect = document.getElementById('rayonReception');
     if (rayonSelect) {
@@ -292,7 +292,7 @@ function onProduitSelected() {
       const rayonId = typeof produit.rayonId === 'object' ? produit.rayonId._id : produit.rayonId;
       const rayonIdStr = rayonId.toString();
       rayonSelect.value = rayonIdStr;
-      console.log(`✅ Rayon prérempli: ${rayonIdStr}`);
+      console.log(` Rayon prérempli: ${rayonIdStr}`);
       
       // Vérifier si la sélection a fonctionné
       if (rayonSelect.value !== rayonIdStr) {
@@ -385,7 +385,7 @@ function generateChampsDynamiques(produit) {
   }
 
   container.innerHTML = html;
-  console.log('✅ Champs dynamiques générés');
+  console.log(' Champs dynamiques générés');
 }
 
 // ================================
@@ -422,7 +422,7 @@ function updateRecapitulatif() {
 }
 
 // ================================
-// ✅ VÉRIFIER SI RAYON EST PLEIN
+//  VÉRIFIER SI RAYON EST PLEIN
 // ================================
 
 function verificarRayonPleinReception(rayonId) {
@@ -523,11 +523,11 @@ function verifierCapaciteTypeReception() {
   // Si typeProduitId est un objet (bien populé par le backend)
   if (typeof produit.typeProduitId === 'object' && produit.typeProduitId?.capaciteMax) {
     capaciteTypeMax = produit.typeProduitId.capaciteMax;
-    console.log(`✅ CapaciteMax obtenue du TypeProduit: ${capaciteTypeMax} ${produit.typeProduitId.unitePrincipale}`);
+    console.log(` CapaciteMax obtenue du TypeProduit: ${capaciteTypeMax} ${produit.typeProduitId.unitePrincipale}`);
   } else if (produit.capaciteMax) {
     // Fallback si c'est directement dans le produit
     capaciteTypeMax = produit.capaciteMax;
-    console.log(`✅ CapaciteMax obtenue du produit directement: ${capaciteTypeMax}`);
+    console.log(` CapaciteMax obtenue du produit directement: ${capaciteTypeMax}`);
   } else {
     console.warn(`⚠️ AUCUNE capaciteMax trouvée pour ${produit.designation}`);
   }
@@ -581,7 +581,7 @@ function verifierCapaciteTypeReception() {
       (${quantiteApreAjout}/${capaciteTypeMax} ${produit.uniteMesure || 'unités'})
     `;
     
-    // ✅ RÉACTIVER LE BOUTON
+    //  RÉACTIVER LE BOUTON
     const btnSubmit = document.getElementById('btnSubmitReception');
     if (btnSubmit) {
       btnSubmit.disabled = false;
@@ -592,7 +592,7 @@ function verifierCapaciteTypeReception() {
   } else {
     alerte.style.display = 'none';
     
-    // ✅ RÉACTIVER LE BOUTON
+    //  RÉACTIVER LE BOUTON
     const btnSubmit = document.getElementById('btnSubmitReception');
     if (btnSubmit) {
       btnSubmit.disabled = false;
@@ -751,7 +751,7 @@ async function submitReception(e) {
       if (uploadResponse.ok) {
         const uploadData = await uploadResponse.json();
         photoUrl = uploadData.photoUrl;
-        console.log('✅ Photo uploadée:', photoUrl);
+        console.log(' Photo uploadée:', photoUrl);
       } else {
         console.warn('⚠️ Erreur upload photo - continuant sans photo');
       }
@@ -802,9 +802,9 @@ async function submitReception(e) {
     }
 
     const result = await response.json();
-    console.log('✅ Réception enregistrée:', result);
+    console.log(' Réception enregistrée:', result);
 
-    showToast('✅ Réception enregistrée avec succès!', 'success');
+    showToast(' Réception enregistrée avec succès!', 'success');
 
     // Fermer le modal
     const modal = bootstrap.Modal.getInstance(document.getElementById('modalReception'));
@@ -856,4 +856,4 @@ window.addEventListener('magasinChanged', () => {
   chargerRayonsReception();
 });
 
-console.log('✅ Module réception chargé');
+console.log(' Module réception chargé');
