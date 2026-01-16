@@ -325,7 +325,6 @@ router.get('/:id', authenticateToken, async (req, res) => {
       // Charger les Activity logs (enregistrements d'activités explicites)
       let activities = await Activity.find({ businessId: businessId })
         .populate('userId', 'prenom nom')
-        .populate('magasinId', 'nom_magasin adresse')
         .sort({ createdAt: -1 })
         .lean();
       
@@ -333,7 +332,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         type: 'activity',
         title: act.title || 'Activité',
         description: act.description || '',
-        magasin: act.magasinId?.nom_magasin || 'N/A',
+        magasin: 'N/A',
         user: act.userId ? (act.userId.prenom + ' ' + act.userId.nom) : 'N/A',
         date: act.createdAt || act.date,
         icon: act.icon || 'fas fa-info-circle'
@@ -463,7 +462,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       budgetRemaining: budgetRemaining,
       budgetUsagePercent: budgetUsagePercent,
       profitMargin: profitMargin,
-      lastActivityDate: activities.length > 0 ? activities[0].createdAt : null,
+      lastActivityDate: activitiesFormatted.length > 0 ? activitiesFormatted[0].date : null,
       operationDaysCount: Math.floor((Date.now() - new Date(business.createdAt)) / (1000 * 60 * 60 * 24))
     };
 
