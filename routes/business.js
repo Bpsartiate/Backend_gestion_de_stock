@@ -289,9 +289,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
             statutVente: vente.statut || 'VALIDÉE',
             modePaiement: vente.modePaiement || 'CASH',
             
-            // Timestamps produit
-            createdAt: produit?.createdAt,
-            updatedAt: produit?.updatedAt
+            // ============ ALIAS FRONTEND ============
+            quantite: article.quantite || 0,           // Pour la colonne "Quantité" du tableau
+            etatStock: produit?.etat || 'Neuf',        // Pour la colonne "État du Stock"
+            montant: article.montantUSD || 0,          // Pour la colonne "Prix"
+            nom: produit?.designation || article.nomProduit || 'Produit'  // Alias pour designation
           });
         }
       }
