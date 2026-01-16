@@ -130,6 +130,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
       return sum;
     }, 0);
     
+    // Charger les affectations pour le KPI processing
+    const affectations = await Affectation.find({ entrepriseId: businessId }).lean();
+    
     // Extraire les transactions à partir des articles des ventes
     const transactions = [];
     for (const vente of ventes) {
