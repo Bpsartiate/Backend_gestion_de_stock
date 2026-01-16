@@ -100,17 +100,27 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const itemsSold = affectations.reduce((sum, a) => sum + (a.quantite || 0), 0);
     
     // 2. Charger les ventes/transactions
+    // Note: Vente n'a pas de lien direct avec Business, elle lie via magasinId
+    // Donc on cherche d'abord les magasins, puis les ventes de ces magasins
     let ventes = [];
     try {
-      ventes = await Vente.find({ entrepriseId: businessId })
-        .populate('vendeurId', 'nom prenom email')
-        .populate('magasinId', 'nom adresse')
-        .setOptions({ strictPopulate: false })
-        .sort({ dateVente: -1 })
-        .limit(50);
+      // Chercher les magasins de cette business
+      const magasinsIds = await Magasin.find({ businessId: businessId }).select('_id').lean();
+      const magasinIdList = magasinsIds.map(m => m._id);
+      
+      // Chercher les ventes de ces magasins
+      if(magasinIdList.length > 0){
+        ventes = await Vente.find({ magasinId: { $in: magasinIdList } })
+          .populate('utilisateurId', 'nom prenom email')
+          .populate('magasinId', 'nom adresse')
+          .populate('guichetId', 'nom')
+          .setOptions({ strictPopulate: false })
+          .sort({ dateVente: -1 })
+          .limit(50);
+      }
     } catch(popErr) {
-      console.warn('Vente populate error, fetching without populate:', popErr.message);
-      ventes = await Vente.find({ entrepriseId: businessId }).sort({ dateVente: -1 }).limit(50);
+      console.warn('Vente fetch error:', popErr.message);
+      ventes = [];
     }
     
     // Extraire les transactions à partir des articles des ventes
@@ -181,47 +191,77 @@ router.get('/:id', authenticateToken, async (req, res) => {
       ventesWithProducts = [];
     }
 
-    // Extraire tous les produits des ventes avec infos complètes
+    // Extraire tous les produits des ventes avec infos COMPLÈTES
     const productsSold = [];
     for (const vente of ventesWithProducts) {
       if (vente.articles && Array.isArray(vente.articles)) {
         for (const article of vente.articles) {
-          // Charger les infos COMPLÈTES du produit
+          // Charger les infos COMPLÈTES du produit (comme le GET /produit/:id)
           let produit = null;
           if (article.produitId) {
             try {
               produit = await Produit.findById(article.produitId)
-                .populate('typeProduitId', 'nomType unitePrincipale')
-                .populate('rayonId', 'nomRayon codeRayon typeRayon')
+                .populate('typeProduitId')
+                .populate('rayonId')
+                .populate('magasinId', 'nom adresse')
                 .lean();
             } catch(e) {
               console.warn('Produit fetch error:', e.message);
             }
           }
           
+          // Retourner l'objet produit complet + infos de vente
           productsSold.push({
-            _id: article.produitId || 'unknown',
-            // Infos produit
+            // ============ DONNÉES PRODUIT COMPLÈTES ============
+            _id: produit?._id || article.produitId || 'unknown',
+            magasinId: produit?.magasinId || {},
             reference: produit?.reference || 'N/A',
-            designation: article.nomProduit || produit?.designation || 'Produit',
-            typeProduit: produit?.typeProduitId?.nomType || 'N/A',
-            rayon: produit?.rayonId?.nomRayon || 'N/A',
+            designation: produit?.designation || article.nomProduit || 'Produit',
+            typeProduitId: produit?.typeProduitId || {},
+            rayonId: produit?.rayonId || {},
             
-            // Vente/Article
-            quantite: article.quantite || 0,
-            prixUnitaire: article.prixUnitaire || produit?.prixUnitaire || 0,
-            montantVente: article.montantUSD || (article.quantite * article.prixUnitaire) || 0,
-            
-            // Stock/État
-            etatStock: produit?.etat || 'Neuf',
             quantiteActuelle: produit?.quantiteActuelle || 0,
-            seuilAlerte: produit?.seuilAlerte || 0,
+            quantiteEntree: produit?.quantiteEntree || 0,
+            quantiteSortie: produit?.quantiteSortie || 0,
+            prixUnitaire: produit?.prixUnitaire || article.prixUnitaire || 0,
             prixTotal: produit?.prixTotal || 0,
             
-            // Media
+            etat: produit?.etat || 'Neuf',
+            dateEntree: produit?.dateEntree,
+            dateReception: produit?.dateReception,
+            seuilAlerte: produit?.seuilAlerte || 0,
+            notes: produit?.notes || '',
+            
+            statut: produit?.statut || 'stocke',
+            priorite: produit?.priorite || 'normale',
+            status: produit?.status || 1,
+            estSupprime: produit?.estSupprime || false,
+            
             photoUrl: produit?.photoUrl || 'https://via.placeholder.com/60?text=No+Image',
             
-            // Audit
+            // Alertes si disponibles
+            alertes: produit?.alertes || {
+              stockBas: false,
+              rupture: false,
+              peremption: false,
+              niveau: 'normal'
+            },
+            
+            stockStats: produit?.stockStats || {
+              quantiteActuelle: produit?.quantiteActuelle || 0,
+              seuilAlerte: produit?.seuilAlerte || 0,
+              valeurEnStock: (produit?.quantiteActuelle || 0) * (produit?.prixUnitaire || 0),
+              tauxOccupation: 0
+            },
+            
+            // ============ DONNÉES VENTE ============
+            ventArticle: {
+              quantite: article.quantite || 0,
+              prixUnitaire: article.prixUnitaire || 0,
+              montantUSD: article.montantUSD || 0
+            },
+            
+            // ============ AUDIT VENTE ============
             date: vente.dateVente || vente.createdAt,
             vendeur: vente.utilisateurId?.prenom || vente.utilisateurId?.nom || 'N/A',
             vendeurComplet: {
@@ -237,10 +277,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
               adresse: vente.magasinId?.adresse
             },
             
-            // Statut
-            statut: produit?.statut || 'stocke',
-            priorite: produit?.priorite || 'normale',
-            status: produit?.status || 1
+            // Statut vente
+            statutVente: vente.statut || 'VALIDÉE',
+            modePaiement: vente.modePaiement || 'CASH',
+            
+            // Timestamps produit
+            createdAt: produit?.createdAt,
+            updatedAt: produit?.updatedAt
           });
         }
       }
@@ -269,7 +312,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }));
 
     // 5. Charger les MAGASINS et GUICHETS pour voir la structure
-    const magasins = await Magasin.find({ entrepriseId: businessId });
+    const magasins = await Magasin.find({ businessId: businessId });
     const totalMagasins = magasins.length;
     const magasinDetails = await Promise.all(
       magasins.map(async (mag) => {
@@ -286,7 +329,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     // 6. Charger les UTILISATEURS (vendeurs, gestionnaires)
     const Utilisateur = require('../models/utilisateur');
-    const utilisateurs = await Utilisateur.find({ entrepriseId: businessId });
+    const utilisateurs = await Utilisateur.find({ businessId: businessId });
     const totalVendeurs = utilisateurs.filter(u => u.role === 'vendeur').length;
     const totalGestionnaires = utilisateurs.filter(u => u.role === 'gestionnaire').length;
 
