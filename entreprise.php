@@ -455,8 +455,8 @@
                   </div>
                 </div>
                 <div class="card-body pt-0 pb-3 h-100">
-                  <div class="mx-ncard d-flex align-items-center justify-content-center" style="min-height: 250px;">
-                    <p class="text-muted text-center">Sélectionnez une entreprise pour voir le graphique</p>
+                  <div style="width: 100%; height: 350px; display: flex; align-items: center; justify-content: center;">
+                    <div class="echart-basic-bar-chart-example" style="width: 100%; height: 100%;" data-echart-responsive="true"></div>
                   </div>
                 </div>
                 <div class="card-footer border-top py-2 d-flex flex-between-center">
@@ -661,8 +661,10 @@
                     </div>
                   </div>
                 </div>
-                <div class="card-body h-100 pe-0 d-flex align-items-center justify-content-center" style="min-height: 300px;">
-                  <p class="text-muted text-center">Sélectionnez une entreprise pour voir le graphique</p>
+                <div class="card-body h-100 pe-0 d-flex align-items-center justify-content-center" style="padding: 0;">
+                  <div style="width: 100%; height: 450px; display: flex; align-items: center; justify-content: center;">
+                    <div class="echart-line-share-dataset-chart-example" style="width: 100%; height: 100%;" data-echart-responsive="true"></div>
+                  </div>
                 </div>
                 <div class="card-footer text-end">
                   <button id="saveTotalSalesBtn" class="btn btn-sm btn-primary">Enregistrer</button>
@@ -1107,20 +1109,6 @@
             
             console.log('💼 Entreprise sélectionnée changée:', businessId);
             
-            // AFFICHER LOADING
-            const mainContent = document.querySelector('.main-content, main, [role="main"]') || document.body;
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = 'dataLoadingSpinner';
-            loadingDiv.innerHTML = `
-              <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 9999;">
-                <div style="text-align: center;">
-                  <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
-                  <p class="mt-3 text-muted">Chargement des données...</p>
-                </div>
-              </div>
-            `;
-            document.body.appendChild(loadingDiv);
-            
             // UN SEUL appel API qui retourne TOUTES les données enrichies
             try{
               const token = getToken();
@@ -1204,6 +1192,180 @@
                 if(kpiProcessingPercent) kpiProcessingPercent.innerHTML = '<span class="me-1 fas fa-caret-up"></span>0%';
               }
               
+              // ===== 2.5 GRAPHIQUE REVENUE GLOBAL (ECharts Bar Chart) =====
+              if(biz.kpis){
+                const grossRevenueEl = document.getElementById('grossRevenueValue');
+                if(grossRevenueEl) {
+                  grossRevenueEl.textContent = '$' + (biz.kpis.grossSale || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                }
+                
+                // Créer le graphique ECharts bar pour Revenue
+                const chartDiv = document.querySelector('.echart-basic-bar-chart-example');
+                if(chartDiv && typeof echarts !== 'undefined') {
+                  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  
+                  // Calculer les ventes par mois à partir des transactions
+                  const salesByMonth = new Array(12).fill(0);
+                  if(biz.transactions && Array.isArray(biz.transactions)) {
+                    biz.transactions.forEach(t => {
+                      const transDate = new Date(t.date);
+                      const month = transDate.getMonth();
+                      salesByMonth[month] += (t.amount || 0);
+                    });
+                  }
+                  
+                  const chart = echarts.init(chartDiv, null, { renderer: 'canvas', useDirtyRect: true });
+                  const option = {
+                    tooltip: {
+                      trigger: 'axis',
+                      axisPointer: { type: 'shadow' }
+                    },
+                    grid: {
+                      left: '3%',
+                      right: '4%',
+                      bottom: '3%',
+                      top: '3%',
+                      containLabel: true
+                    },
+                    xAxis: {
+                      type: 'category',
+                      data: monthLabels
+                    },
+                    yAxis: {
+                      type: 'value',
+                      axisLabel: {
+                        formatter: function(value) {
+                          return '$' + (value / 1000).toFixed(0) + 'k';
+                        }
+                      }
+                    },
+                    series: [{
+                      data: salesByMonth,
+                      type: 'bar',
+                      itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                          { offset: 0, color: '#3696f3' },
+                          { offset: 1, color: '#1e5ba8' }
+                        ])
+                      },
+                      smooth: true
+                    }]
+                  };
+                  chart.setOption(option);
+                  
+                  // Meilleure gestion du resize
+                  const resizeObserver = new ResizeObserver(() => {
+                    chart.resize();
+                  });
+                  resizeObserver.observe(chartDiv);
+                  
+                  // Fallback pour les navigateurs sans ResizeObserver
+                  window.addEventListener('resize', function() { chart.resize(); });
+                }
+              }
+              
+              // ===== 2.6 GRAPHIQUE TOTAL SALES (ECharts Line Chart) =====
+              if(biz.transactions && Array.isArray(biz.transactions)){
+                const totalSalesChartDiv = document.querySelector('.echart-line-share-dataset-chart-example');
+                if(totalSalesChartDiv && typeof echarts !== 'undefined') {
+                  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  
+                  // Calculer les ventes par mois à partir des transactions
+                  const salesByMonth = new Array(12).fill(0);
+                  const quantityByMonth = new Array(12).fill(0);
+                  
+                  biz.transactions.forEach(t => {
+                    const transDate = new Date(t.date);
+                    const month = transDate.getMonth();
+                    salesByMonth[month] += (t.amount || 0);
+                    quantityByMonth[month] += (t.quantite || 0);
+                  });
+                  
+                  const chart = echarts.init(totalSalesChartDiv, null, { renderer: 'canvas', useDirtyRect: true });
+                  const option = {
+                    tooltip: {
+                      trigger: 'axis'
+                    },
+                    legend: {
+                      data: ['Sales Amount', 'Quantity Sold'],
+                      top: '2%'
+                    },
+                    grid: {
+                      left: '3%',
+                      right: '4%',
+                      bottom: '3%',
+                      top: '12%',
+                      containLabel: true
+                    },
+                    xAxis: {
+                      type: 'category',
+                      data: monthLabels
+                    },
+                    yAxis: [{
+                      type: 'value',
+                      name: 'Amount ($)',
+                      axisLabel: {
+                        formatter: function(value) {
+                          return '$' + (value / 1000).toFixed(0) + 'k';
+                        }
+                      }
+                    }, {
+                      type: 'value',
+                      name: 'Quantity',
+                      position: 'right',
+                      axisLabel: {
+                        formatter: function(value) {
+                          return value;
+                        }
+                      }
+                    }],
+                    series: [{
+                      name: 'Sales Amount',
+                      data: salesByMonth,
+                      type: 'line',
+                      smooth: 0.4,
+                      itemStyle: {
+                        color: '#4bc44b'
+                      },
+                      lineStyle: {
+                        color: '#4bc44b',
+                        width: 2
+                      },
+                      areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                          { offset: 0, color: 'rgba(75, 192, 75, 0.3)' },
+                          { offset: 1, color: 'rgba(75, 192, 75, 0.1)' }
+                        ])
+                      },
+                      yAxisIndex: 0
+                    }, {
+                      name: 'Quantity Sold',
+                      data: quantityByMonth,
+                      type: 'line',
+                      smooth: 0.4,
+                      itemStyle: {
+                        color: '#ff9800'
+                      },
+                      lineStyle: {
+                        color: '#ff9800',
+                        width: 2
+                      },
+                      yAxisIndex: 1
+                    }]
+                  };
+                  chart.setOption(option);
+                  
+                  // Meilleure gestion du resize
+                  const resizeObserver = new ResizeObserver(() => {
+                    chart.resize();
+                  });
+                  resizeObserver.observe(totalSalesChartDiv);
+                  
+                  // Fallback pour les navigateurs sans ResizeObserver
+                  window.addEventListener('resize', function() { chart.resize(); });
+                }
+              }
+              
               // ===== 3. CALCULER TOTAL SALES AUTOMATIQUEMENT =====
               if(biz.productsSold && Array.isArray(biz.productsSold)){
                 const totalSalesAmount = biz.productsSold.reduce((sum, prod) => sum + (prod.montantVente || 0), 0);
@@ -1243,10 +1405,12 @@
                 console.log('💰 Transactions chargées:', biz.transactions.length);
                 const tbody = document.querySelector('#paymentHistoryTable tbody.list');
                 if(tbody){
-                  tbody.innerHTML = '';
+                  tbody.innerHTML = '<tr id="transactionsLoadingRow"><td colspan="5" class="text-center py-4"><div class="spinner-border text-info" role="status" style="width: 2rem; height: 2rem;"><span class="visually-hidden">Chargement...</span></div><p class="mt-2 text-muted small">Chargement des transactions...</p></td></tr>';
                   if(biz.transactions.length === 0){
                     tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Aucune transaction</td></tr>';
                   } else {
+                    const loadingRow = document.getElementById('transactionsLoadingRow');
+                    if(loadingRow) loadingRow.remove();
                     biz.transactions.slice(0, 10).forEach((t, idx) => {
                       const statusBadge = t.statut === 'VALIDÉE' ? 'badge-success' : 'badge-warning';
                       const statusText = t.statut === 'VALIDÉE' ? 'Validée' : t.statut || 'En cours';
@@ -1275,7 +1439,7 @@
                 console.log('📦 Produits vendus chargés:', biz.productsSold.length);
                 const tbody = document.querySelector('.table-enrolled-courses tbody.list');
                 if(tbody){
-                  tbody.innerHTML = '';
+                  tbody.innerHTML = '<tr id="productsLoadingRow"><td colspan="7" class="text-center py-4"><div class="spinner-border text-info" role="status" style="width: 2rem; height: 2rem;"><span class="visually-hidden">Chargement...</span></div><p class="mt-2 text-muted small">Chargement des produits...</p></td></tr>';
                   biz.productsSold.slice(0, 6).forEach((prod, idx) => {
                     const placeholderSvg = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22%3E%3Crect fill=%22%23e9ecef%22 width=%2260%22 height=%2260%22/%3E%3Ctext x=%2230%22 y=%2230%22 font-size=%2212%22 fill=%22%23999%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22%3ENo Image%3C/text%3E%3C/svg%3E';
                     const imgSrc = prod.photoUrl && prod.photoUrl.startsWith('http') ? prod.photoUrl : placeholderSvg;
@@ -1301,20 +1465,29 @@
                       </tr>`;
                     tbody.insertAdjacentHTML('beforeend', html);
                   });
+                  // Enlever le loading
+                  const loadingRow = document.getElementById('productsLoadingRow');
+                  if(loadingRow) loadingRow.remove();
                 }
               }
               
               // ===== 6. CHARGER LES ACTIVITÉS RÉCENTES (depuis biz.activities) =====
               if(biz.activities && Array.isArray(biz.activities)){
-                console.log('🔔 Activités chargées:', biz.activities.length);
+                console.log('🔔 Activités chargées:', biz.activities.length, biz.activities);
                 const allActivities = biz.activities.map(act => ({
                   ts: new Date(act.date).getTime(),
                   title: act.title,
                   description: act.description,
-                  icon: act.icon || 'fas fa-info-circle'
+                  icon: act.icon || 'fas fa-info-circle',
+                  type: act.type || 'unknown',
+                  magasin: act.magasin || 'N/A',
+                  user: act.user || 'N/A'
                 }));
                 saveActivities(allActivities.slice(0, 50));
                 renderActivities();
+                console.log('✅ Activités rendues:', allActivities.length);
+              } else {
+                console.warn('⚠️ Pas d\'activités trouvées dans biz.activities');
               }
               
               // ===== 7. AFFICHER LA SITUATION DE L'ENTREPRISE (businessStatus) =====
@@ -1345,42 +1518,7 @@
             } catch(e){ 
               console.error('❌ Erreur chargement données entreprise:', e.message); 
               alert('Erreur: ' + e.message);
-            } finally {
-              // CACHER LOADING
-              const spinner = document.getElementById('dataLoadingSpinner');
-              if(spinner) spinner.remove();
             }
-                
-            // Charger les affectations, ventes, et mouvements de stock pour les activités récentes
-            try{
-              const allActivities = [];
-              const magasinCache = {};
-              
-              // Helper function to fetch magasin name by ID
-              async function getMagasinName(magasinId){
-                try{
-                  // Activities déjà formatées depuis le backend enrichi
-                  if(biz.activities && Array.isArray(biz.activities)){
-                    const formattedActivities = biz.activities.map(a => ({
-                      ts: new Date(a.date).getTime(),
-                      title: a.title || 'Activité',
-                      description: a.description || '',
-                      icon: a.icon || 'fas fa-circle',
-                      magasin: a.magasin,
-                      user: a.user,
-                      type: a.type
-                    }));
-                    
-                    saveActivities(formattedActivities.slice(0, 50));
-                    renderActivities();
-                    console.log('✅ Activités chargées depuis API enrichie:', formattedActivities.length);
-                  }
-                }catch(e){ console.warn('Erreur chargement activités:', e); }
-              }
-            
-              // Sauvegarder l'ID de l'entreprise pour la persistance
-              localStorage.setItem('businessId', businessId);
-            }catch(e){ console.warn('Erreur chargement activités serveur:', e && e.message); }
           });
 
           renderActivities();

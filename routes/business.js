@@ -309,27 +309,115 @@ router.get('/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // 4. Charger les activités (affectations + ventes + mouvements)
-    let activities = [];
+    // Charger la liste des magasins pour les activités (si pas déjà fait)
+    let magasinIdList = [];
     try {
-      activities = await Activity.find({ businessId: businessId })
-        .setOptions({ strictPopulate: false })
-        .sort({ createdAt: -1 })
-        .limit(50);
-    } catch(popErr) {
-      console.warn('Activity populate error:', popErr.message);
-      activities = await Activity.find({ businessId: businessId }).sort({ createdAt: -1 }).limit(50);
+      const magasinsIds = await Magasin.find({ businessId: businessId }).select('_id').lean();
+      magasinIdList = magasinsIds.map(m => m._id);
+    } catch(e) {
+      console.warn('Error loading magasins for activities:', e.message);
     }
 
-    const activitiesFormatted = activities.map(act => ({
-      type: act.type || 'activity',
-      title: act.title || 'Activité',
-      description: act.description || '',
-      magasin: typeof act.magasinId === 'object' ? (act.magasinId?.nom_magasin || 'N/A') : (typeof act.magasin === 'string' ? act.magasin : 'N/A'),
-      user: typeof act.userId === 'object' ? (act.userId?.prenom || act.userId?.nom || 'N/A') : (typeof act.user === 'string' ? act.user : 'N/A'),
-      date: act.createdAt || act.date,
-      icon: act.icon || 'fas fa-info-circle'
-    }));
+    // 4. Charger les activités (affectations + ventes + mouvements + Activity logs)
+    let allActivities = [];
+    
+    try {
+      // Charger les Activity logs (enregistrements d'activités explicites)
+      let activities = await Activity.find({ businessId: businessId })
+        .populate('userId', 'prenom nom')
+        .populate('magasinId', 'nom_magasin adresse')
+        .sort({ createdAt: -1 })
+        .lean();
+      
+      const activitiesFormatted = activities.map(act => ({
+        type: 'activity',
+        title: act.title || 'Activité',
+        description: act.description || '',
+        magasin: act.magasinId?.nom_magasin || 'N/A',
+        user: act.userId ? (act.userId.prenom + ' ' + act.userId.nom) : 'N/A',
+        date: act.createdAt || act.date,
+        icon: act.icon || 'fas fa-info-circle'
+      }));
+      
+      allActivities.push(...activitiesFormatted);
+    } catch(e) {
+      console.warn('Activity logs error:', e.message);
+    }
+    
+    try {
+      // Charger les AFFECTATIONS (stock entries)
+      const affectationsAll = await Affectation.find({ entrepriseId: businessId })
+        .populate('guichetId', 'nom_guichet')
+        .populate('vendeurId', 'prenom nom')
+        .sort({ createdAt: -1 })
+        .lean();
+      
+      const affectationsFormatted = affectationsAll.map(aff => ({
+        type: 'affectation',
+        title: 'Affectation de Vendeur',
+        description: `${aff.vendeurId?.prenom || 'Vendeur'} assigné au guichet ${aff.guichetId?.nom_guichet || 'N/A'} - ${aff.notes || 'Affectation'}`,
+        magasin: aff.guichetId?.nom_guichet || 'N/A',
+        user: aff.vendeurId ? (aff.vendeurId.prenom + ' ' + aff.vendeurId.nom) : 'N/A',
+        date: aff.createdAt || aff.dateAffectation,
+        icon: 'fas fa-inbox'
+      }));
+      
+      allActivities.push(...affectationsFormatted);
+    } catch(e) {
+      console.warn('Affectations loading error:', e.message);
+    }
+
+    try {
+      // Charger les VENTES (sales transactions)
+      const ventesForActivities = await Vente.find({ magasinId: { $in: magasinIdList } })
+        .populate('utilisateurId', 'prenom nom')
+        .populate('magasinId', 'nom_magasin adresse')
+        .sort({ dateVente: -1 })
+        .lean();
+      
+      const ventesFormatted = ventesForActivities.map(vente => ({
+        type: 'vente',
+        title: 'Vente',
+        description: `Montant: $${(vente.montantTotalUSD || 0).toFixed(2)} - ${vente.articles?.length || 0} article(s)`,
+        magasin: vente.magasinId?.nom_magasin || 'N/A',
+        user: vente.utilisateurId ? (vente.utilisateurId.prenom + ' ' + vente.utilisateurId.nom) : 'N/A',
+        date: vente.dateVente || vente.createdAt,
+        icon: 'fas fa-shopping-cart'
+      }));
+      
+      allActivities.push(...ventesFormatted);
+    } catch(e) {
+      console.warn('Ventes loading error:', e.message);
+    }
+
+    try {
+      // Charger les MOUVEMENTS DE STOCK (stock movements)
+      const StockMovement = require('../models/stockMovement');
+      const movementsForActivities = await StockMovement.find({ magasinId: { $in: magasinIdList } })
+        .populate('utilisateurId', 'prenom nom')
+        .populate('magasinId', 'nom_magasin adresse')
+        .sort({ createdAt: -1 })
+        .lean();
+      
+      const movementsFormatted = movementsForActivities.map(mov => ({
+        type: 'mouvement',
+        title: `Mouvement de Stock - ${mov.type || 'N/A'}`,
+        description: `Quantité: ${mov.quantite || 0} - ${mov.numeroDocument ? 'Doc: ' + mov.numeroDocument : 'Mouvement'}`,
+        magasin: mov.magasinId?.nom_magasin || 'N/A',
+        user: mov.utilisateurId ? (mov.utilisateurId.prenom + ' ' + mov.utilisateurId.nom) : 'N/A',
+        date: mov.createdAt,
+        icon: 'fas fa-arrows-alt'
+      }));
+      
+      allActivities.push(...movementsFormatted);
+    } catch(e) {
+      console.warn('Stock movements loading error:', e.message);
+    }
+
+    // Sort all activities by date (newest first) and keep top 50
+    const activitiesFormatted = allActivities
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 50);
 
     // 5. Charger les MAGASINS et GUICHETS pour voir la structure
     const magasins = await Magasin.find({ businessId: businessId });
