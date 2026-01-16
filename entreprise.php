@@ -373,48 +373,48 @@
                   <h6 class="pb-1 text-700">Orders </h6>
                   <p id="kpiOrders" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">— </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-primary"><span class="me-1 fas fa-caret-up"></span>—%</h6>
+                    <h6 id="kpiOrdersChange" class="fs--1 text-500 mb-0">— </h6>
+                    <h6 id="kpiOrdersPercent" class="fs--2 ps-3 mb-0 text-primary"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 border-200 border-md-200 border-bottom border-md-end pb-4 ps-3">
                   <h6 class="pb-1 text-700">Items sold </h6>
                   <p id="kpiItemsSold" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">— </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-warning"><span class="me-1 fas fa-caret-up"></span>—%</h6>
+                    <h6 id="kpiItemsSoldChange" class="fs--1 text-500 mb-0">— </h6>
+                    <h6 id="kpiItemsSoldPercent" class="fs--2 ps-3 mb-0 text-warning"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 border-200 border-bottom border-end border-md-end-0 pb-4 pt-4 pt-md-0 ps-md-3">
                   <h6 class="pb-1 text-700">Refunds </h6>
                   <p id="kpiRefunds" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">— </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>—%</h6>
+                    <h6 id="kpiRefundsChange" class="fs--1 text-500 mb-0">— </h6>
+                    <h6 id="kpiRefundsPercent" class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 border-200 border-md-200 border-bottom border-md-bottom-0 border-md-end pt-4 pb-md-0 ps-3 ps-md-0">
                   <h6 class="pb-1 text-700">Gross sale </h6>
                   <p id="kpiGrossSale" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">— </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-danger"><span class="me-1 fas fa-caret-up"></span>—%</h6>
+                    <h6 id="kpiGrossSaleChange" class="fs--1 text-500 mb-0">— </h6>
+                    <h6 id="kpiGrossSalePercent" class="fs--2 ps-3 mb-0 text-danger"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 border-200 border-md-bottom-0 border-end pt-4 pb-md-0 ps-md-3">
                   <h6 class="pb-1 text-700">Shipping </h6>
                   <p id="kpiShipping" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">— </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>—%</h6>
+                    <h6 id="kpiShippingChange" class="fs--1 text-500 mb-0">— </h6>
+                    <h6 id="kpiShippingPercent" class="fs--2 ps-3 mb-0 text-success"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
                 <div class="col-6 col-md-4 pb-0 pt-4 ps-3">
                   <h6 class="pb-1 text-700">Processing </h6>
                   <p id="kpiProcessing" class="font-sans-serif lh-1 mb-1 fs-2">— </p>
                   <div class="d-flex align-items-center">
-                    <h6 class="fs--1 text-500 mb-0">— </h6>
-                    <h6 class="fs--2 ps-3 mb-0 text-info"><span class="me-1 fas fa-caret-up"></span>—%</h6>
+                    <h6 id="kpiProcessingChange" class="fs--1 text-500 mb-0">— </h6>
+                    <h6 id="kpiProcessingPercent" class="fs--2 ps-3 mb-0 text-info"><span class="me-1 fas fa-caret-up"></span>—%</h6>
                   </div>
                 </div>
               </div>
@@ -1107,6 +1107,20 @@
             
             console.log('💼 Entreprise sélectionnée changée:', businessId);
             
+            // AFFICHER LOADING
+            const mainContent = document.querySelector('.main-content, main, [role="main"]') || document.body;
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'dataLoadingSpinner';
+            loadingDiv.innerHTML = `
+              <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+                <div style="text-align: center;">
+                  <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+                  <p class="mt-3 text-muted">Chargement des données...</p>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(loadingDiv);
+            
             // UN SEUL appel API qui retourne TOUTES les données enrichies
             try{
               const token = getToken();
@@ -1143,13 +1157,27 @@
               // ===== 2. METTRE À JOUR LES KPIs (depuis biz.kpis) =====
               if(biz.kpis){
                 console.log('📈 KPIs chargés:', biz.kpis);
-                const { kpiOrders, kpiItemsSold, kpiRefunds, kpiGrossSale, kpiShipping, kpiProcessing } = {
+                const { kpiOrders, kpiItemsSold, kpiRefunds, kpiGrossSale, kpiShipping, kpiProcessing,
+                        kpiOrdersChange, kpiItemsSoldChange, kpiRefundsChange, kpiGrossSaleChange, kpiShippingChange, kpiProcessingChange,
+                        kpiOrdersPercent, kpiItemsSoldPercent, kpiRefundsPercent, kpiGrossSalePercent, kpiShippingPercent, kpiProcessingPercent } = {
                   kpiOrders: document.getElementById('kpiOrders'),
                   kpiItemsSold: document.getElementById('kpiItemsSold'),
                   kpiRefunds: document.getElementById('kpiRefunds'),
                   kpiGrossSale: document.getElementById('kpiGrossSale'),
                   kpiShipping: document.getElementById('kpiShipping'),
-                  kpiProcessing: document.getElementById('kpiProcessing')
+                  kpiProcessing: document.getElementById('kpiProcessing'),
+                  kpiOrdersChange: document.getElementById('kpiOrdersChange'),
+                  kpiItemsSoldChange: document.getElementById('kpiItemsSoldChange'),
+                  kpiRefundsChange: document.getElementById('kpiRefundsChange'),
+                  kpiGrossSaleChange: document.getElementById('kpiGrossSaleChange'),
+                  kpiShippingChange: document.getElementById('kpiShippingChange'),
+                  kpiProcessingChange: document.getElementById('kpiProcessingChange'),
+                  kpiOrdersPercent: document.getElementById('kpiOrdersPercent'),
+                  kpiItemsSoldPercent: document.getElementById('kpiItemsSoldPercent'),
+                  kpiRefundsPercent: document.getElementById('kpiRefundsPercent'),
+                  kpiGrossSalePercent: document.getElementById('kpiGrossSalePercent'),
+                  kpiShippingPercent: document.getElementById('kpiShippingPercent'),
+                  kpiProcessingPercent: document.getElementById('kpiProcessingPercent')
                 };
                 
                 if(kpiOrders) kpiOrders.textContent = (biz.kpis.totalOrders || 0).toLocaleString();
@@ -1158,6 +1186,22 @@
                 if(kpiGrossSale) kpiGrossSale.textContent = '$' + (biz.kpis.grossSale || 0).toFixed(2);
                 if(kpiShipping) kpiShipping.textContent = '$' + (biz.kpis.shipping || 0).toFixed(2);
                 if(kpiProcessing) kpiProcessing.textContent = (biz.kpis.processing || 0).toLocaleString();
+                
+                // Remplir les changements (pour l'instant 0, ou extraire du business.previousData si disponible)
+                if(kpiOrdersChange) kpiOrdersChange.textContent = '0';
+                if(kpiItemsSoldChange) kpiItemsSoldChange.textContent = '0';
+                if(kpiRefundsChange) kpiRefundsChange.textContent = '$0.00';
+                if(kpiGrossSaleChange) kpiGrossSaleChange.textContent = '$0.00';
+                if(kpiShippingChange) kpiShippingChange.textContent = '$0.00';
+                if(kpiProcessingChange) kpiProcessingChange.textContent = '0';
+                
+                // Remplir les pourcentages (0% pour l'instant)
+                if(kpiOrdersPercent) kpiOrdersPercent.innerHTML = '<span class="me-1 fas fa-caret-up"></span>0%';
+                if(kpiItemsSoldPercent) kpiItemsSoldPercent.innerHTML = '<span class="me-1 fas fa-caret-up"></span>0%';
+                if(kpiRefundsPercent) kpiRefundsPercent.innerHTML = '<span class="me-1 fas fa-caret-up"></span>0%';
+                if(kpiGrossSalePercent) kpiGrossSalePercent.innerHTML = '<span class="me-1 fas fa-caret-up"></span>0%';
+                if(kpiShippingPercent) kpiShippingPercent.innerHTML = '<span class="me-1 fas fa-caret-up"></span>0%';
+                if(kpiProcessingPercent) kpiProcessingPercent.innerHTML = '<span class="me-1 fas fa-caret-up"></span>0%';
               }
               
               // ===== 3. CALCULER TOTAL SALES AUTOMATIQUEMENT =====
@@ -1301,6 +1345,10 @@
             } catch(e){ 
               console.error('❌ Erreur chargement données entreprise:', e.message); 
               alert('Erreur: ' + e.message);
+            } finally {
+              // CACHER LOADING
+              const spinner = document.getElementById('dataLoadingSpinner');
+              if(spinner) spinner.remove();
             }
                 
             // Charger les affectations, ventes, et mouvements de stock pour les activités récentes

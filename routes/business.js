@@ -94,15 +94,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
     // Charger les données enrichies
     const businessId = req.params.id;
 
-    // 1. Charger les KPIs depuis affectations
-    const affectations = await Affectation.find({ entrepriseId: businessId });
-    const totalOrders = affectations.length;
-    const itemsSold = affectations.reduce((sum, a) => sum + (a.quantite || 0), 0);
-    
-    // 2. Charger les ventes/transactions
+    // 1. Charger les ventes/transactions D'ABORD pour les KPIs
+    // NOTE: Affectations sont pour le stock entrant, Ventes sont pour les ventes réelles
     // Note: Vente n'a pas de lien direct avec Business, elle lie via magasinId
     // Donc on cherche d'abord les magasins, puis les ventes de ces magasins
     let ventes = [];
+    let totalOrders = 0;
+    let itemsSold = 0;
     try {
       // Chercher les magasins de cette business
       const magasinsIds = await Magasin.find({ businessId: businessId }).select('_id').lean();
@@ -122,6 +120,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
       console.warn('Vente fetch error:', popErr.message);
       ventes = [];
     }
+    
+    // Calculer les KPIs à partir des ventes réelles
+    totalOrders = ventes.length;
+    itemsSold = ventes.reduce((sum, vente) => {
+      if (vente.articles && Array.isArray(vente.articles)) {
+        return sum + vente.articles.reduce((artSum, art) => artSum + (art.quantite || 0), 0);
+      }
+      return sum;
+    }, 0);
     
     // Extraire les transactions à partir des articles des ventes
     const transactions = [];
