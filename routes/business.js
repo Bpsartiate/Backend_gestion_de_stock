@@ -112,7 +112,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       if(magasinIdList.length > 0){
         ventes = await Vente.find({ magasinId: { $in: magasinIdList } })
           .populate('utilisateurId', 'nom prenom email')
-          .populate('magasinId', 'nom adresse')
+          .populate('magasinId', 'nom_magasin adresse')
           .populate('guichetId', 'nom')
           .setOptions({ strictPopulate: false })
           .sort({ dateVente: -1 })
@@ -144,10 +144,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
               prenom: vente.utilisateurId?.prenom,
               email: vente.utilisateurId?.email
             },
-            magasin: vente.magasinId?.nom || 'N/A',
+            magasin: vente.magasinId?.nom_magasin || 'N/A',
             magasinComplet: {
               _id: vente.magasinId?._id,
-              nom: vente.magasinId?.nom,
+              nom: vente.magasinId?.nom_magasin,
               adresse: vente.magasinId?.adresse
             },
             statut: vente.statut || 'VALIDÉE',
@@ -164,7 +164,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
           quantite: 0,
           date: vente.dateVente || vente.createdAt,
           vendeur: vente.utilisateurId?.prenom || vente.utilisateurId?.nom || 'N/A',
-          magasin: vente.magasinId?.nom || 'N/A',
+          magasin: vente.magasinId?.nom_magasin || 'N/A',
           statut: vente.statut || 'VALIDÉE',
           modePaiement: vente.modePaiement || 'CASH'
         });
@@ -174,20 +174,28 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const totalSalesAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
 
     // 3. Charger les produits vendus (depuis Vente.articles, pas Affectation)
+    // Note: Même logique que pour transactions - chercher via magasinId
     let ventesWithProducts = [];
     try {
-      ventesWithProducts = await Vente.find({ 
-        entrepriseId: businessId,
-        statut: 'VALIDÉE'
-      })
-      .populate('utilisateurId', 'nom prenom email')
-      .populate('magasinId', 'nom adresse')
-      .setOptions({ strictPopulate: false })
-      .lean()
-      .sort({ dateVente: -1 })
-      .limit(50);
+      // Chercher les magasins de cette business
+      const magasinsIds = await Magasin.find({ businessId: businessId }).select('_id').lean();
+      const magasinIdList = magasinsIds.map(m => m._id);
+      
+      // Chercher les ventes de ces magasins avec statut VALIDÉE
+      if(magasinIdList.length > 0){
+        ventesWithProducts = await Vente.find({ 
+          magasinId: { $in: magasinIdList },
+          statut: 'VALIDÉE'
+        })
+        .populate('utilisateurId', 'nom prenom email')
+        .populate('magasinId', 'nom adresse')
+        .setOptions({ strictPopulate: false })
+        .lean()
+        .sort({ dateVente: -1 })
+        .limit(50);
+      }
     } catch(popErr) {
-      console.warn('Vente fetch error:', popErr.message);
+      console.warn('Vente fetch error for products:', popErr.message);
       ventesWithProducts = [];
     }
 
@@ -270,10 +278,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
               prenom: vente.utilisateurId?.prenom,
               email: vente.utilisateurId?.email
             },
-            magasin: vente.magasinId?.nom || 'N/A',
+            magasin: vente.magasinId?.nom_magasin || 'N/A',
             magasinComplet: {
               _id: vente.magasinId?._id,
-              nom: vente.magasinId?.nom,
+              nom: vente.magasinId?.nom_magasin,
               adresse: vente.magasinId?.adresse
             },
             
@@ -305,7 +313,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       type: act.type || 'activity',
       title: act.title || 'Activité',
       description: act.description || '',
-      magasin: typeof act.magasinId === 'object' ? (act.magasinId?.nom || 'N/A') : (typeof act.magasin === 'string' ? act.magasin : 'N/A'),
+      magasin: typeof act.magasinId === 'object' ? (act.magasinId?.nom_magasin || 'N/A') : (typeof act.magasin === 'string' ? act.magasin : 'N/A'),
       user: typeof act.userId === 'object' ? (act.userId?.prenom || act.userId?.nom || 'N/A') : (typeof act.user === 'string' ? act.user : 'N/A'),
       date: act.createdAt || act.date,
       icon: act.icon || 'fas fa-info-circle'
