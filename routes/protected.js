@@ -3912,50 +3912,47 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     }
     console.log(`✅ VALIDATION 2 OK - Capacité rayon respectée`);
 
-    // ⚠️ VALIDATION: Vérifier la capacité MAX du TYPE DE PRODUIT (tous les rayons du magasin)
+    // ⚠️ VALIDATION: Vérifier la capacité MAX du TYPE DE PRODUIT (QUANTITÉ TOTALE)
     console.log('🔍 VALIDATION 3: Capacité type produit?');
     const typeProduit = await TypeProduit.findById(produit.typeProduitId);
     console.log(`   Type produit trouvé: ${typeProduit ? typeProduit.nomType : 'PAS TROUVÉ'}`);
     
     if (typeProduit && typeProduit.capaciteMax) {
-      console.log(`   Capacité max type: ${typeProduit.capaciteMax}`);
+      console.log(`   Capacité max type (quantité totale): ${typeProduit.capaciteMax} ${typeProduit.unitePrincipale || 'unités'}`);
       
-      // Calculer la quantité totale de ce type de produit dans ce magasin
-      const produitsType = await Produit.find({ typeProduitId: produit.typeProduitId, magasinId }).select('_id');
-      const produitsTypeIds = produitsType.map(p => p._id);
+      // Calculer la QUANTITÉ TOTALE de ce type dans ce magasin (somme des quantiteActuelle de tous les produits du type)
+      const produitsType = await Produit.find({ 
+        typeProduitId: produit.typeProduitId, 
+        magasinId,
+        estSupprime: false 
+      }).select('_id quantiteActuelle designation');
+      
       console.log(`   ${produitsType.length} produit(s) de ce type dans ce magasin`);
       
-      const allStocksTypeProduit = await StockRayon.find({
-        produitId: { $in: produitsTypeIds },
-        magasinId
-      });
-      
-      console.log(`   ${allStocksTypeProduit.length} StockRayons trouvés pour ce type`);
-      console.log(`   Détails StockRayons:`, allStocksTypeProduit.map(s => ({
-        produitId: s.produitId,
-        quantiteDisponible: s.quantiteDisponible,
-        rayonId: s.rayonId
-      })));
-      
-      const quantiteTotalTypeProduit = allStocksTypeProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+      // Somme des quantités actuelles
+      const quantiteTotalTypeProduit = produitsType.reduce((sum, p) => sum + (p.quantiteActuelle || 0), 0);
       const quantiteTotalTypeApreAjout = quantiteTotalTypeProduit + parseFloat(quantite);
       
-      console.log(`   Stock actuellement: ${quantiteTotalTypeProduit}`);
-      console.log(`   À ajouter: ${quantite}`);
-      console.log(`   Total après: ${quantiteTotalTypeApreAjout}`);
+      console.log(`   Détails produits type:`);
+      produitsType.forEach(p => {
+        console.log(`      - ${p.designation}: ${p.quantiteActuelle || 0} ${typeProduit.unitePrincipale || 'unités'}`);
+      });
+      console.log(`   Quantité totale actuellement: ${quantiteTotalTypeProduit} ${typeProduit.unitePrincipale || 'unités'}`);
+      console.log(`   À ajouter: ${quantite} ${typeProduit.unitePrincipale || 'unités'}`);
+      console.log(`   Total après: ${quantiteTotalTypeApreAjout} ${typeProduit.unitePrincipale || 'unités'}`);
       
       if (quantiteTotalTypeApreAjout > typeProduit.capaciteMax) {
         console.error(`❌ VALIDATION 3 ÉCHOUÉE - Capacité type dépassée - ARRÊT`);
         return res.status(400).json({
           error: '❌ Capacité du type de produit dépassée',
-          details: `Capacité max pour type "${typeProduit.nomType}": ${typeProduit.capaciteMax} ${typeProduit.unitePrincipale || 'unités'}, Stock actuel: ${quantiteTotalTypeProduit}, À ajouter: ${quantite}, Total: ${quantiteTotalTypeApreAjout}`,
+          details: `Capacité max pour type "${typeProduit.nomType}": ${typeProduit.capaciteMax} ${typeProduit.unitePrincipale || 'unités'}, Quantité actuelle: ${quantiteTotalTypeProduit}, À ajouter: ${quantite}, Total: ${quantiteTotalTypeApreAjout}`,
           capaciteType: typeProduit.capaciteMax,
-          stockTypeActuel: quantiteTotalTypeProduit,
+          quantiteTypeActuelle: quantiteTotalTypeProduit,
           quantiteAjout: quantite,
           quantiteTotalType: quantiteTotalTypeApreAjout
         });
       }
-      console.log(`✅ VALIDATION 3 OK - Capacité type respectée`);
+      console.log(`✅ VALIDATION 3 OK - Capacité type (quantité) respectée`);
     } else {
       console.log(`✅ VALIDATION 3 OK - Pas de limite de capacité pour ce type`);
     }
