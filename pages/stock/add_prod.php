@@ -79,7 +79,7 @@
           </div>
 
           <!-- 3. QUANTITÉ & UNITÉ -->
-          <div class="row g-3 mb-4">
+          <div class="row g-3 mb-4" id="stockInitialContainer">
             <div class="col-md-12">
               <label class="form-label fw-bold" id="labelQuantite">Stock Initial <span class="text-danger">*</span></label>
               <div class="input-group">
@@ -824,10 +824,17 @@
       console.log('🧹 Catégorie désélectionnée');
       document.getElementById('uniteLabel').textContent = 'unités';
       document.getElementById('modeGestionText').innerHTML = 'Le mode de rotation sera appliqué selon la catégorie choisie.';
+      
+      // ✨ Afficher le "Stock Initial" par défaut
+      const stockContainer = document.getElementById('stockInitialContainer');
+      if (stockContainer) {
+        stockContainer.style.display = 'block';
+      }
       return;
     }
 
     console.log('✅ Catégorie sélectionnée:', categorie);
+    console.log('   typeStockage:', categorie.typeStockage);
 
     // 1️⃣ Mettre à jour l'unité
     const unite = categorie.unitePrincipale || categorie.unite || 'unités';
@@ -842,7 +849,25 @@
     document.getElementById('modeGestionText').innerHTML = modeText;
     console.log('🔄 Mode FIFO/LIFO:', modeGestion);
 
-    // 3️⃣ Afficher les champs supplémentaires si présents
+    // ✨ 3️⃣ GÉRER L'AFFICHAGE DU "STOCK INITIAL" SELON LE TYPE (SIMPLE vs LOT)
+    const stockContainer = document.getElementById('stockInitialContainer');
+    if (stockContainer) {
+      if (categorie.typeStockage === 'lot') {
+        // LOT: Cacher le "Stock Initial" (créé via réception)
+        console.log('🎁 Type LOT - Cacher Stock Initial');
+        stockContainer.style.display = 'none';
+        document.getElementById('quantite').removeAttribute('required');
+      } else {
+        // SIMPLE: Afficher le "Stock Initial"
+        console.log('📋 Type SIMPLE - Afficher Stock Initial');
+        stockContainer.style.display = 'block';
+        document.getElementById('quantite').setAttribute('required', '');
+      }
+    } else {
+      console.warn('⚠️ stockInitialContainer non trouvé');
+    }
+
+    // 4️⃣ Afficher les champs supplémentaires si présents
     if (categorie.champsSupplementaires && categorie.champsSupplementaires.length > 0) {
       console.log('📋 Champs supplémentaires:', categorie.champsSupplementaires);
       displaySupplementaryFields(categorie.champsSupplementaires);
@@ -1020,6 +1045,13 @@
 
       if (!reference || !designation || !rayonId || !dateReception) {
         showNotification('⚠️ Veuillez remplir tous les champs obligatoires', 'warning');
+        return;
+      }
+
+      // ✨ Pour SIMPLE: valider la quantité initiale
+      // Pour LOT: la quantité n'est pas requise (elle sera définie via réception)
+      if (selectedCategorie && selectedCategorie.typeStockage === 'simple' && quantite <= 0) {
+        showNotification('⚠️ Veuillez entrer une quantité initiale valide', 'warning');
         return;
       }
 

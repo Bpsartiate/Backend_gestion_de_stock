@@ -3596,7 +3596,7 @@ router.get('/magasins/:magasinId/categories', authMiddleware, async (req, res) =
     
     // ✅ Utiliser les noms corrects du modèle TypeProduit
     const categories = await TypeProduit.find({ magasinId })
-      .select('_id nomType code unitePrincipale icone couleur seuilAlerte capaciteMax photoRequise champsSupplementaires status createdAt updatedAt')
+      .select('_id nomType code unitePrincipale unitePrincipaleStockage typeStockage unitesVente icone couleur seuilAlerte capaciteMax photoRequise champsSupplementaires status createdAt updatedAt')
       .sort({ createdAt: -1 });
 
     res.json({ success: true, categories });
