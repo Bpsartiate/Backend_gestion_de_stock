@@ -3616,12 +3616,19 @@ router.post('/magasins/:magasinId/categories', authMiddleware, async (req, res) 
     // ✅ MAPPING: Les noms du frontend vers les noms du modèle
     const { 
       nomType, code, unitePrincipale, icone, couleur, 
-      seuilAlerte, capaciteMax, photoRequise, champsSupplementaires 
+      seuilAlerte, capaciteMax, photoRequise, champsSupplementaires,
+      typeStockage, unitePrincipaleStockage, unitesVente
     } = req.body;
 
     // Validation - utiliser les noms du modèle
-    if (!nomType || !code || !unitePrincipale || !icone) {
-      return res.status(400).json({ error: 'Champs obligatoires: nomType, code, unitePrincipale, icone' });
+    if (!nomType || !code || !icone) {
+      return res.status(400).json({ error: 'Champs obligatoires: nomType, code, icone' });
+    }
+
+    // Validation de l'unité principale (peut être unitePrincipale ou unitePrincipaleStockage)
+    const finalUnitePrincipale = unitePrincipaleStockage || unitePrincipale;
+    if (!finalUnitePrincipale) {
+      return res.status(400).json({ error: 'Champs obligatoires: Unité Principale' });
     }
 
     // Vérifier l'unicité du code par magasin
@@ -3634,7 +3641,10 @@ router.post('/magasins/:magasinId/categories', authMiddleware, async (req, res) 
       magasinId,
       nomType,
       code: code.toUpperCase(),
-      unitePrincipale,
+      unitePrincipale: finalUnitePrincipale,
+      unitePrincipaleStockage: finalUnitePrincipale,
+      typeStockage: typeStockage || 'simple',
+      unitesVente: unitesVente || [],
       icone,
       couleur: couleur || '#3b82f6',
       seuilAlerte: seuilAlerte || 5,
@@ -3677,7 +3687,8 @@ router.put('/categories/:categoryId', authMiddleware, async (req, res) => {
     // ✅ MAPPING: Les noms du frontend vers les noms du modèle
     const { 
       nomType, code, unitePrincipale, icone, couleur, 
-      seuilAlerte, capaciteMax, photoRequise, champsSupplementaires 
+      seuilAlerte, capaciteMax, photoRequise, champsSupplementaires,
+      typeStockage, unitePrincipaleStockage, unitesVente
     } = req.body;
 
     const category = await TypeProduit.findById(req.params.categoryId);
@@ -3700,13 +3711,19 @@ router.put('/categories/:categoryId', authMiddleware, async (req, res) => {
     // Mise à jour - utiliser les noms du modèle
     if (nomType) category.nomType = nomType;
     if (code) category.code = code.toUpperCase();
-    if (unitePrincipale) category.unitePrincipale = unitePrincipale;
+    const finalUnitePrincipale = unitePrincipaleStockage || unitePrincipale;
+    if (finalUnitePrincipale) {
+      category.unitePrincipale = finalUnitePrincipale;
+      category.unitePrincipaleStockage = finalUnitePrincipale;
+    }
     if (icone) category.icone = icone;
     if (couleur) category.couleur = couleur;
     if (seuilAlerte !== undefined) category.seuilAlerte = seuilAlerte;
     if (capaciteMax !== undefined) category.capaciteMax = capaciteMax;
     if (photoRequise !== undefined) category.photoRequise = photoRequise;
     if (champsSupplementaires) category.champsSupplementaires = champsSupplementaires;
+    if (typeStockage) category.typeStockage = typeStockage;
+    if (unitesVente) category.unitesVente = unitesVente;
 
     await category.save();
     res.json({ success: true, message: '✅ Catégorie modifiée', category });
