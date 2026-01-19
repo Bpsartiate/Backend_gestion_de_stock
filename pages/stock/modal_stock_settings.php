@@ -344,6 +344,48 @@
                         </div>
                       </div>
 
+                      <!-- ✨ NOUVEAU: CONVERSIONS D'UNITÉS -->
+                      <div class="mb-4 p-3 bg-info bg-opacity-10 border border-info rounded">
+                        <label class="form-label fw-bold d-flex justify-content-between align-items-center">
+                          <span>
+                            <i class="fas fa-exchange-alt me-2 text-info"></i>Conversions d'Unités
+                            <a href="javascript:void(0)" class="btn btn-link p-0 ms-2" data-bs-toggle="tooltip" title="Définir comment stocker et vendre ce produit. Ex: stocker en rouleaux, vendre par mètre ou rouleau">
+                              <i class="fas fa-question-circle text-info"></i>
+                            </a>
+                          </span>
+                          <button type="button" class="btn btn-sm btn-outline-info" id="btnAddUnitConversion">
+                            <i class="fas fa-plus me-1"></i>Ajouter Unité
+                          </button>
+                        </label>
+
+                        <!-- Unité Principale -->
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold">Unité Principale de Stockage</label>
+                          <input type="text" class="form-control" id="catEditUnitePrincipale" 
+                                 placeholder="Ex: ROULEAU, CAISSE, PIÈCE" required>
+                          <small class="text-muted">L'unité dans laquelle vous stockez physiquement</small>
+                        </div>
+
+                        <!-- Tableau des conversions -->
+                        <div id="conversionsContainer" class="table-responsive">
+                          <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                              <tr>
+                                <th style="width:15%">Icône</th>
+                                <th style="width:25%">Unité</th>
+                                <th style="width:20%">Quantité en Base</th>
+                                <th style="width:20%">Prix Achat</th>
+                                <th style="width:12%">Peut Vendre?</th>
+                                <th style="width:8%">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody id="conversionsTableBody">
+                              <!-- Rempli dynamiquement -->
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
                       <!-- CHAMPS PERSONNALISÉS -->
                       <div class="mb-4">
                         <label class="form-label fw-bold d-flex justify-content-between align-items-center">
@@ -1011,11 +1053,15 @@
       document.getElementById('catEditNom').value = cat.nomType || cat.nom || '';
       document.getElementById('catEditCode').value = cat.code || '';
       document.getElementById('catEditUnite').value = cat.unitePrincipale || cat.unite || '';
+      document.getElementById('catEditUnitePrincipale').value = cat.unitePrincipaleStockage || cat.unitePrincipale || '';
       document.getElementById('catEditIcone').value = cat.icone || '';
       document.getElementById('catEditCouleur').value = cat.couleur || '#3b82f6';
       document.getElementById('catEditSeuil').value = cat.seuilAlerte || cat.seuil || 5;
       document.getElementById('catEditCapacite').value = cat.capaciteMax || cat.capacite || 1000;
       document.getElementById('catEditPhotoRequired').checked = cat.photoRequise !== false;
+      
+      // ✨ CHARGER LES CONVERSIONS D'UNITÉS
+      loadConversionsForCategory(cat.conversionsUnites || []);
       
       // ✨ AFFICHER LES CHAMPS SUPPLÉMENTAIRES EXISTANTS
       const customContainer = document.getElementById('customFieldsContainer');
@@ -1062,12 +1108,34 @@
       const seuil = parseInt(document.getElementById('catEditSeuil').value) || 5;
       const capacite = parseInt(document.getElementById('catEditCapacite').value) || 1000;
       const photoRequired = document.getElementById('catEditPhotoRequired').checked;
+      const unitePrincipaleStockage = document.getElementById('catEditUnitePrincipale').value.trim();
 
       // Validation
       if (!nom || !code || !unite || !icone) {
         showNotification('⚠️ Veuillez remplir tous les champs obligatoires', 'warning');
         return;
       }
+
+      // ✨ COLLECTER LES CONVERSIONS D'UNITÉS
+      const conversionsUnites = [];
+      document.querySelectorAll('#conversionsTableBody tr').forEach(row => {
+        const nomUnite = row.querySelector('input[data-unite-name]')?.value?.trim();
+        const quantiteEnBase = parseFloat(row.querySelector('input[data-unite-quantity]')?.value) || 0;
+        const prixAchatUnite = parseFloat(row.querySelector('input[data-unite-price]')?.value) || 0;
+        const iconeUnite = row.querySelector('input[data-unite-icone]')?.value || '📦';
+        const peutEtreVendu = row.querySelector('input[data-unite-sellable]')?.checked || false;
+        
+        if (nomUnite && quantiteEnBase > 0) {
+          conversionsUnites.push({
+            nomUnite: nomUnite,
+            quantiteEnBase: quantiteEnBase,
+            prixAchatUnite: prixAchatUnite,
+            icone: iconeUnite,
+            peutEtreVendu: peutEtreVendu,
+            ordre: conversionsUnites.length
+          });
+        }
+      });
 
       // Collecter les champs personnalisés
       const champsSupplementaires = [];
@@ -1089,6 +1157,8 @@
         nomType: nom,                              // nom → nomType
         code: code,
         unitePrincipale: unite,                    // unite → unitePrincipale
+        unitePrincipaleStockage: unitePrincipaleStockage,  // ✨ NOUVEAU
+        conversionsUnites: conversionsUnites,      // ✨ NOUVEAU
         icone: icone,
         couleur: couleur,
         seuilAlerte: seuil,                        // seuil → seuilAlerte
@@ -1679,9 +1749,85 @@
       document.getElementById('btnModifyTypes').style.display = 'inline-block';
     }
 
+    // ✨ FONCTIONS DE GESTION DES CONVERSIONS D'UNITÉS
+    function addUnitConversionRow(e) {
+      if (e) {
+        e.preventDefault();
+      }
+      
+      const tableBody = document.getElementById('conversionsTableBody');
+      const rowCount = tableBody.querySelectorAll('tr').length;
+      
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm" data-unite-icone placeholder="🔤" style="text-align:center;" value="📦" maxlength="1"></td>
+        <td><input type="text" class="form-control form-control-sm" data-unite-name placeholder="Ex: PIÈCE" required></td>
+        <td><input type="number" class="form-control form-control-sm" data-unite-quantity placeholder="0.01" step="0.0001" min="0" required></td>
+        <td><input type="number" class="form-control form-control-sm" data-unite-price placeholder="0.00" step="0.01" min="0"></td>
+        <td class="text-center">
+          <input type="checkbox" class="form-check-input" data-unite-sellable checked>
+        </td>
+        <td class="text-center">
+          <button type="button" class="btn btn-sm btn-outline-danger btn-delete-conversion">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      `;
+      
+      tableBody.appendChild(row);
+      console.log('➕ Nouvelle ligne de conversion ajoutée');
+    }
+    
+    function loadConversionsForCategory(conversionsUnites) {
+      const tableBody = document.getElementById('conversionsTableBody');
+      tableBody.innerHTML = '';
+      
+      if (conversionsUnites && Array.isArray(conversionsUnites)) {
+        conversionsUnites.forEach(conv => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="text" class="form-control form-control-sm" data-unite-icone style="text-align:center;" value="${conv.icone || '📦'}" maxlength="1"></td>
+            <td><input type="text" class="form-control form-control-sm" data-unite-name value="${conv.nomUnite || ''}" required></td>
+            <td><input type="number" class="form-control form-control-sm" data-unite-quantity value="${conv.quantiteEnBase || ''}" step="0.0001" min="0" required></td>
+            <td><input type="number" class="form-control form-control-sm" data-unite-price value="${conv.prixAchatUnite || ''}" step="0.01" min="0"></td>
+            <td class="text-center">
+              <input type="checkbox" class="form-check-input" data-unite-sellable ${conv.peutEtreVendu ? 'checked' : ''}>
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-outline-danger btn-delete-conversion">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          `;
+          
+          tableBody.appendChild(row);
+        });
+        console.log('📋 Conversions chargées:', conversionsUnites.length);
+      }
+    }
+
     // Initialiser au chargement
     document.addEventListener('DOMContentLoaded', function() {
       console.log('🚀 DOMContentLoaded déclenché dans modal_stock_settings.php');
+      
+      // ✨ EVENT LISTENERS POUR CONVERSIONS D'UNITÉS
+      const btnAddUnitConversion = document.getElementById('btnAddUnitConversion');
+      if (btnAddUnitConversion) {
+        btnAddUnitConversion.addEventListener('click', addUnitConversionRow);
+      }
+      
+      // Event delegation pour supprimer une conversion
+      const conversionsTableBody = document.getElementById('conversionsTableBody');
+      if (conversionsTableBody) {
+        conversionsTableBody.addEventListener('click', function(e) {
+          if (e.target.closest('.btn-delete-conversion')) {
+            e.preventDefault();
+            const row = e.target.closest('tr');
+            row.remove();
+            console.log('🗑️ Conversion supprimée');
+          }
+        });
+      }
       
       // ✅ Initialiser les popovers Bootstrap
       const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));

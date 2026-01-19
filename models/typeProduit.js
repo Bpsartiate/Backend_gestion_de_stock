@@ -48,6 +48,43 @@ const typeProduitSchema = new mongoose.Schema({
     }
   },
   
+  // ✨ NOUVEAU: SYSTÈME DE CONVERSIONS D'UNITÉS
+  // Permet de stocker en une unité et vendre en plusieurs unités
+  conversionsUnites: [{
+    nomUnite: {
+      type: String,
+      required: true              // ex: "ROULEAU", "MÈTRE", "BOÎTE", "PIÈCE"
+    },
+    quantiteEnBase: {
+      type: Number,
+      required: true,
+      min: 0.0001                 // Ex: 1 mètre = 0.01 rouleau
+    },
+    prixAchatUnite: {
+      type: Number,
+      default: 0,
+      min: 0                      // Prix d'achat pour cette unité (manuel)
+    },
+    icone: {
+      type: String,
+      default: '📦'               // Icône pour affichage
+    },
+    peutEtreVendu: {
+      type: Boolean,
+      default: true               // Cette unité peut-elle être vendue?
+    },
+    ordre: {
+      type: Number,
+      default: 0                  // Ordre d'affichage
+    }
+  }],
+  
+  // Unité principale de stockage
+  unitePrincipaleStockage: {
+    type: String,
+    default: 'pièces'             // ex: "ROULEAU", "CAISSE", "PIÈCE"
+  },
+  
   // CHAMPS DYNAMIQUES SUPPLÉMENTAIRES
   champsSupplementaires: [{
     nomChamp: String,           // ex: "Couleur", "Dosage"
