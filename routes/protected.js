@@ -2030,12 +2030,34 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
         path: 'rayonId',
         select: 'nomRayon codeRayon typeRayon iconeRayon capaciteMax quantiteActuelle'
       })
-      .sort({ designation: 1 })
-      .lean();
+      .sort({ designation: 1 });
+
+    // 🔄 SYNCHRONISATION STOCK - Recalculer quantiteActuelle depuis StockRayons pour chaque produit
+    const produitsSync = await Promise.all(
+      produits.map(async (produit) => {
+        const stocksActuelsProduit = await StockRayon.find({
+          produitId: produit._id,
+          magasinId: magasinId
+        });
+        
+        const quantiteReeleProduit = stocksActuelsProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+        
+        if (quantiteReeleProduit !== produit.quantiteActuelle) {
+          console.log(`⚠️ [SYNC LIST] Incohérence détectée pour produit ${produit.designation}:`);
+          console.log(`   - quantiteActuelle en DB: ${produit.quantiteActuelle}`);
+          console.log(`   - Somme StockRayons: ${quantiteReeleProduit}`);
+          produit.quantiteActuelle = quantiteReeleProduit;
+          await produit.save();
+          console.log(`   ✅ Produit mis à jour`);
+        }
+        
+        return produit;
+      })
+    );
 
     // Pour chaque produit, récupérer ses alertes actives
     const produitsAvecAlertes = await Promise.all(
-      produits.map(async (produit) => {
+      produitsSync.map(async (produit) => {
         const alertes = await AlerteStock.find({
           produitId: produit._id,
           statut: 'ACTIVE'
@@ -2044,7 +2066,7 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
         .lean();
 
         return {
-          ...produit,
+          ...produit.toObject(),
           alertes: alertes || []
         };
       })
