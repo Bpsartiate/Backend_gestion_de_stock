@@ -244,7 +244,7 @@
 
               // Rediriger vers page protégée
               setTimeout(function() {
-                window.location.href = 'setting.php';
+                window.location.href = 'entreprise.php';
               }, 1500);
             },
             error: function(xhr) {
