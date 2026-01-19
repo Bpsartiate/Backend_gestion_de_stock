@@ -4045,6 +4045,43 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       await stockRayon.save();
       console.log(`✅ StockRayon sauvegardé (LOT): ${stockRayon._id}`);
 
+      // 4. Mettre à jour la quantité du rayon (AUSSI POUR LOT)
+      rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + parseFloat(quantite);
+      await rayon.save();
+      console.log(`✅ Rayon mis à jour: ${rayon.nomRayon} (${rayon.quantiteActuelle}/${rayon.capaciteMax})`);
+
+      // 5. Mettre à jour la quantité totale du produit (AUSSI POUR LOT)
+      const totalStockParProduitLot = await StockRayon.aggregate([
+        {
+          $match: {
+            produitId: new mongoose.Types.ObjectId(produitId),
+            magasinId: new mongoose.Types.ObjectId(magasinId)
+          }
+        },
+        {
+          $group: {
+            _id: '$produitId',
+            totalQuantite: { $sum: '$quantiteDisponible' }
+          }
+        }
+      ]);
+
+      const nouvelleQuantiteActuelleLot = (totalStockParProduitLot[0]?.totalQuantite || 0);
+      produit.quantiteActuelle = nouvelleQuantiteActuelleLot;
+      produit.quantiteEntree = (produit.quantiteEntree || 0) + parseFloat(quantite);
+      produit.dateLastMovement = new Date();
+
+      // Si le produit n'a pas encore de rayonId, assigner le premier
+      if (!produit.rayonId) {
+        produit.rayonId = rayonId;
+        console.log(`📍 Premier rayon assigné au produit: ${rayonId}`);
+      }
+
+      await produit.save();
+      console.log(`✅ Produit "${produit.designation}" mis à jour:`);
+      console.log(`   - quantiteActuelle: ${nouvelleQuantiteActuelleLot}`);
+      console.log(`   - quantiteEntree: ${produit.quantiteEntree}`);
+
       try {
         const activity = new Activity({
           utilisateurId: req.user.id,
@@ -4059,7 +4096,15 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         console.error('activity.save.error', actErr);
       }
 
-      return res.status(201).json(reception);
+      return res.status(201).json({
+        success: true,
+        message: '✅ Réception LOT enregistrée avec succès',
+        reception,
+        produitUpdated: {
+          quantiteActuelle: nouvelleQuantiteActuelleLot,
+          quantiteEntree: produit.quantiteEntree
+        }
+      });
     }
 
     // 3. Mettre à jour StockRayon (NEW LOGIC) - SEULEMENT POUR SIMPLE
