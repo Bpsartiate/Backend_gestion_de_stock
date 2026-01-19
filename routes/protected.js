@@ -1413,14 +1413,17 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
       
       console.log(`📊 Rayon "${rayon.nomRayon}" (${rayon._id}):`);
       console.log(`   - StockRayons trouvés: ${nombreArticles}`);
-      console.log(`   - StockRayons details: ${stocks.map(s => `${s._id} (${s.quantiteDisponible})`).join(', ')}`);
+      console.log(`   - StockRayons details: ${stocks.map(s => `${s.produitId} = ${s.quantiteDisponible}`).join(', ')}`);
+      console.log(`   - rayon.quantiteActuelle: ${rayon.quantiteActuelle}`);
       
       // 2. Calculer la quantité totale
       const quantiteTotale = stocks.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+      console.log(`   - quantiteTotale (calculée): ${quantiteTotale}`);
       
-      // 3. Calculer l'occupation (%)
+      // 3. Calculer l'occupation (%) - basé sur NOMBRE D'ARTICLES DIFFÉRENTS
       const capaciteMax = rayon.capaciteMax || 1000;
       const occupationPourcent = Math.round((nombreArticles / capaciteMax) * 100);
+      console.log(`   - occupation: ${nombreArticles}/${capaciteMax} = ${occupationPourcent}%`);
       
       // 4. Compter les alertes (produits avec quantité <= seuilAlerte)
       // Récupérer les produits avec leurs seuils d'alerte
