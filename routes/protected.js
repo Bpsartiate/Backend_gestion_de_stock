@@ -3912,6 +3912,23 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     }
     console.log(`✅ VALIDATION 2 OK - Capacité rayon respectée`);
 
+    // 🔄 SYNCHRONISATION: Recalculer quantiteActuelle du produit avant validation
+    console.log('🔄 SYNCHRONISATION: Recalcul quantiteActuelle produit');
+    const stocksActuelsProduit = await StockRayon.find({
+      produitId,
+      magasinId
+    });
+    
+    const quantiteRealeProduit = stocksActuelsProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+    console.log(`   Quantité réelle trouvée en StockRayons: ${quantiteRealeProduit}`);
+    console.log(`   Quantité dans Produit.quantiteActuelle: ${produit.quantiteActuelle || 0}`);
+    
+    if (quantiteRealeProduit !== (produit.quantiteActuelle || 0)) {
+      console.log(`   ⚠️ INCOHÉRENCE DÉTECTÉE - Mise à jour produit`);
+      produit.quantiteActuelle = quantiteRealeProduit;
+      await produit.save();
+    }
+
     // ⚠️ VALIDATION: Vérifier la capacité MAX du TYPE DE PRODUIT (par produit)
     console.log('🔍 VALIDATION 3: Capacité type produit?');
     const typeProduit = await TypeProduit.findById(produit.typeProduitId);
@@ -3920,12 +3937,12 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     if (typeProduit && typeProduit.capaciteMax) {
       console.log(`   Capacité max type (par produit): ${typeProduit.capaciteMax} ${typeProduit.unitePrincipale || 'unités'}`);
       
-      // Vérifier la capacité POUR CE PRODUIT SPÉCIFIQUE
-      const quantiteActuelleProduit = produit.quantiteActuelle || 0;
+      // Vérifier la capacité POUR CE PRODUIT SPÉCIFIQUE (utiliser la quantité réelle)
+      const quantiteActuelleProduit = quantiteRealeProduit;
       const quantiteApreAjoutProduit = quantiteActuelleProduit + parseFloat(quantite);
       
       console.log(`   Produit "${produit.designation}":`);
-      console.log(`      - Quantité actuelle: ${quantiteActuelleProduit} ${typeProduit.unitePrincipale || 'unités'}`);
+      console.log(`      - Quantité actuelle (réelle): ${quantiteActuelleProduit} ${typeProduit.unitePrincipale || 'unités'}`);
       console.log(`      - À ajouter: ${quantite} ${typeProduit.unitePrincipale || 'unités'}`);
       console.log(`      - Total après: ${quantiteApreAjoutProduit} ${typeProduit.unitePrincipale || 'unités'}`);
       
