@@ -373,13 +373,48 @@ function showLotInterface() {
     }
   }
   
-  // Event listeners
+  // Event listeners for price calculation
   const nombrePieces = document.getElementById('nombrePieces');
   const quantiteParPiece = document.getElementById('quantiteParPiece');
   const uniteDetail = document.getElementById('uniteDetail');
+  const prixParUniteDetail = document.getElementById('prixParUniteDetail');
+  const prixTotalEstime = document.getElementById('prixTotalEstime');
+  const uniteDetailLabel = document.getElementById('uniteDetailLabel');
   
+  // Function to calculate total price
+  const calculateTotalPrice = () => {
+    const nPieces = parseInt(nombrePieces?.value) || 0;
+    const qtyPerPiece = parseFloat(quantiteParPiece?.value) || 0;
+    const pricePerUnit = parseFloat(prixParUniteDetail?.value) || 0;
+    const total = nPieces * qtyPerPiece * pricePerUnit;
+    
+    if (prixTotalEstime) {
+      prixTotalEstime.value = total > 0 ? total.toFixed(2) : '0.00';
+    }
+  };
+  
+  // Update unit label when uniteDetail changes
+  if (uniteDetail) {
+    uniteDetail.addEventListener('change', (e) => {
+      const selected = e.target.value;
+      if (uniteDetailLabel) {
+        uniteDetailLabel.textContent = selected ? `par ${selected}` : 'par UNITÉ';
+      }
+      calculateTotalPrice();
+    });
+  }
+  
+  // Add listeners for automatic price calculation
+  if (nombrePieces) nombrePieces.addEventListener('change', calculateTotalPrice);
+  if (nombrePieces) nombrePieces.addEventListener('input', calculateTotalPrice);
+  if (quantiteParPiece) quantiteParPiece.addEventListener('input', calculateTotalPrice);
+  if (prixParUniteDetail) prixParUniteDetail.addEventListener('input', calculateTotalPrice);
+  
+  // Also update recap when LOT fields change
   if (nombrePieces) nombrePieces.addEventListener('change', updateRecapitulatif);
+  if (nombrePieces) nombrePieces.addEventListener('input', updateRecapitulatif);
   if (quantiteParPiece) quantiteParPiece.addEventListener('input', updateRecapitulatif);
+  if (prixParUniteDetail) prixParUniteDetail.addEventListener('input', updateRecapitulatif);
   if (uniteDetail) uniteDetail.addEventListener('change', updateRecapitulatif);
 }
 
@@ -523,8 +558,6 @@ function updateRecapitulatif() {
   const rayonSelect = document.getElementById('rayonReception');
 
   const produitId = select?.value;
-  const quantite = parseFloat(quantiteInput?.value) || 0;
-  const prix = parseFloat(prixInput?.value) || 0;
   const rayonId = rayonSelect?.value;
 
   // Trouver produit et rayon
@@ -538,11 +571,35 @@ function updateRecapitulatif() {
   const recapTotal = document.getElementById('recapTotal');
 
   if (recapProduit) recapProduit.textContent = produit?.designation || '-';
-  if (recapQuantite) recapQuantite.textContent = quantite > 0 ? `${quantite} ${produit?.typeUnite || 'unités'}` : '-';
   if (recapRayon) recapRayon.textContent = rayon?.nomRayon || '-';
-  
-  const total = quantite * prix;
-  if (recapTotal) recapTotal.textContent = total > 0 ? `${total.toLocaleString()} CDF` : '0 CDF';
+
+  // ✨ RÉCAPITULATIF PERSONNALISÉ SELON TYPE (SIMPLE vs LOT)
+  if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
+    // LOT: Afficher configuration détaillée
+    const nombrePieces = parseInt(document.getElementById('nombrePieces')?.value) || 0;
+    const quantiteParPiece = parseFloat(document.getElementById('quantiteParPiece')?.value) || 0;
+    const uniteDetail = document.getElementById('uniteDetail')?.value || 'unité';
+    const prixParUnite = parseFloat(document.getElementById('prixParUniteDetail')?.value) || 0;
+    
+    const total = nombrePieces * quantiteParPiece * prixParUnite;
+    
+    if (recapQuantite) {
+      recapQuantite.textContent = nombrePieces > 0 && quantiteParPiece > 0
+        ? `${nombrePieces} pièces × ${quantiteParPiece} ${uniteDetail} @ ${prixParUnite} CDF/${uniteDetail}`
+        : '-';
+    }
+    
+    if (recapTotal) recapTotal.textContent = total > 0 ? `${total.toLocaleString('fr-FR')} CDF` : '0 CDF';
+  } else {
+    // SIMPLE: Affichage normal
+    const quantite = parseFloat(quantiteInput?.value) || 0;
+    const prix = parseFloat(prixInput?.value) || 0;
+    
+    if (recapQuantite) recapQuantite.textContent = quantite > 0 ? `${quantite} ${produit?.typeUnite || 'unités'}` : '-';
+    
+    const total = quantite * prix;
+    if (recapTotal) recapTotal.textContent = total > 0 ? `${total.toLocaleString('fr-FR')} CDF` : '0 CDF';
+  }
 }
 
 // ================================
@@ -842,7 +899,6 @@ async function submitReception(e) {
 
     // Collecter les données
     const produitId = document.getElementById('produitReception').value;
-    const quantite = parseFloat(document.getElementById('quantiteReception').value);
     const rayonId = document.getElementById('rayonReception').value;
     const prixAchat = parseFloat(document.getElementById('prixAchat').value) || 0;
     const fournisseur = document.getElementById('fournisseurReception').value;
@@ -854,26 +910,57 @@ async function submitReception(e) {
     const photoFile = document.getElementById('photoReception').files[0];
     const lotNumber = document.getElementById('lotReception').value;
 
-    // ⚡ VALIDATION: S'assurer que les champs requis sont présents
-    if (!produitId || !quantite || !rayonId || prixAchat === null || prixAchat === undefined) {
-      console.error('❌ Champs requis manquants!', {
-        produitId: produitId || 'MISSING',
-        quantite: quantite || 'MISSING',
-        rayonId: rayonId || 'MISSING',
-        prixAchat: prixAchat,
-        MAGASIN_ID: MAGASIN_ID
-      });
-      showToast('❌ Veuillez remplir tous les champs requis (quantité, rayon, prix)', 'danger');
-      
-      // 📱 RESTAURER LE BOUTON
-      btnSubmit.disabled = false;
-      iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
-      textSubmit.textContent = 'Enregistrer Réception';
-      return;
+    // Récupérer le produit pour déterminer le type
+    const produit = PRODUITS_RECEPTION.find(p => p._id === produitId);
+    const isLot = currentTypeProduit?.typeStockage === 'lot';
+
+    // ⚡ VALIDATION: Adapter les champs requis selon le type
+    let quantite;
+    if (isLot) {
+      // Pour LOT: vérifier les champs LOT
+      const nombrePieces = parseFloat(document.getElementById('nombrePieces')?.value);
+      const quantiteParPiece = parseFloat(document.getElementById('quantiteParPiece')?.value);
+      const uniteDetail = document.getElementById('uniteDetail')?.value;
+      const prixParUnite = parseFloat(document.getElementById('prixParUniteDetail')?.value);
+
+      if (!produitId || !nombrePieces || !quantiteParPiece || !uniteDetail || !rayonId || prixAchat === null) {
+        console.error('❌ Champs LOT requis manquants!', {
+          produitId: produitId || 'MISSING',
+          nombrePieces: nombrePieces || 'MISSING',
+          quantiteParPiece: quantiteParPiece || 'MISSING',
+          uniteDetail: uniteDetail || 'MISSING',
+          prixParUnite: prixParUnite || 'MISSING',
+          rayonId: rayonId || 'MISSING'
+        });
+        showToast('❌ Veuillez remplir tous les champs LOT requis', 'danger');
+        btnSubmit.disabled = false;
+        iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
+        textSubmit.textContent = 'Enregistrer Réception';
+        return;
+      }
+      // Pour LOT, la quantité est juste le nombre de pièces (pas la quantité totale)
+      quantite = nombrePieces;
+    } else {
+      // Pour SIMPLE: vérifier le champ quantite standard
+      quantite = parseFloat(document.getElementById('quantiteReception').value);
+
+      if (!produitId || !quantite || !rayonId || prixAchat === null || prixAchat === undefined) {
+        console.error('❌ Champs requis manquants!', {
+          produitId: produitId || 'MISSING',
+          quantite: quantite || 'MISSING',
+          rayonId: rayonId || 'MISSING',
+          prixAchat: prixAchat,
+          MAGASIN_ID: MAGASIN_ID
+        });
+        showToast('❌ Veuillez remplir tous les champs requis (quantité, rayon, prix)', 'danger');
+        btnSubmit.disabled = false;
+        iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
+        textSubmit.textContent = 'Enregistrer Réception';
+        return;
+      }
     }
 
     // ⚡ VALIDATION: Vérifier capacité type avant soumission
-    const produit = PRODUITS_RECEPTION.find(p => p._id === produitId);
     if (produit) {
       // Récupérer capacité du type
       let capaciteTypeMax = 0;
@@ -885,18 +972,27 @@ async function submitReception(e) {
       
       // Si capacité max est définie, vérifier qu'on ne dépasse pas
       if (capaciteTypeMax > 0) {
+        // Pour LOT: comparer le nombre de pièces à la capacité
+        // Pour SIMPLE: comparer la quantité à la capacité
+        let quantiteAVerifier = quantite;
+        if (isLot) {
+          const nombrePieces = parseFloat(document.getElementById('nombrePieces')?.value);
+          quantiteAVerifier = nombrePieces;  // Capacity is in number of pieces
+        }
+        
         const quantiteActuelleProduit = produit.quantiteActuelle || 0;
-        const quantiteApreAjout = quantiteActuelleProduit + quantite;
+        const quantiteApreAjout = quantiteActuelleProduit + quantiteAVerifier;
         
         if (quantiteApreAjout > capaciteTypeMax) {
           const depassement = (quantiteApreAjout - capaciteTypeMax).toFixed(2);
-          const uniteMesure = produit.typeProduitId?.unitePrincipale || produit.typeUnite || 'unités';
+          const uniteMesure = isLot ? 'pièces' : (currentTypeProduit?.unitePrincipaleStockage || produit.typeProduitId?.unitePrincipale || produit.typeUnite || 'unités');
           console.error(`❌ CAPACITÉ TYPE DÉPASSÉE - ${produit.designation}`, {
             capaciteMax: capaciteTypeMax,
             quantiteActuelle: quantiteActuelleProduit,
-            quantiteAjout: quantite,
+            quantiteAjout: quantiteAVerifier,
             quantiteApreAjout,
-            depassement
+            depassement,
+            isLot
           });
           showToast(`❌ IMPOSSIBLE! Capacité max du type "${produit.designation}" (${capaciteTypeMax} ${uniteMesure}) serait dépassée de ${depassement} ${uniteMesure}`, 'danger');
           
@@ -1002,6 +1098,7 @@ async function submitReception(e) {
       const nombrePieces = parseInt(document.getElementById('nombrePieces').value);
       const quantiteParPiece = parseFloat(document.getElementById('quantiteParPiece').value);
       const uniteDetail = document.getElementById('uniteDetail').value;
+      const prixParUnite = parseFloat(document.getElementById('prixParUniteDetail').value) || 0;
       
       receptionQuantite = nombrePieces;
       receptionData.quantite = nombrePieces;
@@ -1009,8 +1106,10 @@ async function submitReception(e) {
       receptionData.nombrePieces = nombrePieces;
       receptionData.quantiteParPiece = quantiteParPiece;
       receptionData.uniteDetail = uniteDetail;
+      receptionData.prixParUnite = prixParUnite;
+      receptionData.prixTotalEstime = nombrePieces * quantiteParPiece * prixParUnite;
       
-      console.log('🎁 Préparation LOT:', { nombrePieces, quantiteParPiece, uniteDetail });
+      console.log('🎁 Préparation LOT:', { nombrePieces, quantiteParPiece, uniteDetail, prixParUnite });
     } else {
       receptionData.type = 'simple';
     }

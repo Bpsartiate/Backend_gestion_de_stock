@@ -121,6 +121,27 @@
                         <small class="text-muted">MÈTRE, KILOGRAMME, etc</small>
                       </div>
                     </div>
+                    
+                    <!-- Prix et Récapitulatif pour LOT -->
+                    <div class="row g-3 mt-3 pt-3 border-top">
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold text-info">Prix par Unité <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                          <span class="input-group-text">CDF</span>
+                          <input type="number" id="prixParUniteDetail" class="form-control" step="0.01" placeholder="10" />
+                          <span class="input-group-text" id="uniteDetailLabel">par MÈTRE</span>
+                        </div>
+                        <small class="text-muted">Prix du mètre, kg, litre, etc</small>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold text-success">💰 Prix Total Estimé</label>
+                        <div class="input-group">
+                          <span class="input-group-text">CDF</span>
+                          <input type="text" id="prixTotalEstime" class="form-control" readonly value="0" />
+                        </div>
+                        <small class="text-muted">Nombre pièces × Qté/pièce × Prix/unité</small>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

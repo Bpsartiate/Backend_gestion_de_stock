@@ -4004,10 +4004,47 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     await stockMovement.save();
     console.log(`✅ Mouvement de stock créé: ${stockMovement._id}`);
 
-    // ⚠️ SI LOT: Ne pas créer StockRayon (sera créé via LOTs individuels)
+    // ⚠️ SI LOT: Créer StockRayon avec le nombre de pièces
     if (req.body.type === 'lot') {
-      console.log(`🎁 Type = LOT - Pas de création StockRayon (LOTs créés individuellement)`);
+      console.log(`🎁 Type = LOT - Création StockRayon avec ${quantite} pièces`);
       
+      // Créer ou mettre à jour StockRayon pour les LOTs
+      let stockRayon = await StockRayon.findOne({
+        produitId,
+        magasinId,
+        rayonId
+      });
+
+      if (!stockRayon) {
+        // Créer une nouvelle entrée StockRayon
+        console.log(`   ➡️ Création nouveau StockRayon pour LOT...`);
+        stockRayon = new StockRayon({
+          produitId,
+          magasinId,
+          rayonId,
+          quantiteDisponible: parseFloat(quantite),
+          réceptions: [
+            {
+              receptionId: reception._id,
+              date: new Date(),
+              quantite: parseFloat(quantite)
+            }
+          ]
+        });
+      } else {
+        // Mettre à jour StockRayon existant
+        console.log(`   ➡️ Mise à jour StockRayon existant...`);
+        stockRayon.quantiteDisponible += parseFloat(quantite);
+        stockRayon.réceptions.push({
+          receptionId: reception._id,
+          date: new Date(),
+          quantite: parseFloat(quantite)
+        });
+      }
+
+      await stockRayon.save();
+      console.log(`✅ StockRayon sauvegardé (LOT): ${stockRayon._id}`);
+
       try {
         const activity = new Activity({
           utilisateurId: req.user.id,
