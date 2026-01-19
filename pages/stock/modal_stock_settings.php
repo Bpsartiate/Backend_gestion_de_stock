@@ -290,22 +290,9 @@
                         </div>
                       </div>
 
-                      <!-- UNITÉ & ICÔNE & COULEUR -->
+                      <!-- ICÔNE & COULEUR -->
                       <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                          <label class="form-label fw-bold">Unité <span class="text-danger">*</span></label>
-                          <select class="form-select fw-semibold" id="catEditUnite" required>
-                            <option value="">Choisir...</option>
-                            <option value="mètres">Mètres (m)</option>
-                            <option value="kg">Kilogrammes (kg)</option>
-                            <option value="boîtes">Boîtes</option>
-                            <option value="pièces">Pièces</option>
-                            <option value="litres">Litres (L)</option>
-                            <option value="grammes">Grammes (g)</option>
-                            <option value="ml">Millilitres (ml)</option>
-                          </select>
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                           <label class="form-label fw-bold">Icône <span class="text-danger">*</span></label>
                           <select class="form-select fs-3" id="catEditIcone" required>
                             <option value="">Choisir...</option>
@@ -319,7 +306,7 @@
                             <option value="🛠️">🛠️ Construction</option>
                           </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                           <label class="form-label fw-bold">Couleur</label>
                           <input type="color" class="form-control form-control-color" id="catEditCouleur" 
                                  value="#3b82f6" title="Sélectionner couleur">
@@ -372,11 +359,10 @@
                             <thead class="table-light">
                               <tr>
                                 <th style="width:15%">Icône</th>
-                                <th style="width:25%">Unité</th>
-                                <th style="width:20%">Quantité en Base</th>
-                                <th style="width:20%">Prix Achat</th>
-                                <th style="width:12%">Peut Vendre?</th>
-                                <th style="width:8%">Action</th>
+                                <th style="width:30%">Unité</th>
+                                <th style="width:30%">Quantité en Base</th>
+                                <th style="width:15%">Peut Vendre?</th>
+                                <th style="width:10%">Action</th>
                               </tr>
                             </thead>
                             <tbody id="conversionsTableBody">
@@ -1052,8 +1038,7 @@
       // ✅ Utiliser les noms du modèle TypeProduit
       document.getElementById('catEditNom').value = cat.nomType || cat.nom || '';
       document.getElementById('catEditCode').value = cat.code || '';
-      document.getElementById('catEditUnite').value = cat.unitePrincipale || cat.unite || '';
-      document.getElementById('catEditUnitePrincipale').value = cat.unitePrincipaleStockage || cat.unitePrincipale || '';
+      document.getElementById('catEditUnitePrincipale').value = cat.unitePrincipaleStockage || cat.unitePrincipale || cat.unite || '';
       document.getElementById('catEditIcone').value = cat.icone || '';
       document.getElementById('catEditCouleur').value = cat.couleur || '#3b82f6';
       document.getElementById('catEditSeuil').value = cat.seuilAlerte || cat.seuil || 5;
@@ -1102,7 +1087,6 @@
 
       const nom = document.getElementById('catEditNom').value.trim();
       const code = document.getElementById('catEditCode').value.trim().toUpperCase();
-      const unite = document.getElementById('catEditUnite').value;
       const icone = document.getElementById('catEditIcone').value;
       const couleur = document.getElementById('catEditCouleur').value;
       const seuil = parseInt(document.getElementById('catEditSeuil').value) || 5;
@@ -1111,7 +1095,7 @@
       const unitePrincipaleStockage = document.getElementById('catEditUnitePrincipale').value.trim();
 
       // Validation
-      if (!nom || !code || !unite || !icone) {
+      if (!nom || !code || !icone || !unitePrincipaleStockage) {
         showNotification('⚠️ Veuillez remplir tous les champs obligatoires', 'warning');
         return;
       }
@@ -1121,7 +1105,6 @@
       document.querySelectorAll('#conversionsTableBody tr').forEach(row => {
         const nomUnite = row.querySelector('input[data-unite-name]')?.value?.trim();
         const quantiteEnBase = parseFloat(row.querySelector('input[data-unite-quantity]')?.value) || 0;
-        const prixAchatUnite = parseFloat(row.querySelector('input[data-unite-price]')?.value) || 0;
         const iconeUnite = row.querySelector('input[data-unite-icone]')?.value || '📦';
         const peutEtreVendu = row.querySelector('input[data-unite-sellable]')?.checked || false;
         
@@ -1129,7 +1112,6 @@
           conversionsUnites.push({
             nomUnite: nomUnite,
             quantiteEnBase: quantiteEnBase,
-            prixAchatUnite: prixAchatUnite,
             icone: iconeUnite,
             peutEtreVendu: peutEtreVendu,
             ordre: conversionsUnites.length
@@ -1156,8 +1138,7 @@
       const categoryData = {
         nomType: nom,                              // nom → nomType
         code: code,
-        unitePrincipale: unite,                    // unite → unitePrincipale
-        unitePrincipaleStockage: unitePrincipaleStockage,  // ✨ NOUVEAU
+        unitePrincipaleStockage: unitePrincipaleStockage,  // ✨ Unité de stockage
         conversionsUnites: conversionsUnites,      // ✨ NOUVEAU
         icone: icone,
         couleur: couleur,
@@ -1763,7 +1744,6 @@
         <td><input type="text" class="form-control form-control-sm" data-unite-icone placeholder="🔤" style="text-align:center;" value="📦" maxlength="1"></td>
         <td><input type="text" class="form-control form-control-sm" data-unite-name placeholder="Ex: PIÈCE" required></td>
         <td><input type="number" class="form-control form-control-sm" data-unite-quantity placeholder="0.01" step="0.0001" min="0" required></td>
-        <td><input type="number" class="form-control form-control-sm" data-unite-price placeholder="0.00" step="0.01" min="0"></td>
         <td class="text-center">
           <input type="checkbox" class="form-check-input" data-unite-sellable checked>
         </td>
@@ -1789,7 +1769,6 @@
             <td><input type="text" class="form-control form-control-sm" data-unite-icone style="text-align:center;" value="${conv.icone || '📦'}" maxlength="1"></td>
             <td><input type="text" class="form-control form-control-sm" data-unite-name value="${conv.nomUnite || ''}" required></td>
             <td><input type="number" class="form-control form-control-sm" data-unite-quantity value="${conv.quantiteEnBase || ''}" step="0.0001" min="0" required></td>
-            <td><input type="number" class="form-control form-control-sm" data-unite-price value="${conv.prixAchatUnite || ''}" step="0.01" min="0"></td>
             <td class="text-center">
               <input type="checkbox" class="form-check-input" data-unite-sellable ${conv.peutEtreVendu ? 'checked' : ''}>
             </td>

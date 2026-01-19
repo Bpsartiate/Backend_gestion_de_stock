@@ -50,6 +50,7 @@ const typeProduitSchema = new mongoose.Schema({
   
   // ✨ NOUVEAU: SYSTÈME DE CONVERSIONS D'UNITÉS
   // Permet de stocker en une unité et vendre en plusieurs unités
+  // ⚠️ NOTE: Le prix d'achat se détermine à la RÉCEPTION/AJOUT du produit, pas ici!
   conversionsUnites: [{
     nomUnite: {
       type: String,
@@ -59,11 +60,6 @@ const typeProduitSchema = new mongoose.Schema({
       type: Number,
       required: true,
       min: 0.0001                 // Ex: 1 mètre = 0.01 rouleau
-    },
-    prixAchatUnite: {
-      type: Number,
-      default: 0,
-      min: 0                      // Prix d'achat pour cette unité (manuel)
     },
     icone: {
       type: String,
