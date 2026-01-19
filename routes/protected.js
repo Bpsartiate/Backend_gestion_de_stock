@@ -3931,6 +3931,12 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       });
       
       console.log(`   ${allStocksTypeProduit.length} StockRayons trouvés pour ce type`);
+      console.log(`   Détails StockRayons:`, allStocksTypeProduit.map(s => ({
+        produitId: s.produitId,
+        quantiteDisponible: s.quantiteDisponible,
+        rayonId: s.rayonId
+      })));
+      
       const quantiteTotalTypeProduit = allStocksTypeProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
       const quantiteTotalTypeApreAjout = quantiteTotalTypeProduit + parseFloat(quantite);
       

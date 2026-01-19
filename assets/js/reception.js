@@ -1131,7 +1131,8 @@ async function submitReception(e) {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Erreur enregistrement réception');
+      console.error('❌ ERREUR BACKEND 400:', errorData);
+      throw new Error(errorData.error || errorData.message || JSON.stringify(errorData) || 'Erreur enregistrement réception');
     }
 
     const result = await response.json();
@@ -1139,7 +1140,7 @@ async function submitReception(e) {
     
     // ✨ SI LOT: créer les LOTs individuels
     if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
-      await createLotsForReception(result, produitId);
+      await createLotsForReception(result.reception, produitId);
     }
 
     showToast(' Réception enregistrée avec succès!', 'success');
