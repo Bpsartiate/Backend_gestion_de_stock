@@ -1810,6 +1810,23 @@ router.post('/magasins/:magasinId/types-produits', authMiddleware, blockVendeur,
   }
 });
 
+// GET /api/protected/types-produits/:typeProduitId - Obtenir les détails d'un type de produit
+router.get('/types-produits/:typeProduitId', authMiddleware, async (req, res) => {
+  try {
+    const { typeProduitId } = req.params;
+    
+    const typeProduit = await TypeProduit.findById(typeProduitId);
+    if (!typeProduit) {
+      return res.status(404).json({ error: 'Type produit non trouvé' });
+    }
+    
+    res.json(typeProduit);
+  } catch (err) {
+    console.error('types-produits.get.error', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/protected/types-produits/:typeProduitId - Modifier un type de produit
 router.put('/types-produits/:typeProduitId', authMiddleware, blockVendeur, async (req, res) => {
   try {

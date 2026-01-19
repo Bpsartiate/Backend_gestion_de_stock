@@ -289,11 +289,15 @@ async function loadTypeProduitForReception(produit) {
     
     currentTypeProduit = await response.json();
     console.log('📦 Type produit chargé:', currentTypeProduit);
+    console.log('   typeStockage:', currentTypeProduit.typeStockage);
+    console.log('   unitesVente:', currentTypeProduit.unitesVente);
     
     // Afficher l'interface appropriée
     if (currentTypeProduit.typeStockage === 'lot') {
+      console.log('✅ Détecté: LOT - Affichage interface LOT');
       showLotInterface();
     } else {
+      console.log('✅ Détecté: SIMPLE - Affichage interface SIMPLE');
       showSimpleInterface();
     }
     
