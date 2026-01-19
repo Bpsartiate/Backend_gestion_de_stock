@@ -15,10 +15,9 @@ const typeProduitSchema = new mongoose.Schema({
     maxlength: 50
   },
   
-  // UNITÉ DE MESURE PRINCIPALE
+  // UNITÉ DE MESURE PRINCIPALE (deprecated - kept for backward compatibility)
   unitePrincipale: {
     type: String,
-    enum: ['mètres', 'kg', 'boîtes', 'pièces', 'litres', 'grammes', 'ml'],
     default: 'pièces'
   },
 

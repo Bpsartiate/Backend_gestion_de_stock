@@ -143,7 +143,6 @@ lotSchema.virtual('pourcentageVendu').get(function() {
 
 // INDEX
 lotSchema.index({ magasinId: 1, produitId: 1, status: 1 });
-lotSchema.index({ receptionId: 1 });
 lotSchema.index({ dateReception: -1 });
 
 // PRE-SAVE: Mettre à jour le status
