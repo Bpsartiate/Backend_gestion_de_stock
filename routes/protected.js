@@ -2502,6 +2502,23 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
       return res.status(403).json({ success: false, error: 'Accès refusé' });
     }
 
+    // 2️⃣.5️⃣ SYNCHRONISATION STOCK - Recalculer quantiteActuelle depuis StockRayons
+    const stocksActuelsProduit = await StockRayon.find({
+      produitId: produitId,
+      magasinId: produit.magasinId._id
+    });
+    
+    const quantiteReeleProduit = stocksActuelsProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+    
+    if (quantiteReeleProduit !== produit.quantiteActuelle) {
+      console.log(`⚠️ [SYNC] Incohérence détectée pour produit ${produit.designation}:`);
+      console.log(`   - quantiteActuelle en DB: ${produit.quantiteActuelle}`);
+      console.log(`   - Somme StockRayons: ${quantiteReeleProduit}`);
+      produit.quantiteActuelle = quantiteReeleProduit;
+      await produit.save();
+      console.log(`   ✅ Produit mis à jour avec la quantité réelle`);
+    }
+
     // 3️⃣ CONSTRUCTION DE LA RÉPONSE ENRICHIE
     const response = produit.toObject();
 
