@@ -1,14 +1,15 @@
 const mongoose = require('mongoose');
 
 /**
- * 📦 MODEL LOT - Gestion FIFO/LIFO
+ * 📦 MODEL LOT - Suivi individuel de chaque pièce/rouleau
  * 
- * Chaque lot représente une entrée de produits avec:
- * - Date d'entrée
- * - Date d'expiration
- * - Quantité disponible
- * - Quantité vendue/utilisée (pour FIFO)
- * - Prix d'achat
+ * Pour produits avec typeStockage: "lot"
+ * Chaque lot = UNE PIÈCE (rouleau, carton, boîte, etc)
+ * 
+ * Exemple:
+ *   Rouleau #001: 100 mètres @ 10$/m (reçu)
+ *   Après vente de 90m: 10m restants (partiel_vendu)
+ *   On peut vendre les 10m restants
  */
 
 const lotSchema = new mongoose.Schema({
@@ -26,65 +27,68 @@ const lotSchema = new mongoose.Schema({
     index: true
   },
 
-  // IDENTIFICATION DU LOT
-  numeroBatch: {
+  typeProduitId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TypeProduit',
+    required: true,
+    index: true
+  },
+
+  receptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Reception',
+    required: true,
+    index: true
+  },
+
+  // QUANTITÉ (pour un lot = une pièce)
+  unitePrincipale: {
     type: String,
-    required: true,
-    maxlength: 50
-    // Exemple: LOT-2025-001, BATCH-ABC-123
+    required: true              // ex: "PIÈCE"
   },
 
-  // QUANTITÉS
-  quantiteEntree: {
+  quantiteInitiale: {
     type: Number,
     required: true,
-    min: 0.01
+    min: 0                      // ex: 100 (mètres pour un rouleau)
   },
 
-  quantiteDisponible: {
+  quantiteRestante: {
     type: Number,
     required: true,
-    min: 0
-    // = quantiteEntree - quantiteVendue
-  },
-
-  quantiteVendue: {
-    type: Number,
-    default: 0,
-    min: 0
-    // Pour FIFO tracking
+    min: 0                      // Décrémente à chaque vente
   },
 
   // PRIX
-  prixUnitaireAchat: {
+  prixParUnite: {
     type: Number,
     required: true,
-    min: 0
+    min: 0                      // ex: 10 (dollars par mètre)
   },
 
   prixTotal: {
     type: Number,
     required: true,
-    min: 0
-    // quantiteEntree * prixUnitaireAchat
+    min: 0                      // quantiteInitiale × prixParUnite
   },
 
-  // DATES IMPORTANTES
-  dateEntree: {
-    type: Date,
-    default: Date.now,
-    index: true
-    // Pour FIFO
+  // UNITÉ DÉTAILLÉE
+  uniteDetail: {
+    type: String                // ex: "MÈTRE" (la vraie unité de vente)
   },
 
-  dateExpiration: Date,
-  // null si pas d'expiration
+  // STATUT
+  status: {
+    type: String,
+    enum: ['complet', 'partiel_vendu', 'epuise'],
+    default: 'complet'
+  },
 
-  // DOCUMENT SOURCE
-  numeroDocument: String,
-  // Facture d'achat, bon de réception, etc.
-
-  fournisseur: String,
+  // DISPONIBILITÉ
+  peutEtreVendu: {
+    type: Boolean,
+    default: true
+  },
 
   // LOCALISATION
   rayonId: {
@@ -92,16 +96,33 @@ const lotSchema = new mongoose.Schema({
     ref: 'Rayon'
   },
 
-  // STATUT
-  status: {
-    type: String,
-    enum: ['ACTIF', 'EXPIRE', 'EPUISE', 'ANNULE'],
-    default: 'ACTIF',
+  stockRayonId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'StockRayon'
+  },
+
+  // DATES
+  dateReception: {
+    type: Date,
+    default: Date.now,
     index: true
   },
 
+  dateExpiration: Date,
+
+  dateDerniereVente: Date,
+
   // NOTES
   notes: String,
+
+  // MÉTADONNÉES
+  historique: [{
+    date: { type: Date, default: Date.now },
+    action: String,             // "création", "vente", "ajustement"
+    quantiteAvant: Number,
+    quantiteApres: Number,
+    details: String
+  }],
 
   // AUDIT
   createdAt: {
@@ -114,37 +135,29 @@ const lotSchema = new mongoose.Schema({
   }
 });
 
-// Index pour FIFO: par magasin, produit, date d'entrée
-lotSchema.index({ magasinId: 1, produitId: 1, dateEntree: 1 });
+// VIRTUEL: Pourcentage vendu
+lotSchema.virtual('pourcentageVendu').get(function() {
+  if (this.quantiteInitiale === 0) return 0;
+  return Math.round(((this.quantiteInitiale - this.quantiteRestante) / this.quantiteInitiale) * 100);
+});
 
-// Index pour vérifier expiration
-lotSchema.index({ dateExpiration: 1, status: 1 });
+// INDEX
+lotSchema.index({ magasinId: 1, produitId: 1, status: 1 });
+lotSchema.index({ receptionId: 1 });
+lotSchema.index({ dateReception: -1 });
 
-// Middleware pré-save
+// PRE-SAVE: Mettre à jour le status
 lotSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   
-  // Calculer le prix total
-  this.prixTotal = (this.prixUnitaireAchat || 0) * (this.quantiteEntree || 0);
-  
-  // Assurer quantité vendue <= quantité entrée
-  if (this.quantiteVendue > this.quantiteEntree) {
-    this.quantiteVendue = this.quantiteEntree;
+  if (this.quantiteRestante === this.quantiteInitiale) {
+    this.status = 'complet';
+  } else if (this.quantiteRestante === 0) {
+    this.status = 'epuise';
+    this.peutEtreVendu = false;
+  } else {
+    this.status = 'partiel_vendu';
   }
-  
-  // Calculer quantité disponible
-  this.quantiteDisponible = this.quantiteEntree - this.quantiteVendue;
-  
-  // Vérifier expiration
-  if (this.dateExpiration && new Date() > this.dateExpiration && this.status === 'ACTIF') {
-    this.status = 'EXPIRE';
-  }
-  
-  // Si tout vendu
-  if (this.quantiteDisponible <= 0) {
-    this.status = 'EPUISE';
-  }
-  
   next();
 });
 

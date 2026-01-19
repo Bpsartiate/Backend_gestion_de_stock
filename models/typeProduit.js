@@ -48,34 +48,22 @@ const typeProduitSchema = new mongoose.Schema({
     }
   },
   
-  // ✨ NOUVEAU: SYSTÈME DE CONVERSIONS D'UNITÉS
-  // Permet de stocker en une unité et vendre en plusieurs unités
-  // ⚠️ NOTE: Le prix d'achat se détermine à la RÉCEPTION/AJOUT du produit, pas ici!
-  conversionsUnites: [{
-    nomUnite: {
-      type: String,
-      required: true              // ex: "ROULEAU", "MÈTRE", "BOÎTE", "PIÈCE"
-    },
-    quantiteEnBase: {
-      type: Number,
-      required: true,
-      min: 0.0001                 // Ex: 1 mètre = 0.01 rouleau
-    },
-    icone: {
-      type: String,
-      default: '📦'               // Icône pour affichage
-    },
-    peutEtreVendu: {
-      type: Boolean,
-      default: true               // Cette unité peut-elle être vendue?
-    },
-    ordre: {
-      type: Number,
-      default: 0                  // Ordre d'affichage
-    }
+  // ✨ TYPE DE STOCKAGE
+  // "simple": Viande, Riz, etc - juste une quantité
+  // "lot": Rouleaux, Boîtes, Cartons - chaque pièce trackée individuellement
+  typeStockage: {
+    type: String,
+    enum: ['simple', 'lot'],
+    default: 'simple'
+  },
+  
+  // ✨ UNITÉS DE VENTE (uniquement pour typeStockage: "lot")
+  // Les unités dans lesquelles on peut vendre ce produit
+  unitesVente: [{
+    type: String                    // ex: "PIÈCE", "MÈTRE", "BOÎTE", "KG"
   }],
   
-  // Unité principale de stockage
+  // Unité principale de stockage (pour lot: PIÈCE, CARTON, etc)
   unitePrincipaleStockage: {
     type: String,
     default: 'pièces'             // ex: "ROULEAU", "CAISSE", "PIÈCE"

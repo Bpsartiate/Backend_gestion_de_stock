@@ -331,44 +331,52 @@
                         </div>
                       </div>
 
-                      <!-- ✨ NOUVEAU: CONVERSIONS D'UNITÉS -->
+                      <!-- ✨ NOUVEAU: TYPE DE STOCKAGE ET UNITÉS DE VENTE -->
                       <div class="mb-4 p-3 bg-info bg-opacity-10 border border-info rounded">
                         <label class="form-label fw-bold d-flex justify-content-between align-items-center">
                           <span>
-                            <i class="fas fa-exchange-alt me-2 text-info"></i>Conversions d'Unités
-                            <a href="javascript:void(0)" class="btn btn-link p-0 ms-2" data-bs-toggle="tooltip" title="Définir comment stocker et vendre ce produit. Ex: stocker en rouleaux, vendre par mètre ou rouleau">
+                            <i class="fas fa-layer-group me-2 text-info"></i>Type de Stockage
+                            <a href="javascript:void(0)" class="btn btn-link p-0 ms-2" data-bs-toggle="tooltip" title="SIMPLE: Viande, Riz (1 unité). LOT: Rouleaux, Cartons (track individuel chaque pièce)">
                               <i class="fas fa-question-circle text-info"></i>
                             </a>
                           </span>
-                          <button type="button" class="btn btn-sm btn-outline-info" id="btnAddUnitConversion">
-                            <i class="fas fa-plus me-1"></i>Ajouter Unité
-                          </button>
                         </label>
 
-                        <!-- Unité Principale -->
+                        <!-- Type Stockage -->
                         <div class="mb-3">
-                          <label class="form-label fw-semibold">Unité Principale de Stockage</label>
+                          <label class="form-label fw-semibold">Type de Stockage</label>
+                          <select id="catEditTypeStockage" class="form-select" required>
+                            <option value="simple">SIMPLE (Viande, Riz, Sucre, etc)</option>
+                            <option value="lot">LOT (Rouleaux, Cartons, Boîtes, etc)</option>
+                          </select>
+                          <small class="text-muted">
+                            <strong>SIMPLE:</strong> Produits simples avec une unité (kg, litres)<br>
+                            <strong>LOT:</strong> Produits complexes, track chaque pièce individuellement
+                          </small>
+                        </div>
+
+                        <!-- Unité Principale de Stockage -->
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold">Unité Principale de Stockage <span class="text-danger">*</span></label>
                           <input type="text" class="form-control" id="catEditUnitePrincipale" 
-                                 placeholder="Ex: ROULEAU, CAISSE, PIÈCE" required>
+                                 placeholder="Ex: KILOGRAMME, PIÈCE, ROULEAU, LITRE" required>
                           <small class="text-muted">L'unité dans laquelle vous stockez physiquement</small>
                         </div>
 
-                        <!-- Tableau des conversions -->
-                        <div id="conversionsContainer" class="table-responsive">
-                          <table class="table table-sm table-hover mb-0">
-                            <thead class="table-light">
-                              <tr>
-                                <th style="width:15%">Icône</th>
-                                <th style="width:30%">Unité</th>
-                                <th style="width:30%">Quantité en Base</th>
-                                <th style="width:15%">Peut Vendre?</th>
-                                <th style="width:10%">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody id="conversionsTableBody">
-                              <!-- Rempli dynamiquement -->
-                            </tbody>
-                          </table>
+                        <!-- Unités de Vente (seulement pour LOT) -->
+                        <div id="unitesVenteContainer" style="display: none;">
+                          <label class="form-label fw-semibold">Unités de Vente 
+                            <span class="text-muted">(pour type LOT)</span>
+                          </label>
+                          <div id="unitesVenteList" class="mb-2 p-2 border rounded bg-white">
+                            <!-- Rempli dynamiquement -->
+                          </div>
+                          <button type="button" class="btn btn-sm btn-outline-info" id="btnAddUniteVente">
+                            <i class="fas fa-plus me-1"></i>Ajouter Unité de Vente
+                          </button>
+                          <small class="text-muted d-block mt-2">
+                            Ex: Pour rouleaux → PIÈCE et MÈTRE
+                          </small>
                         </div>
                       </div>
 
@@ -1045,8 +1053,10 @@
       document.getElementById('catEditCapacite').value = cat.capaciteMax || cat.capacite || 1000;
       document.getElementById('catEditPhotoRequired').checked = cat.photoRequise !== false;
       
-      // ✨ CHARGER LES CONVERSIONS D'UNITÉS
-      loadConversionsForCategory(cat.conversionsUnites || []);
+      // ✨ CHARGER TYPE DE STOCKAGE ET UNITÉS
+      document.getElementById('catEditTypeStockage').value = cat.typeStockage || 'simple';
+      loadUniteVente(cat.unitesVente || []);
+      updateUniteVenteVisibility();
       
       // ✨ AFFICHER LES CHAMPS SUPPLÉMENTAIRES EXISTANTS
       const customContainer = document.getElementById('customFieldsContainer');
@@ -1093,6 +1103,7 @@
       const capacite = parseInt(document.getElementById('catEditCapacite').value) || 1000;
       const photoRequired = document.getElementById('catEditPhotoRequired').checked;
       const unitePrincipaleStockage = document.getElementById('catEditUnitePrincipale').value.trim();
+      const typeStockage = document.getElementById('catEditTypeStockage').value;
 
       // Validation
       if (!nom || !code || !icone || !unitePrincipaleStockage) {
@@ -1100,24 +1111,21 @@
         return;
       }
 
-      // ✨ COLLECTER LES CONVERSIONS D'UNITÉS
-      const conversionsUnites = [];
-      document.querySelectorAll('#conversionsTableBody tr').forEach(row => {
-        const nomUnite = row.querySelector('input[data-unite-name]')?.value?.trim();
-        const quantiteEnBase = parseFloat(row.querySelector('input[data-unite-quantity]')?.value) || 0;
-        const iconeUnite = row.querySelector('input[data-unite-icone]')?.value || '📦';
-        const peutEtreVendu = row.querySelector('input[data-unite-sellable]')?.checked || false;
+      // ✨ COLLECTER LES UNITÉS DE VENTE (pour LOT)
+      const unitesVente = [];
+      if (typeStockage === 'lot') {
+        document.querySelectorAll('#unitesVenteList .unite-item input').forEach(input => {
+          const unite = input.value?.trim();
+          if (unite) {
+            unitesVente.push(unite);
+          }
+        });
         
-        if (nomUnite && quantiteEnBase > 0) {
-          conversionsUnites.push({
-            nomUnite: nomUnite,
-            quantiteEnBase: quantiteEnBase,
-            icone: iconeUnite,
-            peutEtreVendu: peutEtreVendu,
-            ordre: conversionsUnites.length
-          });
+        if (unitesVente.length === 0) {
+          showNotification('⚠️ Ajoutez au moins une unité de vente pour un type LOT', 'warning');
+          return;
         }
-      });
+      }
 
       // Collecter les champs personnalisés
       const champsSupplementaires = [];
@@ -1136,16 +1144,17 @@
 
       // ✅ MAPPER LES NOMS DE CHAMPS POUR CORRESPONDRE AU MODÈLE TypeProduit
       const categoryData = {
-        nomType: nom,                              // nom → nomType
+        nomType: nom,
         code: code,
-        unitePrincipaleStockage: unitePrincipaleStockage,  // ✨ Unité de stockage
-        conversionsUnites: conversionsUnites,      // ✨ NOUVEAU
+        typeStockage: typeStockage,                // ✨ SIMPLE ou LOT
+        unitePrincipaleStockage: unitePrincipaleStockage,
+        unitesVente: unitesVente,                  // ✨ Pour LOT
         icone: icone,
         couleur: couleur,
-        seuilAlerte: seuil,                        // seuil → seuilAlerte
-        capaciteMax: capacite,                     // capacite → capaciteMax
-        photoRequise: photoRequired,               // photoRequired → photoRequise
-        champsSupplementaires: champsSupplementaires // customFields → champsSupplementaires
+        seuilAlerte: seuil,
+        capaciteMax: capacite,
+        photoRequise: photoRequired,
+        champsSupplementaires: champsSupplementaires
       };
 
       try {
@@ -1730,82 +1739,75 @@
       document.getElementById('btnModifyTypes').style.display = 'inline-block';
     }
 
-    // ✨ FONCTIONS DE GESTION DES CONVERSIONS D'UNITÉS
-    function addUnitConversionRow(e) {
+    // ✨ FONCTIONS GESTION TYPE DE STOCKAGE ET UNITÉS DE VENTE
+    
+    function updateUniteVenteVisibility() {
+      const typeStockage = document.getElementById('catEditTypeStockage').value;
+      const container = document.getElementById('unitesVenteContainer');
+      if (typeStockage === 'lot') {
+        container.style.display = 'block';
+      } else {
+        container.style.display = 'none';
+      }
+    }
+    
+    function addUniteVente(e) {
       if (e) {
         e.preventDefault();
       }
       
-      const tableBody = document.getElementById('conversionsTableBody');
-      const rowCount = tableBody.querySelectorAll('tr').length;
-      
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td><input type="text" class="form-control form-control-sm" data-unite-icone placeholder="🔤" style="text-align:center;" value="📦" maxlength="1"></td>
-        <td><input type="text" class="form-control form-control-sm" data-unite-name placeholder="Ex: PIÈCE" required></td>
-        <td><input type="number" class="form-control form-control-sm" data-unite-quantity placeholder="0.01" step="0.0001" min="0" required></td>
-        <td class="text-center">
-          <input type="checkbox" class="form-check-input" data-unite-sellable checked>
-        </td>
-        <td class="text-center">
-          <button type="button" class="btn btn-sm btn-outline-danger btn-delete-conversion">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
+      const container = document.getElementById('unitesVenteList');
+      const div = document.createElement('div');
+      div.className = 'unite-item d-flex gap-2 mb-2';
+      div.innerHTML = `
+        <input type="text" class="form-control form-control-sm" placeholder="Ex: PIÈCE, MÈTRE, KG" required>
+        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-unite">
+          <i class="fas fa-trash"></i>
+        </button>
       `;
       
-      tableBody.appendChild(row);
-      console.log('➕ Nouvelle ligne de conversion ajoutée');
+      div.querySelector('.btn-delete-unite').addEventListener('click', function() {
+        div.remove();
+      });
+      
+      container.appendChild(div);
     }
     
-    function loadConversionsForCategory(conversionsUnites) {
-      const tableBody = document.getElementById('conversionsTableBody');
-      tableBody.innerHTML = '';
+    function loadUniteVente(unitesVente) {
+      const container = document.getElementById('unitesVenteList');
+      container.innerHTML = '';
       
-      if (conversionsUnites && Array.isArray(conversionsUnites)) {
-        conversionsUnites.forEach(conv => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td><input type="text" class="form-control form-control-sm" data-unite-icone style="text-align:center;" value="${conv.icone || '📦'}" maxlength="1"></td>
-            <td><input type="text" class="form-control form-control-sm" data-unite-name value="${conv.nomUnite || ''}" required></td>
-            <td><input type="number" class="form-control form-control-sm" data-unite-quantity value="${conv.quantiteEnBase || ''}" step="0.0001" min="0" required></td>
-            <td class="text-center">
-              <input type="checkbox" class="form-check-input" data-unite-sellable ${conv.peutEtreVendu ? 'checked' : ''}>
-            </td>
-            <td class="text-center">
-              <button type="button" class="btn btn-sm btn-outline-danger btn-delete-conversion">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          `;
-          
-          tableBody.appendChild(row);
+      (unitesVente || []).forEach(unite => {
+        const div = document.createElement('div');
+        div.className = 'unite-item d-flex gap-2 mb-2';
+        div.innerHTML = `
+          <input type="text" class="form-control form-control-sm" value="${unite}" required>
+          <button type="button" class="btn btn-sm btn-outline-danger btn-delete-unite">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+        
+        div.querySelector('.btn-delete-unite').addEventListener('click', function() {
+          div.remove();
         });
-        console.log('📋 Conversions chargées:', conversionsUnites.length);
-      }
+        
+        container.appendChild(div);
+      });
     }
 
     // Initialiser au chargement
     document.addEventListener('DOMContentLoaded', function() {
       console.log('🚀 DOMContentLoaded déclenché dans modal_stock_settings.php');
       
-      // ✨ EVENT LISTENERS POUR CONVERSIONS D'UNITÉS
-      const btnAddUnitConversion = document.getElementById('btnAddUnitConversion');
-      if (btnAddUnitConversion) {
-        btnAddUnitConversion.addEventListener('click', addUnitConversionRow);
+      // ✨ EVENT LISTENERS POUR TYPE DE STOCKAGE
+      const typeStockageSelect = document.getElementById('catEditTypeStockage');
+      if (typeStockageSelect) {
+        typeStockageSelect.addEventListener('change', updateUniteVenteVisibility);
       }
       
-      // Event delegation pour supprimer une conversion
-      const conversionsTableBody = document.getElementById('conversionsTableBody');
-      if (conversionsTableBody) {
-        conversionsTableBody.addEventListener('click', function(e) {
-          if (e.target.closest('.btn-delete-conversion')) {
-            e.preventDefault();
-            const row = e.target.closest('tr');
-            row.remove();
-            console.log('🗑️ Conversion supprimée');
-          }
-        });
+      const btnAddUniteVente = document.getElementById('btnAddUniteVente');
+      if (btnAddUniteVente) {
+        btnAddUniteVente.addEventListener('click', addUniteVente);
       }
       
       // ✅ Initialiser les popovers Bootstrap

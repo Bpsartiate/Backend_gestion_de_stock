@@ -261,8 +261,125 @@ function onPhotoSelected(e) {
   reader.readAsDataURL(file);
 }
 
+// ================================// ✨ CHARGER TYPE PRODUIT (SIMPLE vs LOT)
 // ================================
-// �🔄 QUAND UN PRODUIT EST SÉLECTIONNÉ
+
+let currentTypeProduit = null;
+
+async function loadTypeProduitForReception(produit) {
+  try {
+    if (!produit.typeProduitId) return;
+    
+    const typeProduitId = typeof produit.typeProduitId === 'object' 
+      ? produit.typeProduitId._id 
+      : produit.typeProduitId;
+    
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/protected/types-produits/${typeProduitId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    
+    if (!response.ok) throw new Error('Erreur chargement type produit');
+    
+    currentTypeProduit = await response.json();
+    console.log('📦 Type produit chargé:', currentTypeProduit);
+    
+    // Afficher l'interface appropriée
+    if (currentTypeProduit.typeStockage === 'lot') {
+      showLotInterface();
+    } else {
+      showSimpleInterface();
+    }
+    
+  } catch (err) {
+    console.error('❌ Erreur loadTypeProduitForReception:', err);
+    currentTypeProduit = null;
+  }
+}
+
+// Afficher interface SIMPLE
+function showSimpleInterface() {
+  console.log('📋 Interface SIMPLE');
+  
+  // Update label for SIMPLE unit
+  const quantDiv = document.getElementById('quantiteReception')?.parentElement?.parentElement;
+  if (quantDiv) {
+    const label = quantDiv.querySelector('.input-group-text');
+    if (label) {
+      label.textContent = currentTypeProduit?.unitePrincipaleStockage || 'unités';
+    }
+  }
+  
+  // Show SIMPLE quantity container
+  const simpleQuantityContainer = document.getElementById('simpleQuantityContainer');
+  if (simpleQuantityContainer) {
+    simpleQuantityContainer.style.display = 'block';
+  }
+  
+  // Hide LOT container
+  const lotContainer = document.getElementById('lotContainer');
+  if (lotContainer) {
+    lotContainer.style.display = 'none';
+  }
+}
+
+// Afficher interface LOT
+function showLotInterface() {
+  console.log('🎁 Interface LOT - rouleaux/cartons');
+  
+  const lotContainer = document.getElementById('lotContainer');
+  if (!lotContainer) {
+    console.error('❌ lotContainer not found in modal');
+    return;
+  }
+  
+  // Populate uniteDetail select with values from typeProduit
+  const uniteDetailSelect = document.getElementById('uniteDetail');
+  if (uniteDetailSelect) {
+    uniteDetailSelect.innerHTML = '<option value="">-- Choisir unité --</option>';
+    (currentTypeProduit?.unitesVente || []).forEach(u => {
+      const option = document.createElement('option');
+      option.value = u;
+      option.textContent = u;
+      uniteDetailSelect.appendChild(option);
+    });
+  }
+  
+  // Show LOT container
+  lotContainer.style.display = 'block';
+  
+  // Hide SIMPLE quantity container
+  const simpleQuantityContainer = document.getElementById('simpleQuantityContainer');
+  if (simpleQuantityContainer) {
+    simpleQuantityContainer.style.display = 'none';
+  }
+  
+  // Update reception label
+  const quantDiv = document.getElementById('quantiteReception')?.parentElement?.parentElement;
+  if (quantDiv) {
+    const label = quantDiv.querySelector('.input-group-text');
+    if (label) {
+      label.textContent = currentTypeProduit?.unitePrincipaleStockage || 'unités';
+    }
+  }
+  
+  // Event listeners
+  const nombrePieces = document.getElementById('nombrePieces');
+  const quantiteParPiece = document.getElementById('quantiteParPiece');
+  const uniteDetail = document.getElementById('uniteDetail');
+  
+  if (nombrePieces) nombrePieces.addEventListener('change', updateRecapitulatif);
+  if (quantiteParPiece) quantiteParPiece.addEventListener('input', updateRecapitulatif);
+  if (uniteDetail) uniteDetail.addEventListener('change', updateRecapitulatif);
+}
+
+// ================================// �🔄 QUAND UN PRODUIT EST SÉLECTIONNÉ
 // ================================
 
 function onProduitSelected() {
@@ -277,6 +394,9 @@ function onProduitSelected() {
 
   console.log('📦 Produit sélectionné:', produit.designation);
   console.log('📍 Rayon du produit:', produit.rayonId);
+
+  // ✨ CHARGER LE TYPE PRODUIT POUR VÉRIFIER SIMPLE vs LOT
+  loadTypeProduitForReception(produit);
 
   // Mettre à jour l'unité
   const uniteLabel = document.getElementById('uniteReceptionLabel');
@@ -604,6 +724,75 @@ function verifierCapaciteTypeReception() {
 }
 
 // ================================
+// 🎁 CRÉER LES LOTS INDIVIDUELS
+// ================================
+
+async function createLotsForReception(reception, produitId) {
+  try {
+    const nombrePieces = parseInt(document.getElementById('nombrePieces').value);
+    const quantiteParPiece = parseFloat(document.getElementById('quantiteParPiece').value);
+    const uniteDetail = document.getElementById('uniteDetail').value;
+    const prixAchat = parseFloat(document.getElementById('prixAchat').value) || 0;
+    const rayonId = document.getElementById('rayonReception').value;
+    const dateReception = document.getElementById('dateReception').value;
+    
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const lotsPromises = [];
+    
+    console.log(`🎁 Création de ${nombrePieces} LOTs...`);
+    
+    for (let i = 1; i <= nombrePieces; i++) {
+      const lotData = {
+        magasinId: MAGASIN_ID,
+        produitId: produitId,
+        typeProduitId: currentTypeProduit._id,
+        receptionId: reception._id,
+        unitePrincipale: currentTypeProduit.unitePrincipaleStockage,
+        quantiteInitiale: quantiteParPiece,
+        quantiteRestante: quantiteParPiece,
+        uniteDetail: uniteDetail,
+        prixParUnite: prixAchat,
+        prixTotal: quantiteParPiece * prixAchat,
+        rayonId: rayonId,
+        dateReception: dateReception,
+        status: 'complet'
+      };
+      
+      lotsPromises.push(
+        fetch(
+          `${API_CONFIG.BASE_URL}/api/protected/lots`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(lotData)
+          }
+        )
+      );
+    }
+    
+    const lotResults = await Promise.all(lotsPromises);
+    let lotCreated = 0;
+    
+    for (const res of lotResults) {
+      if (res.ok) {
+        lotCreated++;
+      } else {
+        console.error('❌ Erreur création LOT:', await res.json());
+      }
+    }
+    
+    console.log(`✅ ${lotCreated}/${nombrePieces} LOTs créés`);
+    
+  } catch (err) {
+    console.error('❌ Erreur createLotsForReception:', err);
+    showToast('⚠️ Réception créée mais erreur lors de création des LOTs', 'warning');
+  }
+}
+
+// ================================
 // 📤 SOUMETTRE LA RÉCEPTION
 // ================================
 
@@ -616,6 +805,26 @@ async function submitReception(e) {
     if (!form.checkValidity()) {
       form.classList.add('was-validated');
       return;
+    }
+    
+    // ⚡ VALIDATION SUPPLÉMENTAIRE: Vérifier les champs selon le type
+    if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
+      // Validation LOT
+      const nombrePieces = document.getElementById('nombrePieces')?.value;
+      const quantiteParPiece = document.getElementById('quantiteParPiece')?.value;
+      const uniteDetail = document.getElementById('uniteDetail')?.value;
+      
+      if (!nombrePieces || nombrePieces <= 0 || !quantiteParPiece || quantiteParPiece <= 0 || !uniteDetail) {
+        showToast('❌ Veuillez remplir tous les champs LOT (nombre, quantité par pièce, unité)', 'danger');
+        return;
+      }
+    } else {
+      // Validation SIMPLE
+      const quantiteReception = document.getElementById('quantiteReception')?.value;
+      if (!quantiteReception || quantiteReception <= 0) {
+        showToast('❌ Veuillez entrer une quantité valide', 'danger');
+        return;
+      }
     }
 
     // 📱 AFFICHER LE LOADING
@@ -758,7 +967,10 @@ async function submitReception(e) {
     }
 
     // 📤 ÉTAPE 2: Enregistrer la réception en base de données
-    const receptionData = {
+    
+    // ✨ ADAPTER POUR SIMPLE vs LOT
+    let receptionQuantite = quantite;
+    let receptionData = {
       produitId,
       magasinId: MAGASIN_ID,
       quantite,
@@ -780,6 +992,24 @@ async function submitReception(e) {
       etatColis,
       garantie
     };
+    
+    // Si LOT: ajouter les infos LOT
+    if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
+      const nombrePieces = parseInt(document.getElementById('nombrePieces').value);
+      const quantiteParPiece = parseFloat(document.getElementById('quantiteParPiece').value);
+      const uniteDetail = document.getElementById('uniteDetail').value;
+      
+      receptionQuantite = nombrePieces;
+      receptionData.quantite = nombrePieces;
+      receptionData.type = 'lot';
+      receptionData.nombrePieces = nombrePieces;
+      receptionData.quantiteParPiece = quantiteParPiece;
+      receptionData.uniteDetail = uniteDetail;
+      
+      console.log('🎁 Préparation LOT:', { nombrePieces, quantiteParPiece, uniteDetail });
+    } else {
+      receptionData.type = 'simple';
+    }
 
     console.log('📡 Envoi données réception:', receptionData);
 
@@ -803,6 +1033,11 @@ async function submitReception(e) {
 
     const result = await response.json();
     console.log(' Réception enregistrée:', result);
+    
+    // ✨ SI LOT: créer les LOTs individuels
+    if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
+      await createLotsForReception(result, produitId);
+    }
 
     showToast(' Réception enregistrée avec succès!', 'success');
 

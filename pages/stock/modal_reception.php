@@ -47,10 +47,10 @@
 
               <!-- 3. QUANTITÉ + UNITÉ (Dynamique selon produit) -->
               <div class="row g-3 mb-4">
-                <div class="col-md-4">
+                <div class="col-md-4" id="simpleQuantityContainer">
                   <label class="form-label fw-bold">Quantité Reçue <span class="text-danger">*</span></label>
                   <div class="input-group">
-                    <input type="number" id="quantiteReception" class="form-control" min="0.01" step="0.01" required />
+                    <input type="number" id="quantiteReception" class="form-control" min="0.01" step="0.01" />
                     <span class="input-group-text fw-bold" id="uniteReceptionLabel">unités</span>
                   </div>
                   <div class="invalid-feedback">Quantité obligatoire</div>
@@ -93,7 +93,37 @@
                   <i class="fas fa-info-circle fa-2x mb-2"></i>
                   <p>Sélectionnez un produit pour voir les champs spécifiques</p>
                 </div>
-          </div>
+              </div>
+
+              <!-- 🎁 CHAMPS POUR PRODUITS LOT (caché par défaut) -->
+              <div id="lotContainer" style="display: none;" class="mb-4">
+                <div class="card border-info">
+                  <div class="card-header bg-info text-white">
+                    <i class="fas fa-boxes me-2"></i><strong>Paramètres Lots (Pièces individuelles)</strong>
+                  </div>
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <label class="form-label fw-bold">Nombre de Pièces <span class="text-danger">*</span></label>
+                        <input type="number" id="nombrePieces" class="form-control" min="1" step="1" placeholder="Ex: 5" />
+                        <small class="text-muted">Combien de rouleaux/cartons?</small>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label fw-bold">Quantité par Pièce <span class="text-danger">*</span></label>
+                        <input type="number" id="quantiteParPiece" class="form-control" min="0.01" step="0.01" placeholder="Ex: 100" />
+                        <small class="text-muted">Mètres, kg, etc par pièce</small>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label fw-bold">Unité Détail <span class="text-danger">*</span></label>
+                        <select id="uniteDetail" class="form-select">
+                          <option value="">-- Choisir unité --</option>
+                        </select>
+                        <small class="text-muted">MÈTRE, KILOGRAMME, etc</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
           <!-- 5. PHOTO OBLIGATOIRE (NOUVEAU !) -->
           <div class="row g-3 mb-4">

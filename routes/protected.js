@@ -3197,6 +3197,85 @@ router.get('/magasins/:magasinId/lots', authMiddleware, async (req, res) => {
   }
 });
 
+// POST /api/protected/lots - Créer un LOT individuel (pour système SIMPLE/LOT)
+router.post('/lots', authMiddleware, checkMagasinAccess, async (req, res) => {
+  try {
+    const requester = req.user;
+    const {
+      magasinId,
+      produitId,
+      typeProduitId,
+      receptionId,
+      unitePrincipale,
+      quantiteInitiale,
+      uniteDetail,
+      prixParUnite,
+      rayonId,
+      dateReception
+    } = req.body;
+
+    // Validation des champs requis
+    if (!magasinId || !produitId || !quantiteInitiale || !uniteDetail) {
+      return res.status(400).json({ message: 'Champs requis manquants' });
+    }
+
+    const magasin = await Magasin.findById(magasinId);
+    if (!magasin) {
+      return res.status(404).json({ message: 'Magasin non trouvé' });
+    }
+
+    if (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const produit = await Produit.findById(produitId);
+    if (!produit || produit.magasinId.toString() !== magasinId) {
+      return res.status(400).json({ message: 'Produit invalide' });
+    }
+
+    // Créer le LOT
+    const lot = new Lot({
+      magasinId,
+      produitId,
+      typeProduitId,
+      receptionId,
+      unitePrincipale,
+      quantiteInitiale,
+      quantiteRestante: quantiteInitiale,
+      uniteDetail,
+      prixParUnite: prixParUnite || 0,
+      prixTotal: (prixParUnite || 0) * quantiteInitiale,
+      rayonId,
+      dateReception: dateReception || new Date(),
+      status: 'complet',
+      peutEtreVendu: true
+    });
+
+    await lot.save();
+
+    // Log activity
+    try {
+      const activity = new Activity({
+        utilisateurId: requester.id,
+        action: 'CREER_LOT_SIMPLE_LOT',
+        entite: 'Lot',
+        entiteId: lot._id,
+        description: `LOT '${uniteDetail}' créé: ${quantiteInitiale} ${unitePrincipale} @ ${prixParUnite}/${uniteDetail}`,
+        icon: 'fas fa-box'
+      });
+      await activity.save();
+    } catch (actErr) {
+      console.error('activity.save.error', actErr);
+    }
+
+    console.log('✅ LOT créé:', lot._id);
+    return res.status(201).json(lot);
+  } catch (err) {
+    console.error('lots.create.error', err);
+    return res.status(500).json({ message: 'Erreur: ' + err.message });
+  }
+});
+
 // ================================
 // 🚨 ROUTES STOCK - ALERTES
 // ================================
@@ -3891,7 +3970,28 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     await stockMovement.save();
     console.log(`✅ Mouvement de stock créé: ${stockMovement._id}`);
 
-    // 3. Mettre à jour StockRayon (NEW LOGIC)
+    // ⚠️ SI LOT: Ne pas créer StockRayon (sera créé via LOTs individuels)
+    if (req.body.type === 'lot') {
+      console.log(`🎁 Type = LOT - Pas de création StockRayon (LOTs créés individuellement)`);
+      
+      try {
+        const activity = new Activity({
+          utilisateurId: req.user.id,
+          action: 'CREER_RECEPTION_LOT',
+          entite: 'Reception',
+          entiteId: reception._id,
+          description: `Réception LOT créée - ${req.body.nombrePieces} pièces de ${produit.designation}`,
+          icon: 'fas fa-truck-loading'
+        });
+        await activity.save();
+      } catch (actErr) {
+        console.error('activity.save.error', actErr);
+      }
+
+      return res.status(201).json(reception);
+    }
+
+    // 3. Mettre à jour StockRayon (NEW LOGIC) - SEULEMENT POUR SIMPLE
     console.log(`\n🔍 === CRÉATION/MISE À JOUR STOCKRAYON ===`);
     console.log(`   Recherche: produitId=${produitId}, magasinId=${magasinId}, rayonId=${rayonId}`);
     
