@@ -2530,7 +2530,7 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
       .populate('magasinId', '_id nomMagasin')
       .populate({
         path: 'typeProduitId',
-        select: '_id nomType unitePrincipale capaciteMax typeStockage'
+        select: '_id nomType unitePrincipale unitePrincipaleStockage typeStockage capaciteMax'
       })
       .populate({
         path: 'rayonId',

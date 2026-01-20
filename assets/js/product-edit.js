@@ -178,6 +178,12 @@ function remplirFormulaireProduit(produit) {
   document.getElementById('editSeuilAlerte').value = produit.seuilAlerte || 10;
   document.getElementById('editEtat').value = produit.etat || 'Neuf';
   document.getElementById('editNotes').value = produit.notes || '';
+  
+  // 🎁 Ajouter dynamiquement l'unité au label du seuil d'alerte (depuis typeProduitId)
+  const seuilLabel = document.querySelector('label[for="editSeuilAlerte"]');
+  if (seuilLabel && produit.typeProduitId?.unitePrincipaleStockage) {
+    seuilLabel.innerHTML = `Seuil Alerte (<span style="color: #0d6efd; font-weight: bold;">${produit.typeProduitId.unitePrincipaleStockage}</span>)`;
+  }
 
   // Photo - afficher la photo existante si elle existe
   const container = document.getElementById('editPhotoPreviewContainer');
@@ -240,6 +246,13 @@ async function chargerOngletStocks(produitId) {
     tableStocks.style.display = 'none';
     noStocks.style.display = 'none';
 
+    // 🎁 Récupérer l'unité du produit (depuis typeProduitId)
+    const unitePrincipale = PRODUIT_EN_EDITION?.typeProduitId?.unitePrincipaleStockage || 
+                            PRODUIT_EN_EDITION?.unitePrincipaleStockage || 'kg';
+    const seuilAlerte = PRODUIT_EN_EDITION?.seuilAlerte || 0;
+
+    console.log('🎯 Unité récupérée:', unitePrincipale);
+
     // Charger les StockRayons
     const stocks = await API.get(
       `/api/protected/produits/:produitId/stocks`,
@@ -253,26 +266,103 @@ async function chargerOngletStocks(produitId) {
       return;
     }
 
-    // Remplir le tableau
+    // ✨ Améliorer le tableau avec styles et actions
     stocksBody.innerHTML = '';
     stocks.forEach(stock => {
       const row = document.createElement('tr');
       const nomRayon = stock.rayonId?.nomRayon || 'N/A';
       const quantite = stock.quantiteDisponible?.toFixed(2) || 0;
       const nbReceptions = stock.réceptions?.length || 0;
+      const seuilAtteint = quantite < seuilAlerte ? 'table-warning' : '';
       
+      // 🎯 Afficher l'unité dynamique au lieu de "kg"
+      const badgeAlerte = quantite < seuilAlerte ? 
+        `<span class="badge bg-danger ms-2"><i class="fas fa-exclamation-triangle"></i> Critique</span>` : '';
+      
+      row.className = seuilAtteint;
       row.innerHTML = `
         <td><strong>${nomRayon}</strong></td>
-        <td>${quantite} kg</td>
-        <td>${nbReceptions}</td>
         <td>
-          <button class="btn btn-sm btn-info" onclick="afficherDetailsStock('${stock._id}')">
+          <div class="d-flex align-items-center">
+            <span>${quantite} ${unitePrincipale}</span>
+            ${badgeAlerte}
+          </div>
+          <small class="text-muted d-block">Seuil: ${seuilAlerte} ${unitePrincipale}</small>
+        </td>
+        <td><span class="badge bg-info">${nbReceptions}</span></td>
+        <td>
+          <button class="btn btn-sm btn-info me-2" onclick="afficherDetailsStock('${stock._id}')" title="Voir les détails du stock">
             <i class="fas fa-eye"></i> Détails
+          </button>
+          <button class="btn btn-sm btn-success" onclick="ouvrirAjoutMouvement('${stock._id}', '${nomRayon}')" title="Ajouter une réception ou sortie">
+            <i class="fas fa-plus"></i> Mouvement
           </button>
         </td>
       `;
       stocksBody.appendChild(row);
     });
+
+    // 📝 Ajouter une section pour les mouvements récents
+    const mouvementsRecents = PRODUIT_EN_EDITION?.mouvements?.slice(0, 5) || [];
+    if (mouvementsRecents.length > 0) {
+      const mouvDiv = document.createElement('div');
+      mouvDiv.className = 'mt-4';
+      mouvDiv.innerHTML = `
+        <div class="card border-info">
+          <div class="card-header bg-info text-white">
+            <h6 class="mb-0">
+              <i class="fas fa-exchange-alt me-2"></i>
+              Mouvements Récents
+            </h6>
+          </div>
+          <div class="card-body p-2">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Quantité</th>
+                    <th>Utilisateur</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${mouvementsRecents.map(mouv => {
+                    // 🎯 Formater la date correctement (chercher ts, dateCreation, ou createdAt)
+                    let dateFormatee = 'N/A';
+                    const dateValue = mouv.ts || mouv.dateCreation || mouv.createdAt;
+                    if (dateValue) {
+                      try {
+                        const d = new Date(dateValue);
+                        if (!isNaN(d.getTime())) {
+                          dateFormatee = d.toLocaleDateString('fr-FR');
+                        }
+                      } catch(e) { 
+                        console.warn('⚠️ Erreur parsing date mouvement:', mouv, e);
+                      }
+                    }
+                    
+                    return `
+                      <tr>
+                        <td><small>${dateFormatee}</small></td>
+                        <td>
+                          <span class="badge ${mouv.type === 'entree' ? 'bg-success' : 'bg-danger'}">
+                            ${mouv.type === 'entree' ? '📥 Entrée' : '📤 Sortie'}
+                          </span>
+                        </td>
+                        <td><strong>${mouv.quantite?.toFixed(2)} ${unitePrincipale}</strong></td>
+                        <td><small>${mouv.utilisateur?.nom || mouv.utilisateur?.email || 'Système'}</small></td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+      tableStocks.parentElement.insertBefore(mouvDiv, tableStocks.nextSibling);
+    }
 
     tableStocks.style.display = 'table';
   } catch (err) {
@@ -297,6 +387,11 @@ async function chargerOngletReceptions(produitId) {
 
     // Utiliser les réceptions du produit enrichi (déjà chargées)
     let receptions = PRODUIT_EN_EDITION?.receptions || [];
+    // 🎁 Récupérer l'unité depuis typeProduitId
+    const unitePrincipale = PRODUIT_EN_EDITION?.typeProduitId?.unitePrincipaleStockage || 
+                            PRODUIT_EN_EDITION?.unitePrincipaleStockage || 'kg';
+
+    console.log('📋 Réceptions unité:', unitePrincipale);
 
     receptionsLoading.style.display = 'none';
 
@@ -308,13 +403,25 @@ async function chargerOngletReceptions(produitId) {
     // Remplir le tableau
     receptionsBody.innerHTML = '';
     receptions.forEach(reception => {
-      const date = new Date(reception.dateReception).toLocaleDateString('fr-FR');
+      // 🎯 Formater la date correctement
+      let dateFormatee = 'N/A';
+      if (reception.dateReception) {
+        try {
+          const d = new Date(reception.dateReception);
+          if (!isNaN(d.getTime())) {
+            dateFormatee = d.toLocaleDateString('fr-FR');
+          }
+        } catch(e) { 
+          console.warn('⚠️ Erreur parsing date réception:', e);
+        }
+      }
+      
       const prixTotal = (reception.quantite * reception.prixAchat).toFixed(2);
       
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${date}</td>
-        <td>${reception.quantite} kg</td>
+        <td>${dateFormatee}</td>
+        <td><strong>${reception.quantite} ${unitePrincipale}</strong></td>
         <td>${reception.rayonId?.nomRayon || 'N/A'}</td>
         <td>${reception.fournisseur || 'N/A'}</td>
         <td>${reception.prixAchat?.toFixed(2) || 0} €</td>
@@ -570,6 +677,39 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+/**
+ * Ouvrir le modal pour ajouter un mouvement de stock
+ */
+function ouvrirAjoutMouvement(stockRayonId, nomRayon) {
+  console.log(`📦 Ouverture mouvement pour stock: ${stockRayonId}, rayon: ${nomRayon}`);
+  
+  // Vérifier si un modal de mouvement existe
+  const mouvementModal = document.getElementById('modalAjoutMouvement') || 
+                         document.getElementById('modalStockMovement') ||
+                         document.getElementById('modalMouvement');
+  
+  if (!mouvementModal) {
+    alert('⚠️ Modal mouvement non trouvé. Veuillez rafraîchir la page.');
+    return;
+  }
+  
+  // Pré-remplir les informations
+  const quantiteInput = document.getElementById('mouvementQuantite');
+  const rayonInput = document.getElementById('mouvementRayon');
+  const typeInput = document.getElementById('mouvementType');
+  
+  if (quantiteInput) quantiteInput.value = '';
+  if (rayonInput) rayonInput.value = nomRayon;
+  
+  // Afficher le modal
+  const modal = new bootstrap.Modal(mouvementModal);
+  modal.show();
+  
+  // Sauvegarder l'ID du stock pour utilisation ultérieure
+  window.STOCK_RAYON_COURANT = stockRayonId;
+}
+
 // Exporter pour utilisation
 window.openProductDetailPremium = openProductDetailPremium;
 window.sauvegarderEditProduit = sauvegarderEditProduit;
+window.ouvrirAjoutMouvement = ouvrirAjoutMouvement;

@@ -918,25 +918,28 @@ async function loadPremiumLots(produit, receptions) {
   try {
     const tbody = document.getElementById('premiumLotsTable');
     
-    // 🎁 Extraire les LOTs des réceptions (soit via métadonnées, soit via lots individuels)
+    // 🎁 Extraire les LOTs des réceptions (grouper par réception, pas par pièce)
     let lots = [];
     if (Array.isArray(receptions)) {
       receptions.forEach(reception => {
-        // Option 1: LOTs individuels (depuis la base de données)
+        // Option 1: Si nous avons des lots individuels, en créer UN RÉSUMÉ par réception
         if (reception.lots && Array.isArray(reception.lots) && reception.lots.length > 0) {
-          reception.lots.forEach(lot => {
-            lots.push({
-              nombrePieces: 1,
-              quantiteParPiece: lot.quantiteInitiale || 0,
-              quantiteRestante: lot.quantiteRestante || 0,
-              uniteDetail: lot.uniteDetail || reception.uniteDetail || 'unité',
-              prixParUnite: lot.prixParUnite || reception.prixParUnite || 0,
-              dateReception: reception.dateReception,
-              fournisseur: reception.fournisseur,
-              statut: lot.statut,
-              reception: reception,
-              lotId: lot._id
-            });
+          // ✅ Grouper tous les lots de cette réception en UNE SEULE LIGNE
+          const totalPiecesInReception = reception.lots.length;
+          const firstLot = reception.lots[0];
+          
+          lots.push({
+            nombrePieces: totalPiecesInReception, // Total de pièces dans cette réception
+            quantiteParPiece: firstLot.quantiteInitiale || reception.quantiteParPiece || 0,
+            quantiteRestante: reception.lots.reduce((sum, lot) => sum + (lot.quantiteRestante || 0), 0),
+            uniteDetail: firstLot.uniteDetail || reception.uniteDetail || 'unité',
+            prixParUnite: firstLot.prixParUnite || reception.prixParUnite || 0,
+            dateReception: reception.dateReception,
+            fournisseur: reception.fournisseur,
+            statut: reception.statut,
+            reception: reception,
+            receptionId: reception._id,
+            lotCount: totalPiecesInReception
           });
         } 
         // Option 2: Métadonnées LOT (fallback si pas de lots individuels)
@@ -948,7 +951,8 @@ async function loadPremiumLots(produit, receptions) {
             prixParUnite: reception.prixParUnite,
             dateReception: reception.dateReception,
             fournisseur: reception.fournisseur,
-            reception: reception
+            reception: reception,
+            receptionId: reception._id
           });
         }
       });
@@ -988,18 +992,22 @@ async function loadPremiumLots(produit, receptions) {
         : 'N/A';
 
       html += `
-        <tr class="align-middle">
+        <tr class="align-middle" style="background-color: ${idx % 2 === 0 ? '#f8f9fa' : 'white'}; border-left: 4px solid #0d6efd;">
           <td>
-            <span class="badge bg-warning text-dark">
-              <i class="fas fa-cube me-1"></i>
-              <strong>${nombrePieces}</strong>
-            </span>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-warning text-dark">
+                <i class="fas fa-cube me-1"></i>
+                <strong>${nombrePieces}</strong>
+              </span>
+              ${lot.lotCount ? `<small class="text-muted">(${lot.lotCount} pcs)</small>` : ''}
+            </div>
           </td>
           <td>
             <strong>${(qtyParPiece).toLocaleString('fr-FR', {minimumFractionDigits: 2})}</strong>
+            <small class="d-block text-muted">par pièce</small>
           </td>
           <td>
-            <span class="badge bg-info">${unite}</span>
+            <span class="badge bg-info text-white">${unite}</span>
           </td>
           <td>
             <span class="text-success fw-bold">
@@ -1008,19 +1016,19 @@ async function loadPremiumLots(produit, receptions) {
           </td>
           <td>
             <div>
-              <small class="text-muted d-block">
-                <strong>${(totalQtyLot).toLocaleString('fr-FR', {minimumFractionDigits: 2})}</strong> ${unite}
-              </small>
-              <strong class="text-success d-block">
+              <div class="fw-bold">
+                ${(totalQtyLot).toLocaleString('fr-FR', {minimumFractionDigits: 2})} ${unite}
+              </div>
+              <div class="text-success fw-bold">
                 ${(totalPrixLot).toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF
-              </strong>
+              </div>
             </div>
           </td>
           <td>
             <small class="text-muted">${dateReception}</small>
           </td>
           <td>
-            <button class="btn btn-sm btn-info" title="Voir réception" onclick="showReceptionDetail('${lot.reception._id || ''}')">
+            <button class="btn btn-sm btn-outline-info" title="Voir réception" onclick="showReceptionDetail('${lot.receptionId || lot.reception._id || ''}')">
               <i class="fas fa-eye"></i>
             </button>
           </td>
