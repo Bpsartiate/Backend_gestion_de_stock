@@ -215,9 +215,17 @@
                   </select>
                 </div>
               </div>
+            </div>
+          </div>
 
+          <!-- 3. GESTION LOT & ROTATION STOCK -->
+          <div class="card bg-light border-info mb-4">
+            <div class="card-header bg-info bg-opacity-10 border-info py-2">
+              <h6 class="mb-0 fw-bold"><i class="fas fa-info-circle me-2 text-info"></i>Mode de Rotation</h6>
+            </div>
+            <div class="card-body p-3">
               <!-- Info Mode FIFO/LIFO -->
-              <div id="infoModeGestion" class="alert alert-info mt-3 mb-0 py-2">
+              <div id="infoModeGestion" class="alert alert-info mt-0 mb-0 py-2">
                 <small>
                   <i class="fas fa-info-circle me-2"></i>
                   <span id="modeGestionText">Le mode de rotation sera appliqué selon la catégorie choisie.</span>
@@ -225,8 +233,6 @@
               </div>
             </div>
           </div>
-
-          <!-- 5. INFOS COMPLÉMENTAIRES -->
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label fw-bold">Seuil Minimum</label>
@@ -690,10 +696,12 @@
       return;
     }
 
-    // Vérifier la capacité
+    // Vérifier la capacité - NOMBRE D'ARTICLES (pas quantité de pièces!)
     const capaciteMax = rayon.capaciteMax || 100; // Par défaut 100 si non défini
-    const quantiteActuelle = rayon.quantiteActuelle || 0;
-    const pourcentageUtilisation = (quantiteActuelle / capaciteMax) * 100;
+    const nombreArticlesActuel = rayon.articles || 0;  // ✅ Nombre d'articles DIFFÉRENTS
+    const pourcentageUtilisation = (nombreArticlesActuel / capaciteMax) * 100;
+
+    console.log(`🔍 verificarRayonPlein: rayon=${rayon.nomRayon}, articles=${nombreArticlesActuel}/${capaciteMax}, %=${Math.round(pourcentageUtilisation)}`);
 
     // Afficher une alerte si le rayon est à 80% ou plus
     if (pourcentageUtilisation >= 80) {
@@ -701,13 +709,13 @@
       
       if (pourcentageUtilisation >= 100) {
         // Rayon complètement plein
-        messageSpan.innerHTML = `Ce rayon est <strong>PLEIN</strong> (${quantiteActuelle}/${capaciteMax} unités) ⛔`;
+        messageSpan.innerHTML = `Ce rayon est <strong>PLEIN</strong> (${nombreArticlesActuel}/${capaciteMax} articles) ⛔`;
         alerte.classList.remove('alert-warning');
         alerte.classList.add('alert-danger');
       } else {
         // Rayon presque plein
         const pourcentage = Math.round(pourcentageUtilisation);
-        messageSpan.innerHTML = `Ce rayon est presque plein (${quantiteActuelle}/${capaciteMax} unités - ${pourcentage}%) ⚠️`;
+        messageSpan.innerHTML = `Ce rayon est presque plein (${nombreArticlesActuel}/${capaciteMax} articles - ${pourcentage}%) ⚠️`;
         alerte.classList.remove('alert-danger');
         alerte.classList.add('alert-warning');
       }

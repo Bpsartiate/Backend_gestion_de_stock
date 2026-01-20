@@ -67,6 +67,10 @@
             <i class="fas fa-cubes me-2 text-info"></i>
             <strong>Stock & Rayon</strong>
           </button>
+          <button class="nav-link px-4 py-3" id="tabLots-tab" data-bs-toggle="tab" data-bs-target="#tabLots" type="button" role="tab" style="display: none;">
+            <i class="fas fa-boxes me-2 text-warning"></i>
+            <strong>Lots</strong>
+          </button>
           <button class="nav-link px-4 py-3" id="tabReceptions-tab" data-bs-toggle="tab" data-bs-target="#tabReceptions" type="button" role="tab">
             <i class="fas fa-arrow-down me-2 text-success"></i>
             <strong>Réceptions</strong>
@@ -196,7 +200,21 @@
             </div>
           </div>
 
-          <!-- ========== TAB 2: STOCK & RAYON ========== -->
+          <!-- ========== TAB 2: LOT (si produit LOT) ========== -->
+          <div class="tab-pane fade" id="tabLots" role="tabpanel" style="display: none;">
+            <h6 class="text-uppercase text-muted fw-bold mb-3">
+              <i class="fas fa-boxes me-2 text-warning"></i>Lots reçus
+            </h6>
+
+            <!-- Tableau des LOTs -->
+            <div id="detailLotsContainer" style="max-height: 600px; overflow-y: auto;">
+              <div class="alert alert-info text-center">
+                <i class="fas fa-spinner fa-spin me-2"></i>Chargement des lots...
+              </div>
+            </div>
+          </div>
+
+          <!-- ========== TAB 3: STOCK & RAYON ========== -->
           <div class="tab-pane fade" id="tabStock" role="tabpanel">
             <h6 class="text-uppercase text-muted fw-bold mb-3">
               <i class="fas fa-cubes me-2"></i>État du stock
@@ -456,6 +474,14 @@ async function openProductDetailModal(produitId) {
     loadProductReceptions(produitId);
     loadProductTimeline(produitId);
 
+    // ✅ Si produit LOT, afficher l'onglet Lots
+    if (produit.typeProduitsId?.typeStockage === 'lot') {
+      document.getElementById('tabLots-tab').style.display = 'block';
+      loadProductLots(produitId);
+    } else {
+      document.getElementById('tabLots-tab').style.display = 'none';
+    }
+
     const modal = new bootstrap.Modal(document.getElementById('modalProductDetail'));
     modal.show();
 
@@ -602,6 +628,104 @@ async function loadProductTimeline(produitId) {
   } catch (err) {
     console.warn('Timeline non disponible:', err);
     document.getElementById('detailTimelineContainer').innerHTML = '<div class="alert alert-info">Aucun historique</div>';
+  }
+}
+
+// 🎁 Charger et afficher les LOTS
+async function loadProductLots(produitId) {
+  try {
+    const container = document.getElementById('detailLotsContainer');
+    
+    // Récupérer les LOTs via l'endpoint (suppose qu'il existe)
+    let lots = [];
+    try {
+      const response = await fetch(`${API_BASE_PROTECTED}/produits/${produitId}/lots`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken')}`
+        }
+      });
+      if (response.ok) {
+        lots = await response.json();
+      }
+    } catch (e) {
+      console.warn('⚠️ Endpoint /lots non disponible, tentative alternative...');
+    }
+
+    if (!lots || lots.length === 0) {
+      container.innerHTML = `
+        <div class="alert alert-info text-center">
+          <i class="fas fa-info-circle me-2"></i>Aucun lot reçu pour ce produit
+        </div>
+      `;
+      return;
+    }
+
+    // Créer tableau des LOTS
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th><i class="fas fa-boxes me-2 text-warning"></i>Pièces</th>
+              <th><i class="fas fa-weight me-2"></i>Quantité/Pièce</th>
+              <th><i class="fas fa-ruler me-2"></i>Unité</th>
+              <th><i class="fas fa-tag me-2 text-success"></i>Prix/Unité</th>
+              <th><i class="fas fa-calculator me-2 text-info"></i>Total</th>
+              <th><i class="fas fa-calendar me-2 text-muted"></i>Date Réception</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    lots.forEach(lot => {
+      const totalQty = (lot.nombrePieces || 0) * (lot.quantiteParPiece || 0);
+      const totalPrice = totalQty * (lot.prixParUnite || 0);
+      const dateReception = new Date(lot.dateReception || lot.createdAt).toLocaleDateString('fr-FR');
+      
+      html += `
+        <tr class="align-middle">
+          <td>
+            <span class="badge bg-warning text-dark">
+              <i class="fas fa-cube me-1"></i>${lot.nombrePieces || 0}
+            </span>
+          </td>
+          <td>
+            <strong>${(lot.quantiteParPiece || 0).toLocaleString('fr-FR', {minimumFractionDigits: 2})}</strong>
+          </td>
+          <td>
+            <span class="badge bg-info">${lot.uniteDetail || 'unité'}</span>
+          </td>
+          <td>
+            <span class="text-success fw-bold">${(lot.prixParUnite || 0).toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF</span>
+          </td>
+          <td>
+            <div>
+              <small class="text-muted d-block">${totalQty.toLocaleString('fr-FR', {minimumFractionDigits: 2})} ${lot.uniteDetail || 'unité'}</small>
+              <strong class="text-success">${totalPrice.toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF</strong>
+            </div>
+          </td>
+          <td>
+            <small class="text-muted">${dateReception}</small>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    container.innerHTML = html;
+
+  } catch (err) {
+    console.warn('❌ Erreur loadProductLots:', err);
+    document.getElementById('detailLotsContainer').innerHTML = `
+      <div class="alert alert-warning text-center">
+        <i class="fas fa-exclamation-triangle me-2"></i>Impossible de charger les lots
+      </div>
+    `;
   }
 }
 

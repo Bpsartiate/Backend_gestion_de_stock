@@ -97,49 +97,105 @@
 
               <!-- 🎁 CHAMPS POUR PRODUITS LOT (caché par défaut) -->
               <div id="lotContainer" style="display: none;" class="mb-4">
-                <div class="card border-info">
-                  <div class="card-header bg-info text-white">
-                    <i class="fas fa-boxes me-2"></i><strong>Paramètres Lots (Pièces individuelles)</strong>
-                  </div>
-                  <div class="card-body">
-                    <div class="row g-3">
-                      <div class="col-md-4">
-                        <label class="form-label fw-bold">Nombre de Pièces <span class="text-danger">*</span></label>
-                        <input type="number" id="nombrePieces" class="form-control" min="1" step="1" placeholder="Ex: 5" />
-                        <small class="text-muted">Combien de rouleaux/cartons?</small>
-                      </div>
-                      <div class="col-md-4">
-                        <label class="form-label fw-bold">Quantité par Pièce <span class="text-danger">*</span></label>
-                        <input type="number" id="quantiteParPiece" class="form-control" min="0.01" step="0.01" placeholder="Ex: 100" />
-                        <small class="text-muted">Mètres, kg, etc par pièce</small>
-                      </div>
-                      <div class="col-md-4">
-                        <label class="form-label fw-bold">Unité Détail <span class="text-danger">*</span></label>
-                        <select id="uniteDetail" class="form-select">
-                          <option value="">-- Choisir unité --</option>
-                        </select>
-                        <small class="text-muted">MÈTRE, KILOGRAMME, etc</small>
+                <!-- INFO HEADER avec détails produit LOT -->
+                <div class="alert alert-info border-info bg-light mb-3" id="lotInfoHeader" style="border-left: 4px solid #0dcaf0;">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">
+                        <i class="fas fa-cube me-2 text-info"></i>
+                        <span id="lotProductName">Produit LOT</span>
+                      </h6>
+                      <small class="text-muted d-block">
+                        <strong>Unité stockage:</strong> <span id="lotUnitePrincipale">--</span>
+                      </small>
+                    </div>
+                    <div class="text-end">
+                      <div id="lotPreviewInfo" class="small">
+                        <span class="text-muted">Détails à remplir...</span>
                       </div>
                     </div>
-                    
-                    <!-- Prix et Récapitulatif pour LOT -->
-                    <div class="row g-3 mt-3 pt-3 border-top">
-                      <div class="col-md-6">
-                        <label class="form-label fw-bold text-info">Prix par Unité <span class="text-danger">*</span></label>
+                  </div>
+                </div>
+
+                <div class="card border-warning shadow-sm">
+                  <div class="card-header bg-warning bg-opacity-10 border-warning">
+                    <i class="fas fa-boxes me-2 text-warning"></i>
+                    <strong>Détails du Lot (Pièces individuelles)</strong>
+                  </div>
+                  <div class="card-body">
+                    <!-- Ligne 1: Pièces et Quantité -->
+                    <div class="row g-3 mb-4">
+                      <div class="col-md-4">
+                        <label class="form-label fw-bold">
+                          <i class="fas fa-cube me-2"></i>Nombre de Pièces <span class="text-danger">*</span>
+                        </label>
                         <div class="input-group">
-                          <span class="input-group-text">CDF</span>
-                          <input type="number" id="prixParUniteDetail" class="form-control" step="0.01" placeholder="10" />
-                          <span class="input-group-text" id="uniteDetailLabel">par MÈTRE</span>
+                          <input type="number" id="nombrePieces" class="form-control form-control-lg" min="1" step="1" placeholder="Ex: 5" />
+                          <span class="input-group-text">pièces</span>
                         </div>
-                        <small class="text-muted">Prix du mètre, kg, litre, etc</small>
+                        <small class="text-muted d-block mt-2">Rouleaux, cartons, reams...</small>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label fw-bold">
+                          <i class="fas fa-weight me-2"></i>Quantité par Pièce <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                          <input type="number" id="quantiteParPiece" class="form-control form-control-lg" min="0.01" step="0.01" placeholder="100" />
+                          <span class="input-group-text" id="quantiteParPieceUnit">unité</span>
+                        </div>
+                        <small class="text-muted d-block mt-2">Mètres, kg, litres...</small>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label fw-bold">
+                          <i class="fas fa-ruler me-2"></i>Unité <span class="text-danger">*</span>
+                        </label>
+                        <select id="uniteDetail" class="form-select form-select-lg">
+                          <option value="">-- Choisir unité --</option>
+                        </select>
+                        <small class="text-muted d-block mt-2">Mètre, kg, litre, etc.</small>
+                      </div>
+                    </div>
+
+                    <!-- Ligne 2: Prix et Totaux -->
+                    <div class="row g-3 pt-3 border-top">
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                          <i class="fas fa-tag me-2 text-success"></i>Prix par Unité <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                          <span class="input-group-text fw-bold">CDF</span>
+                          <input type="number" id="prixParUniteDetail" class="form-control form-control-lg" step="0.01" placeholder="10.50" />
+                          <span class="input-group-text" id="prixUnitLabel">par unité</span>
+                        </div>
+                        <small class="text-muted d-block mt-2">Prix du mètre, kg, litre...</small>
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label fw-bold text-success">💰 Prix Total Estimé</label>
+                        <label class="form-label fw-bold text-success">
+                          <i class="fas fa-calculator me-2"></i>💰 Prix Total Estimé
+                        </label>
                         <div class="input-group">
-                          <span class="input-group-text">CDF</span>
-                          <input type="text" id="prixTotalEstime" class="form-control" readonly value="0" />
+                          <span class="input-group-text fw-bold">CDF</span>
+                          <input type="text" id="prixTotalEstime" class="form-control form-control-lg fw-bold text-success" readonly value="0" />
                         </div>
-                        <small class="text-muted">Nombre pièces × Qté/pièce × Prix/unité</small>
+                        <small class="text-muted d-block mt-2">
+                          Pièces × Qté/pièce × Prix/unité
+                        </small>
+                      </div>
+                    </div>
+
+                    <!-- Preview et Formule -->
+                    <div class="row g-3 mt-4 pt-3 border-top">
+                      <div class="col-12">
+                        <div class="card bg-success bg-opacity-10 border-success">
+                          <div class="card-body">
+                            <h6 class="text-success mb-3">
+                              <i class="fas fa-eye me-2"></i>Récapitulatif
+                            </h6>
+                            <div id="lotRecapitulatif" class="small">
+                              <p class="text-muted mb-2">Remplissez les champs pour voir le détail...</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

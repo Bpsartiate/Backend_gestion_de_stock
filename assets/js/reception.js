@@ -343,6 +343,26 @@ function showLotInterface() {
     return;
   }
   
+  // 🎁 AFFICHER LES DÉTAILS LOT DU PRODUIT EN HAUT
+  const produitSelect = document.getElementById('produitReception');
+  const produitId = produitSelect?.value;
+  
+  if (produitId) {
+    const produit = PRODUITS_RECEPTION.find(p => p._id === produitId);
+    if (produit) {
+      // Mettre à jour le header avec infos LOT
+      const lotProductName = document.getElementById('lotProductName');
+      const lotUnitePrincipale = document.getElementById('lotUnitePrincipale');
+      
+      if (lotProductName) {
+        lotProductName.textContent = produit.designation;
+      }
+      if (lotUnitePrincipale) {
+        lotUnitePrincipale.textContent = currentTypeProduit?.unitePrincipaleStockage || 'unités';
+      }
+    }
+  }
+  
   // Populate uniteDetail select with values from typeProduit
   const uniteDetailSelect = document.getElementById('uniteDetail');
   if (uniteDetailSelect) {
@@ -364,6 +384,85 @@ function showLotInterface() {
     simpleQuantityContainer.style.display = 'none';
   }
   
+  // ⚡ Ajouter listeners pour mise à jour en temps réel
+  const nombrePieces = document.getElementById('nombrePieces');
+  const quantiteParPiece = document.getElementById('quantiteParPiece');
+  const prixParUniteDetail = document.getElementById('prixParUniteDetail');
+  const uniteDetail = document.getElementById('uniteDetail');
+  
+  const updateLotPreview = () => {
+    const nb = parseInt(nombrePieces?.value) || 0;
+    const qty = parseFloat(quantiteParPiece?.value) || 0;
+    const prix = parseFloat(prixParUniteDetail?.value) || 0;
+    const unite = uniteDetail?.value || 'unité';
+    
+    const total = nb * qty;
+    const totalPrix = total * prix;
+    
+    // Update main preview in header
+    const preview = document.getElementById('lotPreviewInfo');
+    if (preview) {
+      preview.innerHTML = nb > 0 && qty > 0 
+        ? `
+          <div>
+            <div class="text-success"><strong>${nb} pièces</strong></div>
+            <div class="text-info small">${total.toLocaleString('fr-FR', {minimumFractionDigits: 2})} ${unite}</div>
+            <div class="text-success"><strong>💰 ${totalPrix.toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF</strong></div>
+          </div>
+        `
+        : '<div class="text-muted small">Remplissez les champs...</div>';
+    }
+
+    // Update detailed recap
+    const recap = document.getElementById('lotRecapitulatif');
+    if (recap) {
+      if (nb > 0 && qty > 0) {
+        recap.innerHTML = `
+          <div class="fw-bold text-success">
+            <i class="fas fa-check-circle me-2"></i>
+            <span>${nb}</span> 
+            <span class="text-muted">pièces ×</span>
+            <span>${qty.toLocaleString('fr-FR', {minimumFractionDigits: 2})}</span>
+            <span class="text-muted">${unite} ×</span>
+            <span>${prix.toLocaleString('fr-FR', {minimumFractionDigits: 2})}</span>
+            <span class="text-muted">CDF/unité =</span>
+            <span class="text-success">${totalPrix.toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF</span>
+          </div>
+          <hr class="my-2">
+          <div class="row g-2 small">
+            <div class="col-6">
+              <strong>Quantité totale:</strong> ${total.toLocaleString('fr-FR', {minimumFractionDigits: 2})} ${unite}
+            </div>
+            <div class="col-6">
+              <strong>Prix total:</strong> <span class="text-success">${totalPrix.toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF</span>
+            </div>
+          </div>
+        `;
+      } else {
+        recap.innerHTML = '<p class="text-muted mb-0">Remplissez tous les champs pour voir le récapitulatif...</p>';
+      }
+    }
+  };
+  
+  nombrePieces?.addEventListener('input', updateLotPreview);
+  quantiteParPiece?.addEventListener('input', updateLotPreview);
+  prixParUniteDetail?.addEventListener('input', updateLotPreview);
+  uniteDetail?.addEventListener('change', updateLotPreview);
+  
+  // Update unité labels dynamiquement
+  uniteDetail?.addEventListener('change', () => {
+    const selectedUnite = uniteDetail.value;
+    const quantiteParPieceUnit = document.getElementById('quantiteParPieceUnit');
+    const prixUnitLabel = document.getElementById('prixUnitLabel');
+    
+    if (quantiteParPieceUnit) {
+      quantiteParPieceUnit.textContent = selectedUnite || 'unité';
+    }
+    if (prixUnitLabel) {
+      prixUnitLabel.textContent = `par ${selectedUnite || 'unité'}`;
+    }
+  });
+  
   // Update reception label
   const quantDiv = document.getElementById('quantiteReception')?.parentElement?.parentElement;
   if (quantDiv) {
@@ -373,13 +472,8 @@ function showLotInterface() {
     }
   }
   
-  // Event listeners for price calculation
-  const nombrePieces = document.getElementById('nombrePieces');
-  const quantiteParPiece = document.getElementById('quantiteParPiece');
-  const uniteDetail = document.getElementById('uniteDetail');
-  const prixParUniteDetail = document.getElementById('prixParUniteDetail');
+  // ✅ Récupérer les éléments pour calcul de prix (SANS REDÉCLARATION)
   const prixTotalEstime = document.getElementById('prixTotalEstime');
-  const uniteDetailLabel = document.getElementById('uniteDetailLabel');
   
   // Function to calculate total price
   const calculateTotalPrice = () => {
@@ -622,10 +716,12 @@ function verificarRayonPleinReception(rayonId) {
     return;
   }
 
-  // Vérifier la capacité
+  // Vérifier la capacité - NOMBRE D'ARTICLES (pas quantité de pièces!)
   const capaciteMax = rayon.capaciteMax || 100; // Par défaut 100 si non défini
-  const quantiteActuelle = rayon.quantiteActuelle || 0;
-  const pourcentageUtilisation = (quantiteActuelle / capaciteMax) * 100;
+  const nombreArticlesActuel = rayon.articles || 0;  // ✅ Nombre d'articles DIFFÉRENTS
+  const pourcentageUtilisation = (nombreArticlesActuel / capaciteMax) * 100;
+
+  console.log(`🔍 verificarRayonPleinReception: rayon=${rayon.nomRayon}, articles=${nombreArticlesActuel}/${capaciteMax}, %=${Math.round(pourcentageUtilisation)}`);
 
   // Afficher une alerte si le rayon est à 80% ou plus
   if (pourcentageUtilisation >= 80) {
@@ -633,13 +729,13 @@ function verificarRayonPleinReception(rayonId) {
     
     if (pourcentageUtilisation >= 100) {
       // Rayon complètement plein
-      messageSpan.innerHTML = `Ce rayon est <strong>PLEIN</strong> (${quantiteActuelle}/${capaciteMax} unités) ⛔`;
+      messageSpan.innerHTML = `Ce rayon est <strong>PLEIN</strong> (${nombreArticlesActuel}/${capaciteMax} articles) ⛔`;
       alerte.classList.remove('alert-warning');
       alerte.classList.add('alert-danger');
     } else {
       // Rayon presque plein
       const pourcentage = Math.round(pourcentageUtilisation);
-      messageSpan.innerHTML = `Ce rayon est presque plein (${quantiteActuelle}/${capaciteMax} unités - ${pourcentage}%) ⚠️`;
+      messageSpan.innerHTML = `Ce rayon est presque plein (${nombreArticlesActuel}/${capaciteMax} articles - ${pourcentage}%) ⚠️`;
       alerte.classList.remove('alert-danger');
       alerte.classList.add('alert-warning');
     }

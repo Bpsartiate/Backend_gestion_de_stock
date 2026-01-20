@@ -1414,11 +1414,21 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
       console.log(`📊 Rayon "${rayon.nomRayon}" (${rayon._id}):`);
       console.log(`   - StockRayons trouvés: ${nombreArticles}`);
       console.log(`   - StockRayons details: ${stocks.map(s => `${s.produitId} = ${s.quantiteDisponible}`).join(', ')}`);
-      console.log(`   - rayon.quantiteActuelle: ${rayon.quantiteActuelle}`);
+      console.log(`   - rayon.quantiteActuelle AVANT SYNC: ${rayon.quantiteActuelle}`);
       
       // 2. Calculer la quantité totale
       const quantiteTotale = stocks.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
       console.log(`   - quantiteTotale (calculée): ${quantiteTotale}`);
+      
+      // 2️⃣.5️⃣ SYNCHRONISATION - Mettre à jour quantiteActuelle du rayon si incohérence
+      if (quantiteTotale !== rayon.quantiteActuelle) {
+        console.log(`⚠️ [SYNC RAYON] Incohérence détectée pour rayon ${rayon.nomRayon}:`);
+        console.log(`   - quantiteActuelle en DB: ${rayon.quantiteActuelle}`);
+        console.log(`   - Somme StockRayons: ${quantiteTotale}`);
+        rayon.quantiteActuelle = quantiteTotale;
+        await Rayon.findByIdAndUpdate(rayon._id, { quantiteActuelle: quantiteTotale });
+        console.log(`   ✅ Rayon mis à jour avec la quantité réelle`);
+      }
       
       // 3. Calculer l'occupation (%) - basé sur NOMBRE D'ARTICLES DIFFÉRENTS
       const capaciteMax = rayon.capaciteMax || 1000;
@@ -2035,6 +2045,18 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
       })
       .sort({ designation: 1 });
 
+    console.log(`📦 [PRODUITS LIST] Magasin ${magasinId}: ${produits.length} produits trouvés`);
+    
+    // Déboguer les produits qui ne seraient pas retournés
+    const tousLesProduits = await Produit.find({ magasinId }).select('_id designation status estSupprime');
+    const produitsSupprimesOuInactifs = tousLesProduits.filter(p => p.status !== 1 || p.estSupprime);
+    if (produitsSupprimesOuInactifs.length > 0) {
+      console.log(`⚠️ [PRODUITS LIST] ${produitsSupprimesOuInactifs.length} produits exclus (supprimés ou inactifs):`);
+      produitsSupprimesOuInactifs.forEach(p => {
+        console.log(`   - ${p.designation}: status=${p.status}, estSupprime=${p.estSupprime}`);
+      });
+    }
+
     // 🔄 SYNCHRONISATION STOCK - Recalculer quantiteActuelle depuis StockRayons pour chaque produit
     const produitsSync = await Promise.all(
       produits.map(async (produit) => {
@@ -2508,7 +2530,7 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
       .populate('magasinId', '_id nomMagasin')
       .populate({
         path: 'typeProduitId',
-        select: '_id nomType unitePrincipale capaciteMax'
+        select: '_id nomType unitePrincipale capaciteMax typeStockage'
       })
       .populate({
         path: 'rayonId',

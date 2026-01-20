@@ -237,7 +237,72 @@
           </div>
         </div>
 
-        <!-- ========== SECTION 5: ALERTES DÉTAILLÉES ========== -->
+        <!-- ========== SECTION 5: LOTS (si produit LOT) ========== -->
+        <div id="sectionLots" style="display: none;" class="mb-4">
+          <h6 class="text-uppercase text-muted fw-bold mb-3">
+            <i class="fas fa-boxes me-2 text-warning"></i>Lots reçus (Pièces individuelles)
+          </h6>
+
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 12%;"><i class="fas fa-cube me-2 text-warning"></i>Pièces</th>
+                      <th style="width: 15%;"><i class="fas fa-weight me-2"></i>Qté/Pièce</th>
+                      <th style="width: 12%;"><i class="fas fa-ruler me-2"></i>Unité</th>
+                      <th style="width: 15%;"><i class="fas fa-tag me-2 text-success"></i>Prix/Unité</th>
+                      <th style="width: 20%;"><i class="fas fa-calculator me-2 text-info"></i>Total</th>
+                      <th style="width: 15%;"><i class="fas fa-calendar me-2 text-muted"></i>Réception</th>
+                      <th style="width: 11%;"><i class="fas fa-info-circle me-2"></i>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="premiumLotsTable">
+                    <tr>
+                      <td colspan="7" class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Chargement des lots...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Récapitulatif LOTs -->
+          <div class="row g-3 mt-3">
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm bg-info bg-opacity-10">
+                <div class="card-body text-center p-3">
+                  <i class="fas fa-boxes" style="font-size: 24px; color: #0dcaf0;"></i>
+                  <h5 id="premiumLotsTotalPieces" class="my-3">0</h5>
+                  <small class="text-muted">Total pièces reçues</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+                <div class="card-body text-center p-3">
+                  <i class="fas fa-cube" style="font-size: 24px; color: #28a745;"></i>
+                  <h5 id="premiumLotsQtyTotal" class="my-3">0</h5>
+                  <small class="text-muted" id="premiumLotsQtyUnit">unités</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+                <div class="card-body text-center p-3">
+                  <i class="fas fa-euro-sign" style="font-size: 24px; color: #28a745;"></i>
+                  <h5 id="premiumLotsValueTotal" class="my-3">0 CDF</h5>
+                  <small class="text-muted">Valeur totale LOTs</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== SECTION 5B: ALERTES DÉTAILLÉES ========== -->
         <h6 class="text-uppercase text-muted fw-bold mb-3">
           <i class="fas fa-exclamation-circle me-2"></i>Alertes & État
         </h6>
@@ -540,15 +605,26 @@ async function openProductDetailPremium(produitId) {
       placeholder.style.display = 'block';
     }
 
-    // ============ CHARGER MOUVEMENTS, RÉCEPTIONS, AUDIT ============
+    // ============ CHARGER MOUVEMENTS, RÉCEPTIONS, AUDIT, LOTS ============
     console.log('✅ Produit complet reçu:', produit);
     console.log('📊 Mouvements:', produit.mouvements);
     console.log('📬 Réceptions:', produit.receptions);
     console.log('📋 Audit:', produit.audit);
+    console.log('🎁 Type produit:', produit.typeProduitId?.typeStockage);
     
     await loadPremiumMovements(produit.mouvements || []);
     await loadPremiumReceptions(produit.receptions || []);
     await loadPremiumAudit(produit.audit || {});
+    
+    // ✅ Si produit LOT, charger la section LOTS
+    if (produit.typeProduitId?.typeStockage === 'lot') {
+      console.log('🎁 Produit LOT détecté');
+      document.getElementById('sectionLots').style.display = 'block';
+      await loadPremiumLots(produit, produit.receptions || []);
+    } else {
+      console.log('📋 Produit SIMPLE (ou typeStockage non défini)');
+      document.getElementById('sectionLots').style.display = 'none';
+    }
 
     // Ouvrir le modal
     const modal = new bootstrap.Modal(document.getElementById('modalProductDetailPremium'));
@@ -590,6 +666,43 @@ async function loadPremiumReceptions(receptions) {
       ? Math.floor((new Date(reception.datePeremption) - new Date()) / (1000 * 60 * 60 * 24))
       : null;
     
+    // 🎁 Détails LOT si présents
+    const hasLotDetails = reception.nombrePieces || reception.quantiteParPiece;
+    const lotDetailsHTML = hasLotDetails ? `
+      <div class="alert alert-warning bg-warning bg-opacity-10 border-warning mb-3">
+        <h6 class="mb-3 text-warning"><i class="fas fa-boxes me-2"></i>Détails Lot</h6>
+        <div class="row g-3 small">
+          <div class="col-md-3">
+            <small class="text-muted d-block">Nombre de Pièces</small>
+            <strong class="h5 text-warning">${reception.nombrePieces || '--'}</strong>
+          </div>
+          <div class="col-md-3">
+            <small class="text-muted d-block">Quantité par Pièce</small>
+            <strong class="h5">${(reception.quantiteParPiece || 0).toLocaleString('fr-FR', {minimumFractionDigits: 2})}</strong>
+          </div>
+          <div class="col-md-3">
+            <small class="text-muted d-block">Unité</small>
+            <span class="badge bg-info h5 py-2">${reception.uniteDetail || '--'}</span>
+          </div>
+          <div class="col-md-3">
+            <small class="text-muted d-block">Prix par Unité</small>
+            <strong class="h5 text-success">${(reception.prixParUnite || 0).toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF</strong>
+          </div>
+        </div>
+        <hr class="my-3">
+        <div class="row g-2">
+          <div class="col-md-6">
+            <small class="text-muted d-block">Quantité Totale</small>
+            <strong>${((reception.nombrePieces || 0) * (reception.quantiteParPiece || 0)).toLocaleString('fr-FR', {minimumFractionDigits: 2})} ${reception.uniteDetail || 'unité'}</strong>
+          </div>
+          <div class="col-md-6">
+            <small class="text-muted d-block">Valeur Totale</small>
+            <strong class="text-success">${(((reception.nombrePieces || 0) * (reception.quantiteParPiece || 0)) * (reception.prixParUnite || 0)).toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF</strong>
+          </div>
+        </div>
+      </div>
+    ` : '';
+    
     html += `
       <div class="accordion-item border-0 border-bottom mb-2">
         <h2 class="accordion-header">
@@ -598,6 +711,7 @@ async function loadPremiumReceptions(receptions) {
               <div class="d-flex justify-content-between align-items-center">
                 <div>
                   <strong>📦 ${reception.quantite} unités</strong>
+                  ${hasLotDetails ? `<span class="badge bg-warning ms-2"><i class="fas fa-cube me-1"></i>LOT</span>` : ''}
                   <small class="text-muted ms-2">• ${dateReception}</small>
                 </div>
                 <span class="badge bg-${statutColor}">${reception.statut}</span>
@@ -608,6 +722,7 @@ async function loadPremiumReceptions(receptions) {
         </h2>
         <div id="collapse${idx}" class="accordion-collapse collapse" data-bs-parent="#premiumReceptionsContainer">
           <div class="accordion-body p-4 bg-light">
+            ${lotDetailsHTML}
             <div class="row">
               <div class="col-md-6">
                 <div class="mb-3">
@@ -798,6 +913,119 @@ async function loadPremiumAudit(audit) {
   }
 }
 
+// ============ CHARGER LOTS (pour produits LOT) ============
+async function loadPremiumLots(produit, receptions) {
+  try {
+    const tbody = document.getElementById('premiumLotsTable');
+    
+    // Extraire les LOTs des réceptions
+    let lots = [];
+    if (Array.isArray(receptions)) {
+      receptions.forEach(reception => {
+        if (reception.nombrePieces) {
+          lots.push({
+            nombrePieces: reception.nombrePieces,
+            quantiteParPiece: reception.quantiteParPiece,
+            uniteDetail: reception.uniteDetail,
+            prixParUnite: reception.prixParUnite,
+            dateReception: reception.dateReception,
+            fournisseur: reception.fournisseur,
+            reception: reception
+          });
+        }
+      });
+    }
+
+    console.log('🎁 LOTs trouvés:', lots);
+
+    if (!lots || lots.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-inbox"></i> Aucun lot</td></tr>';
+      document.getElementById('premiumLotsTotalPieces').textContent = '0';
+      document.getElementById('premiumLotsQtyTotal').textContent = '0';
+      document.getElementById('premiumLotsValueTotal').textContent = '0 CDF';
+      return;
+    }
+
+    // Calculer les totaux
+    let totalPieces = 0;
+    let totalQty = 0;
+    let totalValue = 0;
+
+    let html = '';
+    lots.forEach((lot, idx) => {
+      const nombrePieces = lot.nombrePieces || 0;
+      const qtyParPiece = lot.quantiteParPiece || 0;
+      const unite = lot.uniteDetail || 'unité';
+      const prixParUnite = lot.prixParUnite || 0;
+      
+      const totalQtyLot = nombrePieces * qtyParPiece;
+      const totalPrixLot = totalQtyLot * prixParUnite;
+
+      totalPieces += nombrePieces;
+      totalQty += totalQtyLot;
+      totalValue += totalPrixLot;
+
+      const dateReception = lot.dateReception 
+        ? new Date(lot.dateReception).toLocaleDateString('fr-FR')
+        : 'N/A';
+
+      html += `
+        <tr class="align-middle">
+          <td>
+            <span class="badge bg-warning text-dark">
+              <i class="fas fa-cube me-1"></i>
+              <strong>${nombrePieces}</strong>
+            </span>
+          </td>
+          <td>
+            <strong>${(qtyParPiece).toLocaleString('fr-FR', {minimumFractionDigits: 2})}</strong>
+          </td>
+          <td>
+            <span class="badge bg-info">${unite}</span>
+          </td>
+          <td>
+            <span class="text-success fw-bold">
+              ${(prixParUnite).toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF
+            </span>
+          </td>
+          <td>
+            <div>
+              <small class="text-muted d-block">
+                <strong>${(totalQtyLot).toLocaleString('fr-FR', {minimumFractionDigits: 2})}</strong> ${unite}
+              </small>
+              <strong class="text-success d-block">
+                ${(totalPrixLot).toLocaleString('fr-FR', {minimumFractionDigits: 2})} CDF
+              </strong>
+            </div>
+          </td>
+          <td>
+            <small class="text-muted">${dateReception}</small>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-info" title="Voir réception" onclick="showReceptionDetail('${lot.reception._id || ''}')">
+              <i class="fas fa-eye"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+
+    // Mettre à jour les totaux
+    document.getElementById('premiumLotsTotalPieces').textContent = totalPieces;
+    document.getElementById('premiumLotsQtyTotal').textContent = (totalQty).toLocaleString('fr-FR', {minimumFractionDigits: 2});
+    document.getElementById('premiumLotsQtyUnit').textContent = lots.length > 0 ? (lots[0].uniteDetail || 'unité') : 'unité';
+    document.getElementById('premiumLotsValueTotal').textContent = (totalValue).toLocaleString('fr-FR', {minimumFractionDigits: 2}) + ' CDF';
+
+    console.log('✅ LOTs affichés. Total:', { totalPieces, totalQty, totalValue });
+
+  } catch (err) {
+    console.warn('❌ Erreur chargement LOTs:', err);
+    document.getElementById('premiumLotsTable').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Erreur chargement</td></tr>';
+  }
+}
+
 // Ouvrir lightbox image
 function ouvrirImageLightbox() {
   const src = document.getElementById('premiumProductImage').src;
@@ -887,6 +1115,16 @@ function editerProduitPremium(produitId) {
 function updatePremiumAlerts() {
   const alertes = 0; // À calculer depuis les données
   document.getElementById('premiumAlertsCount').textContent = alertes;
+}
+
+// Afficher le détail d'une réception
+function showReceptionDetail(receptionId) {
+  if (!receptionId) {
+    showToast('⚠️ Réception non trouvée', 'warning');
+    return;
+  }
+  showToast('ℹ️ Réception: ' + receptionId, 'info');
+  // À améliorer: naviguer vers le détail de la réception
 }
 </script>
 
