@@ -6,7 +6,14 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 
-const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin%40123@cluster0.d75p8.mongodb.net/gestion_stock?retryWrites=true&w=majority';
+// ⚠️ Ne jamais hardcoder les secrets - utiliser .env
+const mongoUri = process.env.MONGODB_URI;
+
+if (!mongoUri) {
+  console.error('❌ Erreur: MONGODB_URI non défini dans les variables d\'environnement');
+  console.error('   Veuillez configurer MONGODB_URI dans le fichier .env');
+  process.exit(1);
+}
 
 (async () => {
   try {

@@ -328,9 +328,9 @@ async function chargerOngletStocks(produitId) {
                 </thead>
                 <tbody>
                   ${mouvementsRecents.map(mouv => {
-                    // 🎯 Formater la date correctement (chercher ts, dateCreation, ou createdAt)
+                    // 🎯 Formater la date correctement (chercher dateDocument, ts, dateCreation, ou createdAt)
                     let dateFormatee = 'N/A';
-                    const dateValue = mouv.ts || mouv.dateCreation || mouv.createdAt;
+                    const dateValue = mouv.dateDocument || mouv.ts || mouv.dateCreation || mouv.createdAt;
                     if (dateValue) {
                       try {
                         const d = new Date(dateValue);
@@ -346,12 +346,12 @@ async function chargerOngletStocks(produitId) {
                       <tr>
                         <td><small>${dateFormatee}</small></td>
                         <td>
-                          <span class="badge ${mouv.type === 'entree' ? 'bg-success' : 'bg-danger'}">
-                            ${mouv.type === 'entree' ? '📥 Entrée' : '📤 Sortie'}
+                          <span class="badge ${mouv.type === 'entree' || mouv.type === 'ENTREE_INITIALE' || mouv.type === 'RECEPTION' ? 'bg-success' : 'bg-danger'}">
+                            ${mouv.type === 'entree' || mouv.type === 'ENTREE_INITIALE' || mouv.type === 'RECEPTION' ? '📥 Entrée' : '📤 Sortie'}
                           </span>
                         </td>
                         <td><strong>${mouv.quantite?.toFixed(2)} ${unitePrincipale}</strong></td>
-                        <td><small>${mouv.utilisateur?.nom || mouv.utilisateur?.email || 'Système'}</small></td>
+                        <td><small>${mouv.utilisateurId?.prenom} ${mouv.utilisateurId?.nom || mouv.utilisateurId?.email || 'Système'}</small></td>
                       </tr>
                     `;
                   }).join('')}

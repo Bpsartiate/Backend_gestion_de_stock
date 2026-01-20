@@ -5,6 +5,14 @@ const bcrypt = require('bcryptjs');
 async function run(){
   const uri = process.env.MONGODB_URI;
   if(!uri){ console.error('MONGODB_URI missing'); process.exit(1); }
+  
+  // ⚠️ Ne jamais hardcoder les mots de passe - utiliser .env
+  const tempPassword = process.env.TEMP_PASSWORD || 'ChangeMe@12345';
+  if (!process.env.TEMP_PASSWORD) {
+    console.warn('⚠️  TEMP_PASSWORD non défini - utilisation du mot de passe par défaut');
+    console.warn('⚠️  Modifiez .env pour définir un mot de passe temporaire plus sécurisé');
+  }
+  
   await mongoose.connect(uri);
   console.log('Connected to MongoDB');
   const Utilisateur = require('../models/utilisateur');
@@ -16,9 +24,9 @@ async function run(){
   for(const u of users){
     if(!u.password || u.password.length < 10){
       console.log(`Fixing user ${u._id} (${u.email || u.nom}): password missing or invalid`);
-      const hashed = await bcrypt.hash('TempPassword123!', 10);
+      const hashed = await bcrypt.hash(tempPassword, 10);
       await Utilisateur.updateOne({ _id: u._id }, { $set: { password: hashed } });
-      console.log(`  ✓ Password reset to: TempPassword123!`);
+      console.log(`  ✓ Password reset`);
       fixed++;
     }
   }

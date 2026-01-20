@@ -10,8 +10,15 @@
 const mongoose = require('mongoose');
 const Rayon = require('../models/rayon');
 
-// MongoDB Connection
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gestion-stock';
+// ⚠️ Ne jamais hardcoder les secrets - utiliser .env
+require('dotenv').config();
+const mongoUri = process.env.MONGODB_URI;
+
+if (!mongoUri) {
+  console.error('❌ Erreur: MONGODB_URI non défini dans les variables d\'environnement');
+  console.error('   Veuillez configurer MONGODB_URI dans le fichier .env');
+  process.exit(1);
+}
 
 mongoose.connect(mongoUri, {
     useNewUrlParser: true,

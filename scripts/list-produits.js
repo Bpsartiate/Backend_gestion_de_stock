@@ -7,7 +7,11 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const Produit = require('../models/produit');
 
-const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin%40123@cluster0.d75p8.mongodb.net/gestion_stock?retryWrites=true&w=majority';
+const mongoUri = process.env.MONGODB_URI;
+if (!mongoUri) {
+  console.error('❌ MONGODB_URI not defined in .env');
+  process.exit(1);
+}
 
 (async () => {
   try {
