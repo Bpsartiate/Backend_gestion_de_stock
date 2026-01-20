@@ -389,6 +389,7 @@ function showLotInterface() {
   const quantiteParPiece = document.getElementById('quantiteParPiece');
   const prixParUniteDetail = document.getElementById('prixParUniteDetail');
   const uniteDetail = document.getElementById('uniteDetail');
+  const uniteDetailLabel = document.getElementById('uniteDetailLabel');
   
   const updateLotPreview = () => {
     const nb = parseInt(nombrePieces?.value) || 0;

@@ -2619,6 +2619,11 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
         .sort({ dateReception: -1 })
         .limit(20);
 
+      console.log(`📬 Receptions trouvées: ${receptions.length}`);
+      receptions.forEach((r, idx) => {
+        console.log(`   Reception ${idx}: nombrePieces=${r.nombrePieces}, quantiteParPiece=${r.quantiteParPiece}, uniteDetail=${r.uniteDetail}, prixParUnite=${r.prixParUnite}`);
+      });
+
       // 🎁 Pour chaque réception LOT, chercher les lots associés
       const receptionsWithLots = await Promise.all(receptions.map(async (reception) => {
         const receptionObj = reception.toObject();
@@ -2626,10 +2631,11 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
         // Si c'est une réception LOT (nombrePieces > 0), charger les lots
         if (receptionObj.nombrePieces && receptionObj.nombrePieces > 0) {
           try {
-            const Lot = mongoose.model('Lot');
             const lots = await Lot.find({ receptionId: reception._id })
               .select('quantiteInitiale quantiteRestante prixParUnite uniteDetail statut')
               .limit(100);
+            
+            console.log(`🎁 ${lots.length} lots trouvés pour réception ${reception._id}`);
             receptionObj.lots = lots;
           } catch (lotsErr) {
             console.warn(`⚠️ Erreur chargement lots pour réception ${reception._id}:`, lotsErr.message);
@@ -4092,6 +4098,11 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     // Sauvegarder la réception
     await reception.save();
     console.log(`✅ Réception créée: ${reception._id}`);
+    console.log(`🎁 Réception LOT fields:`);
+    console.log(`   - nombrePieces: ${reception.nombrePieces}`);
+    console.log(`   - quantiteParPiece: ${reception.quantiteParPiece}`);
+    console.log(`   - uniteDetail: ${reception.uniteDetail}`);
+    console.log(`   - prixParUnite: ${reception.prixParUnite}`);
 
     // 2. Créer automatiquement un mouvement de stock (RÉCEPTION)
     const stockMovement = new StockMovement({
