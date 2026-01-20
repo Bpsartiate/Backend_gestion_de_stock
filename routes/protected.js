@@ -2613,12 +2613,36 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
         .populate('rayonId', 'nomRayon codeRayon')
         .select(
           'dateReception quantite fournisseur prixAchat prixTotal photoUrl ' +
-          'dateFabrication datePeremption lotNumber statut utilisateurId rayonId createdAt updatedAt'
+          'dateFabrication datePeremption lotNumber statut utilisateurId rayonId createdAt updatedAt ' +
+          'nombrePieces quantiteParPiece uniteDetail prixParUnite'
         )
         .sort({ dateReception: -1 })
         .limit(20);
 
-      response.receptions = receptions;
+      // 🎁 Pour chaque réception LOT, chercher les lots associés
+      const receptionsWithLots = await Promise.all(receptions.map(async (reception) => {
+        const receptionObj = reception.toObject();
+        
+        // Si c'est une réception LOT (nombrePieces > 0), charger les lots
+        if (receptionObj.nombrePieces && receptionObj.nombrePieces > 0) {
+          try {
+            const Lot = mongoose.model('Lot');
+            const lots = await Lot.find({ receptionId: reception._id })
+              .select('quantiteInitiale quantiteRestante prixParUnite uniteDetail statut')
+              .limit(100);
+            receptionObj.lots = lots;
+          } catch (lotsErr) {
+            console.warn(`⚠️ Erreur chargement lots pour réception ${reception._id}:`, lotsErr.message);
+            receptionObj.lots = [];
+          }
+        } else {
+          receptionObj.lots = [];
+        }
+        
+        return receptionObj;
+      }));
+
+      response.receptions = receptionsWithLots;
     }
 
     // 🛍️ VENTES (À implémenter quand module vente existera)
@@ -3859,7 +3883,12 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       numeroSerie,
       codeBarres,
       etatColis,
-      garantie
+      garantie,
+      // 🎁 LOT fields
+      nombrePieces,
+      quantiteParPiece,
+      uniteDetail,
+      prixParUnite
     } = req.body;
 
     // Log les données reçues
@@ -4052,7 +4081,12 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       numeroSerie,
       codeBarres,
       etatColis,
-      garantie
+      garantie,
+      // 🎁 Champs LOT
+      nombrePieces: nombrePieces || null,
+      quantiteParPiece: quantiteParPiece || null,
+      uniteDetail: uniteDetail || null,
+      prixParUnite: prixParUnite || null
     });
 
     // Sauvegarder la réception

@@ -67,6 +67,21 @@ const receptionSchema = new mongoose.Schema(
     etatColis: String,
     garantie: Number,
 
+    // 🎁 Champs LOT (pour produits avec typeStockage: 'lot')
+    nombrePieces: {
+      type: Number,
+      default: 0
+    },
+    quantiteParPiece: {
+      type: Number,
+      default: 0
+    },
+    uniteDetail: String,
+    prixParUnite: {
+      type: Number,
+      default: 0
+    },
+
     // Traçabilité
     mouvementStockId: {
       type: mongoose.Schema.Types.ObjectId,

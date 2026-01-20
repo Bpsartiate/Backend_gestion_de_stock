@@ -918,11 +918,29 @@ async function loadPremiumLots(produit, receptions) {
   try {
     const tbody = document.getElementById('premiumLotsTable');
     
-    // Extraire les LOTs des réceptions
+    // 🎁 Extraire les LOTs des réceptions (soit via métadonnées, soit via lots individuels)
     let lots = [];
     if (Array.isArray(receptions)) {
       receptions.forEach(reception => {
-        if (reception.nombrePieces) {
+        // Option 1: LOTs individuels (depuis la base de données)
+        if (reception.lots && Array.isArray(reception.lots) && reception.lots.length > 0) {
+          reception.lots.forEach(lot => {
+            lots.push({
+              nombrePieces: 1,
+              quantiteParPiece: lot.quantiteInitiale || 0,
+              quantiteRestante: lot.quantiteRestante || 0,
+              uniteDetail: lot.uniteDetail || reception.uniteDetail || 'unité',
+              prixParUnite: lot.prixParUnite || reception.prixParUnite || 0,
+              dateReception: reception.dateReception,
+              fournisseur: reception.fournisseur,
+              statut: lot.statut,
+              reception: reception,
+              lotId: lot._id
+            });
+          });
+        } 
+        // Option 2: Métadonnées LOT (fallback si pas de lots individuels)
+        else if (reception.nombrePieces && reception.nombrePieces > 0) {
           lots.push({
             nombrePieces: reception.nombrePieces,
             quantiteParPiece: reception.quantiteParPiece,
