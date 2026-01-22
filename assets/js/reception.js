@@ -123,6 +123,9 @@ async function chargerProduitsReception() {
     // Remplir le select des produits
     const select = document.getElementById('produitReception');
     if (select && PRODUITS_RECEPTION.length > 0) {
+      // ⚡ Sauvegarder la valeur actuelle pour la restaurer après
+      const valeurActuelle = select.value;
+      
       select.innerHTML = '<option value="">Choisir produit...</option>';
       
       PRODUITS_RECEPTION.forEach(p => {
@@ -133,6 +136,12 @@ async function chargerProduitsReception() {
         option.dataset.unite = p.typeUnite || 'unités';
         select.appendChild(option);
       });
+
+      // ⚡ Restaurer la valeur si elle existe toujours
+      if (valeurActuelle && PRODUITS_RECEPTION.some(p => p._id === valeurActuelle)) {
+        select.value = valeurActuelle;
+        console.log(`✅ Valeur du produit restaurée: ${valeurActuelle}`);
+      }
 
       console.log(' Produits chargés pour réception:', PRODUITS_RECEPTION.length);
     }
@@ -386,13 +395,24 @@ function showLotInterface() {
   // Populate uniteDetail select with values from typeProduit
   const uniteDetailSelect = document.getElementById('uniteDetail');
   if (uniteDetailSelect) {
+    console.log('🔍 DEBUG uniteDetail select found');
+    console.log('   currentTypeProduit:', currentTypeProduit);
+    console.log('   unitesVente:', currentTypeProduit?.unitesVente);
+    
     uniteDetailSelect.innerHTML = '<option value="">-- Choisir unité --</option>';
-    (currentTypeProduit?.unitesVente || []).forEach(u => {
-      const option = document.createElement('option');
-      option.value = u;
-      option.textContent = u;
-      uniteDetailSelect.appendChild(option);
-    });
+    
+    if (currentTypeProduit?.unitesVente && Array.isArray(currentTypeProduit.unitesVente)) {
+      console.log('✅ unitesVente est un array avec', currentTypeProduit.unitesVente.length, 'items');
+      currentTypeProduit.unitesVente.forEach((u, idx) => {
+        console.log(`   [${idx}] Ajout option: "${u}"`);
+        const option = document.createElement('option');
+        option.value = u;
+        option.textContent = u;
+        uniteDetailSelect.appendChild(option);
+      });
+    } else {
+      console.warn('⚠️ unitesVente absent ou pas un array!', currentTypeProduit?.unitesVente);
+    }
   }
   
   // Show LOT container
