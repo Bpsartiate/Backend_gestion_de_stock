@@ -13,10 +13,11 @@ const receptionSchema = new mongoose.Schema(
       ref: 'Magasin',
       required: true
     },
+    // 🆕 Support multi-rayon : rayonId peut être vide (distributions dans array)
     rayonId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Rayon',
-      required: true
+      ref: 'Rayon'
+      // ⚠️ NON REQUIS si distributions multi-rayon
     },
 
     // Détails réception
@@ -25,6 +26,31 @@ const receptionSchema = new mongoose.Schema(
       required: true,
       min: 0
     },
+
+    // 🆕 Distributions par rayon (nouveau!)
+    distributions: [
+      {
+        rayonId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Rayon',
+          required: true
+        },
+        quantite: {
+          type: Number,
+          required: true,
+          min: 0
+        },
+        dateDistribution: {
+          type: Date,
+          default: Date.now
+        },
+        statut: {
+          type: String,
+          enum: ['EN_STOCK', 'PARTIELLEMENT_VENDU', 'VIDE'],
+          default: 'EN_STOCK'
+        }
+      }
+    ],
     prixAchat: {
       type: Number,
       default: 0
@@ -32,6 +58,13 @@ const receptionSchema = new mongoose.Schema(
     prixTotal: {
       type: Number, // quantite * prixAchat
       default: 0
+    },
+
+    // 🆕 Statut de la réception
+    statutReception: {
+      type: String,
+      enum: ['EN_ATTENTE', 'DISTRIBUÉE', 'COMPLÈTE', 'ANNULÉE'],
+      default: 'EN_ATTENTE'
     },
 
     // Fournisseur et lot

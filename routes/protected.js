@@ -26,6 +26,7 @@ const AlerteStock = require('../models/alerteStock');
 const RapportInventaire = require('../models/rapportInventaire');
 const Reception = require('../models/reception');
 const StockRayon = require('../models/stockRayon');
+const consolidationService = require('../services/consolidationService');
 
 // Profil et membres protégés
 router.get('/members', authMiddleware, utilisateurController.listerMembres);
@@ -3890,6 +3891,7 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       codeBarres,
       etatColis,
       garantie,
+      typeProduitId,        // ← NOUVEAU: requis pour Phase 1 v2
       // 🎁 LOT fields
       nombrePieces,
       quantiteParPiece,
@@ -3903,15 +3905,16 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       magasinId: magasinId || 'MISSING',
       rayonId: rayonId || 'MISSING',
       quantite: quantite || 'MISSING',
-      prixAchat: prixAchat || 'MISSING'
+      prixAchat: prixAchat || 'MISSING',
+      typeProduitId: typeProduitId || 'MISSING'  // ← NOUVEAU
     });
 
     // Validation des champs requis
-    if (!produitId || !magasinId || !rayonId || !quantite || prixAchat === null || prixAchat === undefined) {
+    if (!produitId || !magasinId || !rayonId || !quantite || !typeProduitId || prixAchat === null || prixAchat === undefined) {
       console.error('❌ Champs manquants - ARRÊT');
       return res.status(400).json({
-        error: 'Champs requis manquants',
-        received: { produitId, magasinId, rayonId, quantite, prixAchat }
+        error: 'Champs requis manquants (produitId, magasinId, rayonId, quantite, typeProduitId, prixAchat)',
+        received: { produitId, magasinId, rayonId, quantite, prixAchat, typeProduitId }
       });
     }
     console.log('✅ Tous les champs requis présents');
@@ -4224,65 +4227,36 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       });
     }
 
-    // 3. Mettre à jour StockRayon (NEW LOGIC) - SEULEMENT POUR SIMPLE
-    console.log(`\n🔍 === CRÉATION/MISE À JOUR STOCKRAYON ===`);
-    console.log(`   Recherche: produitId=${produitId}, magasinId=${magasinId}, rayonId=${rayonId}`);
+    // 3. 🆕 PHASE 1 v2: Utiliser consolidationService pour logique intelligente
+    console.log(`\n🆕 === PHASE 1 v2 - CONSOLIDATION SERVICE ===`);
+    console.log(`   Type: ${typeProduit?.typeStockage || 'unknown'}`);
     
-    let stockRayon = await StockRayon.findOne({
-      produitId,
-      magasinId,
-      rayonId
-    });
-
-    console.log(`   Résultat recherche: ${stockRayon ? '✅ Trouvé' : '❌ Pas trouvé'}`);
-
-    if (!stockRayon) {
-      // Créer une nouvelle entrée StockRayon
-      console.log(`   ➡️ Création nouveau StockRayon...`);
-      stockRayon = new StockRayon({
+    let consolidationResult;
+    try {
+      consolidationResult = await consolidationService.findOrCreateStockRayon({
         produitId,
-        magasinId,
         rayonId,
-        quantiteDisponible: parseFloat(quantite),
-        réceptions: [
-          {
-            receptionId: reception._id,
-            quantite: parseFloat(quantite),
-            dateReception: dateReception || new Date(),
-            lotNumber: lotNumber || `LOT-${Date.now()}`,
-            fournisseur: fournisseur || 'Non spécifié',
-            datePeremption
-          }
-        ]
-      });
-      console.log(`   ✅ StockRayon préparé: ${JSON.stringify({
-        _id: stockRayon._id,
-        produitId: stockRayon.produitId,
-        rayonId: stockRayon.rayonId,
-        quantiteDisponible: stockRayon.quantiteDisponible
-      })}`);
-    } else {
-      // Mettre à jour le StockRayon existant
-      console.log(`   ➡️ Mise à jour StockRayon existant...`);
-      const ancienneQte = stockRayon.quantiteDisponible;
-      stockRayon.quantiteDisponible = (stockRayon.quantiteDisponible || 0) + parseFloat(quantite);
-      stockRayon.réceptions.push({
+        quantiteAjouter: parseFloat(quantite),
+        typeProduitId,
         receptionId: reception._id,
-        quantite: parseFloat(quantite),
-        dateReception: dateReception || new Date(),
-        lotNumber: lotNumber || `LOT-${Date.now()}`,
-        fournisseur: fournisseur || 'Non spécifié',
-        datePeremption
+        magasinId
       });
-      console.log(`   ✅ StockRayon mis à jour: ${ancienneQte} → ${stockRayon.quantiteDisponible}`);
+      console.log(`✅ consolidationService OK: ${consolidationResult.actionType}`);
+    } catch (consolidationError) {
+      console.error(`❌ Erreur consolidationService:`, consolidationError.message);
+      return res.status(400).json({
+        error: 'Erreur consolidation stock',
+        details: consolidationError.message
+      });
     }
 
-    try {
-      await stockRayon.save();
-      console.log(`✅ StockRayon SAUVEGARDÉ: ${stockRayon._id}`);
-    } catch (saveError) {
-      console.error(`❌ ERREUR SAUVEGARDE StockRayon:`, saveError.message);
-      throw saveError;
+    const stockRayon = consolidationResult.sr;
+    console.log(`   Action: ${consolidationResult.actionType}`);
+    console.log(`   StockRayon: ${stockRayon._id}`);
+    console.log(`   Quantité après: ${stockRayon.quantiteDisponible}`);
+    console.log(`   Type: ${stockRayon.typeStockage || 'simple'}`);
+    if (stockRayon.numeroLot) {
+      console.log(`   NuméroLot: ${stockRayon.numeroLot}`);
     }
 
     // 4. Mettre à jour la quantité du rayon
@@ -4319,7 +4293,7 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
 
     await produit.save();
     console.log(`✅ Produit "${produit.designation}" mis à jour:`);
-    console.log(`   - quantiteActuelle: ${nouvelleQuantiteActuelle} (aggregate result: ${totalStockParProduit[0]?.totalQuantite || 'vide'})`);
+    console.log(`   - quantiteActuelle: ${nouvelleQuantiteActuelle}`);
     console.log(`   - quantiteEntree: ${produit.quantiteEntree}`);
 
     // 6. Lier le mouvement à la réception
@@ -4339,6 +4313,15 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       message: '✅ Réception enregistrée avec succès',
       reception: populatedReception,
       mouvement: stockMovement,
+      stockRayon: {
+        _id: stockRayon._id,
+        quantiteDisponible: stockRayon.quantiteDisponible,
+        statut: stockRayon.statut,
+        typeStockage: stockRayon.typeStockage,
+        numeroLot: stockRayon.numeroLot || undefined,
+        actionType: consolidationResult.actionType,  // CREATE ou CONSOLIDATE
+        receptionsFusionnées: consolidationResult.receptionsFusionnées || 1
+      },
       produitUpdated: {
         id: produit._id,
         quantiteActuelle: produit.quantiteActuelle,

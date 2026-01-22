@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+/**
+ * PHASE 1 v2 - StockRayon enrichi
+ * 
+ * Supports:
+ * - Type SIMPLE: Consolidation multiple réceptions
+ * - Type LOT: Unique emplacement par lot
+ */
+
 const stockRayonSchema = new mongoose.Schema({
   // RÉFÉRENCES
   produitId: {
@@ -20,6 +28,19 @@ const stockRayonSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  typeProduitId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TypeProduit',
+    required: false
+  },
+
+  // TYPE DE STOCKAGE (copié de TypeProduit pour perf)
+  typeStockage: {
+    type: String,
+    enum: ['simple', 'lot'],
+    default: 'simple',
+    required: false
+  },
 
   // QUANTITÉS
   quantiteDisponible: {
@@ -37,8 +58,20 @@ const stockRayonSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  quantiteInitiale: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
 
-  // HISTORIQUE DES RÉCEPTIONS (pour FIFO)
+  // POUR LOT UNIQUEMENT
+  numeroLot: {
+    type: String,
+    required: false,
+    sparse: true
+  },
+
+  // HISTORIQUE DES RÉCEPTIONS (pour FIFO et traçabilité)
   réceptions: [
     {
       receptionId: {
@@ -53,22 +86,30 @@ const stockRayonSchema = new mongoose.Schema({
     }
   ],
 
-  // METADATA
+  // ÉTAT DE L'EMPLACEMENT
+  statut: {
+    type: String,
+    enum: ['EN_STOCK', 'PARTIELLEMENT_VENDU', 'VIDE', 'FERMÉ'],
+    default: 'EN_STOCK'
+  },
+
+  // DATES
   dateCreation: {
     type: Date,
     default: Date.now
   },
+  dateOuverture: {
+    type: Date,
+    required: false
+  },
+  dateFermeture: {
+    type: Date,
+    required: false
+  },
   dateModification: {
     type: Date,
     default: Date.now
-  },
-
-  // INDEX COMPOSITE POUR ÉVITER LES DOUBLONS
-}, {
-  // Index unique sur la clé composite
-  indexes: [
-    { produitId: 1, magasinId: 1, rayonId: 1, unique: true }
-  ]
+  }
 });
 
 // Middleware: Mettre à jour dateModification avant sauvegarde
@@ -77,9 +118,34 @@ stockRayonSchema.pre('save', function(next) {
   next();
 });
 
-// Calcul: quantité totale = disponible + réservée + damaged
+// VIRTUAL: quantité totale
 stockRayonSchema.virtual('quantiteTotal').get(function() {
   return this.quantiteDisponible + this.quantiteRéservée + this.quantiteDamaged;
 });
+
+// VIRTUAL: nombre de réceptions fusionnées
+stockRayonSchema.virtual('nombreReceptions').get(function() {
+  return this.réceptions.length;
+});
+
+// METHOD: Ajouter réception à l'historique
+stockRayonSchema.methods.ajouterReception = function(receptionId, quantite) {
+  this.réceptions.push({
+    receptionId,
+    quantite,
+    dateReception: new Date()
+  });
+  this.quantiteDisponible += quantite;
+  return this.save();
+};
+
+// METHOD: Enlever quantité (mouvement)
+stockRayonSchema.methods.enleverQuantite = function(quantite) {
+  if (quantite > this.quantiteDisponible) {
+    throw new Error(`Quantité insuffisante: ${this.quantiteDisponible} disponible, ${quantite} demandé`);
+  }
+  this.quantiteDisponible -= quantite;
+  return this.save();
+};
 
 module.exports = mongoose.model('StockRayon', stockRayonSchema);

@@ -27,6 +27,13 @@ const produitSchema = new mongoose.Schema({
     required: true
   },
   
+  // MARQUE DU PRODUIT
+  marque: {
+    type: String,
+    maxlength: 100,
+    default: null
+  },
+  
   // ⚠️ rayonId: DEPRECATED - Utiliser StockRayon pour la localisation
   // Gardé pour compatibilité, mais ne devrait pas être modifié
   rayonId: {
