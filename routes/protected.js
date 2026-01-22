@@ -3367,7 +3367,10 @@ router.post('/lots', authMiddleware, checkMagasinAccess, async (req, res) => {
 
     // Log activity
     try {
+      const magasin = await Magasin.findById(magasinId);
       const activity = new Activity({
+        title: `Création LOT - ${uniteDetail}`,
+        businessId: magasin?.businessId,
         utilisateurId: requester.id,
         action: 'CREER_LOT_SIMPLE_LOT',
         entite: 'Lot',
