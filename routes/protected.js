@@ -2038,7 +2038,7 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
     })
       .populate({
         path: 'typeProduitId',
-        select: 'nomType unitePrincipale code icone seuilAlerte capaciteMax'
+        select: 'nomType unitePrincipale code icone seuilAlerte capaciteMax typeStockage'
       })
       .populate({
         path: 'rayonId',
@@ -2247,7 +2247,7 @@ router.get('/magasins/:magasinId/produits-supprimes', authMiddleware, blockVende
       magasinId, 
       estSupprime: true
     })
-      .populate('typeProduitId', 'nomType unitePrincipale code')
+      .populate('typeProduitId', 'nomType unitePrincipale code typeStockage')
       .populate('supprimePar', 'nom prenom email')
       .sort({ dateSuppression: -1 })
       .lean();
