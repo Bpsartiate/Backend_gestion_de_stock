@@ -4014,7 +4014,8 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     const typeProduitForCapacity = await TypeProduit.findById(produit.typeProduitId);
     if (typeProduitForCapacity && typeProduitForCapacity.capaciteMax) {
       const capaciteTotalRayon = rayon.capaciteMax * typeProduitForCapacity.capaciteMax;
-      const quantiteTotalActuelle = allStocksInRayon.reduce((sum, sr) => sum + (sr.quantite || 0), 0);
+      // ⚡ CORRECTION: Utiliser quantiteDisponible (pas quantite)
+      const quantiteTotalActuelle = allStocksInRayon.reduce((sum, sr) => sum + (sr.quantiteDisponible || 0), 0);
       const quantiteTotalApreAjout = quantiteTotalActuelle + parseFloat(quantite);
       
       console.log(`   Capacité totale rayon: ${rayon.capaciteMax} × ${typeProduitForCapacity.capaciteMax} = ${capaciteTotalRayon} ${typeProduitForCapacity.unitePrincipale}`);
