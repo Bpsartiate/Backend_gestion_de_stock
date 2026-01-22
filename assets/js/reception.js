@@ -548,11 +548,15 @@ function onProduitSelected() {
 
   console.log('📦 Produit sélectionné:', produit.designation);
   console.log('📍 Rayon du produit:', produit.rayonId);
+  console.log('🔍 DEBUG produit.typeProduitId:', produit.typeProduitId);
 
   // ✨ OPTIMISATION: Utiliser le type produit DÉJÀ POPULÉ (pas d'appel API!)
   // Le backend envoie typeProduitId avec tous les infos directement
   if (produit.typeProduitId) {
     currentTypeProduit = typeof produit.typeProduitId === 'object' ? produit.typeProduitId : null;
+    
+    console.log('🔍 DEBUG currentTypeProduit:', currentTypeProduit);
+    console.log('🔍 DEBUG typeStockage:', currentTypeProduit?.typeStockage);
     
     if (currentTypeProduit) {
       console.log('✅ Type produit détecté (déjà populé):', currentTypeProduit.nomType);
@@ -565,7 +569,11 @@ function onProduitSelected() {
         console.log('✅ Interface SIMPLE activée');
         showSimpleInterface();
       }
+    } else {
+      console.warn('⚠️ currentTypeProduit est null après assignement');
     }
+  } else {
+    console.warn('⚠️ Pas de typeProduitId dans le produit!');
   }
 
   // Mettre à jour l'unité
