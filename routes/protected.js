@@ -4031,37 +4031,34 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       await produit.save();
     }
 
-    // ⚠️ VALIDATION: Vérifier la capacité MAX du TYPE DE PRODUIT (par produit)
-    console.log('🔍 VALIDATION 3: Capacité type produit?');
+    // ℹ️ PHASE 1 v2 INFO: Vérifier la capacité MAX du TYPE DE PRODUIT (pour l'info seulement)
+    // La consolidation intelligente est gérée par consolidationService ci-dessous
+    console.log('ℹ️ PHASE 1 v2: Vérification capacité type (INFO SEULEMENT - consolidationService gère la logique)');
     const typeProduit = await TypeProduit.findById(produit.typeProduitId);
-    console.log(`   Type produit trouvé: ${typeProduit ? typeProduit.nomType : 'PAS TROUVÉ'}`);
+    let capaciteInfo = null;
     
     if (typeProduit && typeProduit.capaciteMax) {
-      console.log(`   Capacité max type (par produit): ${typeProduit.capaciteMax} ${typeProduit.unitePrincipale || 'unités'}`);
-      
-      // Vérifier la capacité POUR CE PRODUIT SPÉCIFIQUE (utiliser la quantité réelle)
       const quantiteActuelleProduit = quantiteRealeProduit;
       const quantiteApreAjoutProduit = quantiteActuelleProduit + parseFloat(quantite);
       
-      console.log(`   Produit "${produit.designation}":`);
-      console.log(`      - Quantité actuelle (réelle): ${quantiteActuelleProduit} ${typeProduit.unitePrincipale || 'unités'}`);
-      console.log(`      - À ajouter: ${quantite} ${typeProduit.unitePrincipale || 'unités'}`);
-      console.log(`      - Total après: ${quantiteApreAjoutProduit} ${typeProduit.unitePrincipale || 'unités'}`);
-      
       if (quantiteApreAjoutProduit > typeProduit.capaciteMax) {
-        console.error(`❌ VALIDATION 3 ÉCHOUÉE - Capacité type (par produit) dépassée - ARRÊT`);
-        return res.status(400).json({
-          error: '❌ Capacité du type de produit dépassée',
-          details: `Capacité max pour type "${typeProduit.nomType}": ${typeProduit.capaciteMax} ${typeProduit.unitePrincipale || 'unités'} par produit. ${produit.designation} a actuellement ${quantiteActuelleProduit}. Après ajout de ${quantite}, total serait ${quantiteApreAjoutProduit} > ${typeProduit.capaciteMax}`,
-          capaciteType: typeProduit.capaciteMax,
-          quantiteActuelleProduit: quantiteActuelleProduit,
+        capaciteInfo = {
+          type: 'depassement',
+          capaciteMax: typeProduit.capaciteMax,
+          quantiteActuelle: quantiteActuelleProduit,
           quantiteAjout: quantite,
-          quantiteApreAjoutProduit: quantiteApreAjoutProduit
-        });
+          quantiteApreAjout: quantiteApreAjoutProduit,
+          depassement: quantiteApreAjoutProduit - typeProduit.capaciteMax
+        };
+        console.log(`ℹ️ INFO: Dépassement de capacité type détecté`);
+        console.log(`   Type: ${typeProduit.nomType}, Max: ${typeProduit.capaciteMax}`);
+        console.log(`   Produit: ${produit.designation}`);
+        console.log(`   Actuel: ${quantiteActuelleProduit}, Ajout: ${quantite}, Total: ${quantiteApreAjoutProduit}`);
+        console.log(`   Dépassement: ${capaciteInfo.depassement} ${typeProduit.unitePrincipale || 'unités'}`);
+        console.log(`   ✅ Phase 1 v2 va gérer automatiquement:`);
+        console.log(`      - Type SIMPLE: consolidera en 1 emplacement`);
+        console.log(`      - Type LOT: créera nouvel emplacement avec numeroLot unique`);
       }
-      console.log(`✅ VALIDATION 3 OK - Capacité type (par produit) respectée`);
-    } else {
-      console.log(`✅ VALIDATION 3 OK - Pas de limite de capacité pour ce type`);
     }
 
     // Calculer le prix total
