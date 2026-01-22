@@ -562,7 +562,11 @@ function onProduitSelected() {
       console.log('✅ Type produit détecté (déjà populé):', currentTypeProduit.nomType);
       console.log('   typeStockage:', currentTypeProduit.typeStockage);
       
-      if (currentTypeProduit.typeStockage === 'lot') {
+      // ⚡ DÉFAUT: Si typeStockage n'est pas défini, utiliser 'simple'
+      const typeStockage = currentTypeProduit.typeStockage || 'simple';
+      console.log('   typeStockage final (avec défaut):', typeStockage);
+      
+      if (typeStockage === 'lot') {
         console.log('✅ Interface LOT activée');
         showLotInterface();
       } else {
