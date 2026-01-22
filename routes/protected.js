@@ -2038,7 +2038,7 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
     })
       .populate({
         path: 'typeProduitId',
-        select: 'nomType unitePrincipale code icone seuilAlerte capaciteMax typeStockage'
+        select: 'nomType unitePrincipale code icone seuilAlerte capaciteMax typeStockage unitesVente unitePrincipaleStockage'
       })
       .populate({
         path: 'rayonId',

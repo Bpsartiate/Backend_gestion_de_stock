@@ -152,7 +152,7 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             .populate({
                 path: 'articles.produitId',
                 select: '_id designation photoUrl prixUnitaire quantiteActuelle seuilAlerte',
-                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale capaciteMax' }
+                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale capaciteMax typeStockage unitesVente unitePrincipaleStockage' }
             })
             .populate({
                 path: 'articles.rayonId',
@@ -327,7 +327,7 @@ router.put('/ventes/:venteId', authMiddleware, async (req, res) => {
             .populate({
                 path: 'articles.produitId',
                 select: '_id designation photoUrl prixUnitaire',
-                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale' }
+                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale typeStockage unitesVente unitePrincipaleStockage' }
             })
             .populate({ path: 'articles.rayonId', select: '_id nomRayon codeRayon' });
         
@@ -377,7 +377,7 @@ router.delete('/ventes/:venteId', authMiddleware, async (req, res) => {
             .populate({
                 path: 'articles.produitId',
                 select: '_id designation photoUrl prixUnitaire',
-                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale' }
+                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale typeStockage unitesVente unitePrincipaleStockage' }
             })
             .populate({ path: 'articles.rayonId', select: '_id nomRayon codeRayon' });
         
