@@ -85,6 +85,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Event listeners
   setupReceptionListeners();
+  
+  // ✨ ÉCOUTER L'OUVERTURE DU MODAL RÉCEPTION
+  const modalReception = document.getElementById('modalReception');
+  if (modalReception) {
+    modalReception.addEventListener('show.bs.modal', async () => {
+      console.log('📦 Modal réception ouverte - rechargement des produits');
+      await chargerProduitsReception();
+      await chargerRayonsReception();
+    });
+  }
 });
 
 // ================================
@@ -182,6 +192,8 @@ function setupReceptionListeners() {
   const rayonSelect = document.getElementById('rayonReception');
   const dateReception = document.getElementById('dateReception');
   const photoInput = document.getElementById('photoReception');
+  const fournisseurInput = document.getElementById('fournisseurReception');
+  const marqueInput = document.getElementById('marqueReception');
 
   // Définir date d'aujourd'hui par défaut
   if (dateReception) {
@@ -210,6 +222,14 @@ function setupReceptionListeners() {
       updateRecapitulatif();
       verificarRayonPleinReception(this.value);
     });
+  }
+
+  // ✨ Mettre à jour récapitulatif quand fournisseur ou marque change
+  if (fournisseurInput) {
+    fournisseurInput.addEventListener('input', updateRecapitulatif);
+  }
+  if (marqueInput) {
+    marqueInput.addEventListener('input', updateRecapitulatif);
   }
 
   // 📸 PRÉVISUALISATION PHOTO EN TEMPS RÉEL
@@ -651,9 +671,13 @@ function updateRecapitulatif() {
   const quantiteInput = document.getElementById('quantiteReception');
   const prixInput = document.getElementById('prixAchat');
   const rayonSelect = document.getElementById('rayonReception');
+  const fournisseurInput = document.getElementById('fournisseurReception');
+  const marqueInput = document.getElementById('marqueReception');
 
   const produitId = select?.value;
   const rayonId = rayonSelect?.value;
+  const fournisseur = fournisseurInput?.value || '-';
+  const marque = marqueInput?.value || '-';
 
   // Trouver produit et rayon
   const produit = PRODUITS_RECEPTION.find(p => p._id === produitId);
@@ -664,9 +688,13 @@ function updateRecapitulatif() {
   const recapQuantite = document.getElementById('recapQuantite');
   const recapRayon = document.getElementById('recapRayon');
   const recapTotal = document.getElementById('recapTotal');
+  const recapFournisseur = document.getElementById('recapFournisseur');
+  const recapMarque = document.getElementById('recapMarque');
 
   if (recapProduit) recapProduit.textContent = produit?.designation || '-';
   if (recapRayon) recapRayon.textContent = rayon?.nomRayon || '-';
+  if (recapFournisseur) recapFournisseur.textContent = fournisseur;
+  if (recapMarque) recapMarque.textContent = marque;
 
   // ✨ RÉCAPITULATIF PERSONNALISÉ SELON TYPE (SIMPLE vs LOT)
   if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
@@ -823,29 +851,29 @@ function verifierCapaciteTypeReception() {
   
   // Vérifier si on dépasse la capacité
   if (quantiteApreAjout > capaciteTypeMax) {
+    // ℹ️ PHASE 1 v2: Juste afficher une INFO, ne pas bloquer
+    // L'API gère la consolidation (SIMPLE) ou création nouvel emplacement (LOT)
     alerte.style.display = 'block';
-    alerte.classList.remove('alert-warning');
-    alerte.classList.add('alert-danger');
+    alerte.classList.remove('alert-danger');
+    alerte.classList.add('alert-warning');
     
     const depassement = (quantiteApreAjout - capaciteTypeMax).toFixed(2);
+    const typeStockageInfo = currentTypeProduit?.typeStockage === 'lot' 
+      ? '✅ Type LOT: créera un nouvel emplacement'
+      : '✅ Type SIMPLE: consolidera dans 1 emplacement';
+    
     messageSpan.innerHTML = `
-      <strong>❌ DÉPASSEMENT!</strong> 
+      <strong>⚠️ INFO CAPACITÉ:</strong> 
       Capacité max: <strong>${capaciteTypeMax}</strong> ${produit.uniteMesure || 'unités'},
       Actuel: <strong>${quantiteActuelleProduit}</strong>,
       À ajouter: <strong>${quantite}</strong>,
       Total: <strong>${quantiteApreAjout}</strong>
-      → Dépassement de <strong>${depassement}</strong> ${produit.uniteMesure || 'unités'} ⛔
+      → Dépassement de <strong>${depassement}</strong> ${produit.uniteMesure || 'unités'}<br>
+      <small>${typeStockageInfo}</small>
     `;
-    console.warn(`❌ CAPACITÉ DÉPASSÉE - Type: ${produit.designation}`);
+    console.info(`ℹ️ DÉPASSEMENT CAPACITÉ (OK avec Phase 1 v2) - Type: ${produit.designation}`);
     
-    // ⚡ DÉSACTIVER LE BOUTON SUBMIT
-    const btnSubmit = document.getElementById('btnSubmitReception');
-    if (btnSubmit) {
-      btnSubmit.disabled = true;
-      btnSubmit.style.opacity = '0.5';
-      btnSubmit.style.cursor = 'not-allowed';
-      btnSubmit.title = '❌ Capacité dépassée - impossible d\'enregistrer';
-    }
+    // ✅ NE PAS DÉSACTIVER LE BOUTON - laisser l'API gérer
   } else if (quantiteApreAjout > capaciteTypeMax * 0.8) {
     // Alerte jaune si au-delà de 80%
     alerte.style.display = 'block';
@@ -858,26 +886,8 @@ function verifierCapaciteTypeReception() {
       Vous atteindrez <strong>${pourcentage}%</strong> de la capacité max 
       (${quantiteApreAjout}/${capaciteTypeMax} ${produit.uniteMesure || 'unités'})
     `;
-    
-    //  RÉACTIVER LE BOUTON
-    const btnSubmit = document.getElementById('btnSubmitReception');
-    if (btnSubmit) {
-      btnSubmit.disabled = false;
-      btnSubmit.style.opacity = '1';
-      btnSubmit.style.cursor = 'pointer';
-      btnSubmit.title = '';
-    }
   } else {
     alerte.style.display = 'none';
-    
-    //  RÉACTIVER LE BOUTON
-    const btnSubmit = document.getElementById('btnSubmitReception');
-    if (btnSubmit) {
-      btnSubmit.disabled = false;
-      btnSubmit.style.opacity = '1';
-      btnSubmit.style.cursor = 'pointer';
-      btnSubmit.title = '';
-    }
   }
 }
 
@@ -999,6 +1009,7 @@ async function submitReception(e) {
     const rayonId = document.getElementById('rayonReception').value;
     const prixAchat = parseFloat(document.getElementById('prixAchat').value) || 0;
     const fournisseur = document.getElementById('fournisseurReception').value;
+    const marque = document.getElementById('marqueReception').value; // ✨ NOUVEAU
     const dateReception = document.getElementById('dateReception').value;
     const datePeremption = document.getElementById('datePeremption').value;
     const dateFabrication = document.getElementById('dateFabrication')?.value;
@@ -1010,6 +1021,7 @@ async function submitReception(e) {
     // Récupérer le produit pour déterminer le type
     const produit = PRODUITS_RECEPTION.find(p => p._id === produitId);
     const isLot = currentTypeProduit?.typeStockage === 'lot';
+    const typeProduitId = produit?.typeProduitId; // ✨ NOUVEAU - requis pour API
 
     // ⚡ VALIDATION: Adapter les champs requis selon le type
     let quantite;
@@ -1057,9 +1069,10 @@ async function submitReception(e) {
       }
     }
 
-    // ⚡ VALIDATION: Vérifier capacité type avant soumission
+    // ⚡ PHASE 1 v2: Capacité gérée par consolidationService
+    // NE PAS BLOQUER ICI - l'API gère la création d'emplacements (SIMPLE consolide, LOT crée nouveau)
+    // Juste afficher une info pour l'utilisateur
     if (produit) {
-      // Récupérer capacité du type
       let capaciteTypeMax = 0;
       if (typeof produit.typeProduitId === 'object' && produit.typeProduitId?.capaciteMax) {
         capaciteTypeMax = produit.typeProduitId.capaciteMax;
@@ -1067,40 +1080,29 @@ async function submitReception(e) {
         capaciteTypeMax = produit.capaciteMax;
       }
       
-      // Si capacité max est définie, vérifier qu'on ne dépasse pas
       if (capaciteTypeMax > 0) {
-        // Pour LOT: comparer le nombre de pièces à la capacité
-        // Pour SIMPLE: comparer la quantité à la capacité
         let quantiteAVerifier = quantite;
         if (isLot) {
           const nombrePieces = parseFloat(document.getElementById('nombrePieces')?.value);
-          quantiteAVerifier = nombrePieces;  // Capacity is in number of pieces
+          quantiteAVerifier = nombrePieces;
         }
         
         const quantiteActuelleProduit = produit.quantiteActuelle || 0;
         const quantiteApreAjout = quantiteActuelleProduit + quantiteAVerifier;
         
+        // ℹ️ JUSTE UN WARNING - ne pas bloquer
         if (quantiteApreAjout > capaciteTypeMax) {
           const depassement = (quantiteApreAjout - capaciteTypeMax).toFixed(2);
           const uniteMesure = isLot ? 'pièces' : (currentTypeProduit?.unitePrincipaleStockage || produit.typeProduitId?.unitePrincipale || produit.typeUnite || 'unités');
-          console.error(`❌ CAPACITÉ TYPE DÉPASSÉE - ${produit.designation}`, {
+          console.warn(`⚠️ INFO: Capacité type dépassée - ${produit.designation}`, {
             capaciteMax: capaciteTypeMax,
             quantiteActuelle: quantiteActuelleProduit,
             quantiteAjout: quantiteAVerifier,
             quantiteApreAjout,
-            depassement,
-            isLot
+            depassement
           });
-          showToast(`❌ IMPOSSIBLE! Capacité max du type "${produit.designation}" (${capaciteTypeMax} ${uniteMesure}) serait dépassée de ${depassement} ${uniteMesure}`, 'danger');
-          
-          // 📱 RESTAURER LE BOUTON
-          const btnSubmit = document.getElementById('btnSubmitReception');
-          const iconSubmit = document.getElementById('iconSubmit');
-          const textSubmit = document.getElementById('textSubmit');
-          btnSubmit.disabled = false;
-          iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
-          textSubmit.textContent = 'Enregistrer Réception';
-          return;
+          // Afficher juste une notification, pas un blocage
+          console.log(`ℹ️ Avec Phase 1 v2: ${isLot ? 'LOT crée nouvel emplacement' : 'SIMPLE consolide en 1 emplacement'}`);
         }
       }
     }
@@ -1172,8 +1174,10 @@ async function submitReception(e) {
       magasinId: MAGASIN_ID,
       quantite,
       rayonId,
+      typeProduitId, // ✨ REQUIS - Pour Phase 1 v2 (SIMPLE vs LOT)
       prixAchat,
       fournisseur,
+      marque, // ✨ NOUVEAU
       dateReception,
       datePeremption,
       dateFabrication,

@@ -45,6 +45,15 @@
                 </div>
               </div>
 
+              <!-- 2.5 MARQUE DU PRODUIT (NOUVEAU!) -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Marque <span class="text-danger">*</span></label>
+                  <input type="text" id="marqueReception" class="form-control" placeholder="Ex: Premium Beef, Quality Cloth" required />
+                  <div class="invalid-feedback">Marque obligatoire</div>
+                </div>
+              </div>
+
               <!-- 3. QUANTITÉ + UNITÉ (Dynamique selon produit) -->
               <div class="row g-3 mb-4">
                 <div class="col-md-4" id="simpleQuantityContainer">
@@ -277,6 +286,14 @@
                   </div>
                   <div class="col-md-3">
                     <strong id="recapTotal">0 CDF</strong><br><small>Valeur totale</small>
+                  </div>
+                </div>
+                <div class="row text-center mt-3 pt-3 border-top">
+                  <div class="col-md-6">
+                    <strong id="recapFournisseur">-</strong><br><small>Fournisseur</small>
+                  </div>
+                  <div class="col-md-6">
+                    <strong id="recapMarque">-</strong><br><small>Marque</small>
                   </div>
                 </div>
               </div>
