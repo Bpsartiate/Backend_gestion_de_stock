@@ -4227,7 +4227,10 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       console.log(`   - quantiteEntree: ${produit.quantiteEntree}`);
 
       try {
+        const magasinData = await Magasin.findById(magasinId);
         const activity = new Activity({
+          title: `Réception LOT - ${produit.designation}`,
+          businessId: magasinData?.businessId,
           utilisateurId: req.user.id,
           action: 'CREER_RECEPTION_LOT',
           entite: 'Reception',
