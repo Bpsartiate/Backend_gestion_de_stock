@@ -3976,43 +3976,66 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       console.log(`✅ VALIDATION 1 OK - Pas de restriction de types`);
     }
 
-    // ⚠️ VALIDATION: Vérifier la capacité TOTALE du rayon (tous les produits)
+    // ⚠️ VALIDATION 2: Vérifier la capacité TOTALE du rayon (nombre d'articles ET quantité totale)
     console.log('🔍 VALIDATION 2: Capacité rayon?');
     const allStocksInRayon = await StockRayon.find({
       rayonId,
       magasinId
     });
     
-    // ⚡ La capacité d'un rayon est en NOMBRE D'ARTICLES (produits différents)
-    // PAS en quantité/poids!
-    // Donc on vérifie: le produit existe-t-il déjà dans ce rayon?
+    // Vérifier DEUX choses:
+    // 1. Nombre d'articles (produits différents)
+    // 2. Quantité totale en fonction de la capacité du type
+    
     const produitExisteEnRayon = allStocksInRayon.some(stock => stock.produitId.toString() === produitId);
+    const nombreArticlesActuel = allStocksInRayon.length;
+    const nombreArticlesApreAjout = produitExisteEnRayon ? nombreArticlesActuel : nombreArticlesActuel + 1;
     
     console.log(`   StockRayons dans ce rayon: ${allStocksInRayon.length}`);
     console.log(`   Produit existe déjà en rayon?: ${produitExisteEnRayon}`);
-    
-    // Nombre d'articles ACTUELS
-    const nombreArticlesActuel = allStocksInRayon.length;
-    
-    // Si c'est un NOUVEAU produit pour ce rayon, on ajoute 1 article
-    // Si c'est un produit EXISTANT, on ajoute 0 article (juste la quantité)
-    const nombreArticlesApreAjout = produitExisteEnRayon ? nombreArticlesActuel : nombreArticlesActuel + 1;
-    
     console.log(`   Nombre d'articles actuels: ${nombreArticlesActuel}`);
     console.log(`   Nombre d'articles après ajout: ${nombreArticlesApreAjout}`);
     console.log(`   Capacité max rayon (en articles): ${rayon.capaciteMax}`);
     
+    // Vérifier la capacité EN NOMBRE D'ARTICLES
     if (nombreArticlesApreAjout > rayon.capaciteMax) {
-      console.error(`❌ VALIDATION 2 ÉCHOUÉE - Capacité rayon dépassée - ARRÊT`);
+      console.error(`❌ VALIDATION 2a ÉCHOUÉE - Trop d'articles différents dans le rayon`);
       return res.status(400).json({
-        error: '❌ Capacité du rayon dépassée',
-        details: `Capacité rayon: ${rayon.capaciteMax} articles, Actuels: ${nombreArticlesActuel}, Après: ${nombreArticlesApreAjout}`,
-        capaciteRayon: rayon.capaciteMax,
+        error: '❌ Capacité du rayon dépassée (nombre d\'articles)',
+        details: `Rayon peut contenir max ${rayon.capaciteMax} articles, actuels: ${nombreArticlesActuel}, après ajout: ${nombreArticlesApreAjout}`,
+        capaciteRayonArticles: rayon.capaciteMax,
         articlesActuels: nombreArticlesActuel,
         articlesApreAjout: nombreArticlesApreAjout
       });
     }
-    console.log(`✅ VALIDATION 2 OK - Capacité rayon respectée`);
+    
+    // ⚡ NOUVEAU: Vérifier la capacité EN QUANTITÉ TOTALE
+    // Capacité totale = nombre d'emplacements × capacité par type produit
+    const typeProduitForCapacity = await TypeProduit.findById(produit.typeProduitId);
+    if (typeProduitForCapacity && typeProduitForCapacity.capaciteMax) {
+      const capaciteTotalRayon = rayon.capaciteMax * typeProduitForCapacity.capaciteMax;
+      const quantiteTotalActuelle = allStocksInRayon.reduce((sum, sr) => sum + (sr.quantite || 0), 0);
+      const quantiteTotalApreAjout = quantiteTotalActuelle + parseFloat(quantite);
+      
+      console.log(`   Capacité totale rayon: ${rayon.capaciteMax} × ${typeProduitForCapacity.capaciteMax} = ${capaciteTotalRayon} ${typeProduitForCapacity.unitePrincipale}`);
+      console.log(`   Quantité totale actuelle: ${quantiteTotalActuelle}`);
+      console.log(`   Quantité à ajouter: ${quantite}`);
+      console.log(`   Quantité totale après: ${quantiteTotalApreAjout}`);
+      
+      if (quantiteTotalApreAjout > capaciteTotalRayon) {
+        console.error(`❌ VALIDATION 2b ÉCHOUÉE - Capacité totale en quantité dépassée`);
+        return res.status(400).json({
+          error: '❌ Capacité du rayon dépassée (quantité totale)',
+          details: `Rayon peut contenir max ${capaciteTotalRayon} ${typeProduitForCapacity.unitePrincipale}, actuels: ${quantiteTotalActuelle}, après ajout: ${quantiteTotalApreAjout}`,
+          capaciteTotalRayon: capaciteTotalRayon,
+          quantiteTotalActuelle: quantiteTotalActuelle,
+          quantiteTotalApreAjout: quantiteTotalApreAjout
+        });
+      }
+      console.log(`✅ VALIDATION 2 OK - Capacité rayon respectée (articles ET quantité)`);
+    } else {
+      console.log(`✅ VALIDATION 2 OK - Capacité rayon respectée (articles uniquement)`);
+    }
 
     // 🔄 SYNCHRONISATION: Recalculer quantiteActuelle du produit avant validation
     console.log('🔄 SYNCHRONISATION: Recalcul quantiteActuelle produit');
