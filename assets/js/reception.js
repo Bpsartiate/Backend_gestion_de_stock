@@ -549,8 +549,24 @@ function onProduitSelected() {
   console.log('📦 Produit sélectionné:', produit.designation);
   console.log('📍 Rayon du produit:', produit.rayonId);
 
-  // ✨ CHARGER LE TYPE PRODUIT POUR VÉRIFIER SIMPLE vs LOT
-  loadTypeProduitForReception(produit);
+  // ✨ OPTIMISATION: Utiliser le type produit DÉJÀ POPULÉ (pas d'appel API!)
+  // Le backend envoie typeProduitId avec tous les infos directement
+  if (produit.typeProduitId) {
+    currentTypeProduit = typeof produit.typeProduitId === 'object' ? produit.typeProduitId : null;
+    
+    if (currentTypeProduit) {
+      console.log('✅ Type produit détecté (déjà populé):', currentTypeProduit.nomType);
+      console.log('   typeStockage:', currentTypeProduit.typeStockage);
+      
+      if (currentTypeProduit.typeStockage === 'lot') {
+        console.log('✅ Interface LOT activée');
+        showLotInterface();
+      } else {
+        console.log('✅ Interface SIMPLE activée');
+        showSimpleInterface();
+      }
+    }
+  }
 
   // Mettre à jour l'unité
   const uniteLabel = document.getElementById('uniteReceptionLabel');
@@ -1270,6 +1286,9 @@ async function submitReception(e) {
 
     // Recharger aussi les produits de réception
     await chargerProduitsReception();
+    
+    // 🔄 RÉINITIALISER LES VARIABLES DE FORMULAIRE
+    currentTypeProduit = null;
 
   } catch (err) {
     console.error('❌ Erreur enregistrement réception:', err);
