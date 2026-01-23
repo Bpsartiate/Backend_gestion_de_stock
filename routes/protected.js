@@ -2560,21 +2560,43 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
       return res.status(403).json({ success: false, error: 'Accès refusé' });
     }
 
-    // 2️⃣.5️⃣ SYNCHRONISATION STOCK - Recalculer quantiteActuelle depuis StockRayons
+    // 2️⃣.5️⃣ SYNCHRONISATION STOCK - Recalculer quantiteActuelle depuis StockRayons + LOTs (Phase 1 v2)
     const stocksActuelsProduit = await StockRayon.find({
       produitId: produitId,
       magasinId: produit.magasinId._id
     });
     
-    const quantiteReeleProduit = stocksActuelsProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+    // Calculer quantité totale: StockRayons + LOTs
+    const quantiteStockRayons = stocksActuelsProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+    
+    // Compter aussi les LOTs pour ce produit (Phase 1 v2)
+    const lotsTotal = await Lot.aggregate([
+      {
+        $match: {
+          produitId: new mongoose.Types.ObjectId(produitId),
+          magasinId: new mongoose.Types.ObjectId(produit.magasinId._id)
+        }
+      },
+      {
+        $group: {
+          _id: '$produitId',
+          totalQuantite: { $sum: '$quantiteInitiale' }
+        }
+      }
+    ]);
+    const quantiteLots = (lotsTotal[0]?.totalQuantite || 0);
+    
+    const quantiteReeleProduit = quantiteStockRayons + quantiteLots;  // StockRayons + LOTs
     
     if (quantiteReeleProduit !== produit.quantiteActuelle) {
       console.log(`⚠️ [SYNC] Incohérence détectée pour produit ${produit.designation}:`);
       console.log(`   - quantiteActuelle en DB: ${produit.quantiteActuelle}`);
-      console.log(`   - Somme StockRayons: ${quantiteReeleProduit}`);
+      console.log(`   - Somme StockRayons: ${quantiteStockRayons}`);
+      console.log(`   - Somme LOTs: ${quantiteLots}`);
+      console.log(`   - Total réel: ${quantiteReeleProduit}`);
       produit.quantiteActuelle = quantiteReeleProduit;
       await produit.save();
-      console.log(`   ✅ Produit mis à jour avec la quantité réelle`);
+      console.log(`   ✅ Produit mis à jour avec la quantité réelle (${quantiteReeleProduit})`);
     }
 
     // 3️⃣ CONSTRUCTION DE LA RÉPONSE ENRICHIE
