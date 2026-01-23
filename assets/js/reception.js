@@ -485,7 +485,60 @@ function showLotInterface() {
     }
   };
   
+  // 🎁 FONCTION: Mettre à jour l'alerte capacité rayon en temps réel
+  const updateAlertCapaciteRayon = () => {
+    const nb = parseInt(nombrePieces?.value) || 0;
+    const rayonElement = document.getElementById('rayonReception');
+    const rayonText = rayonElement?.options[rayonElement.selectedIndex]?.text || '';
+    const alerteDiv = document.getElementById('alerteCapaciteRayon');
+    
+    if (!alerteDiv) return;
+    
+    if (!nb || nb === 0) {
+      // Si pas de valeur, nettoyer l'alerte
+      alerteDiv.innerHTML = '';
+      return;
+    }
+    
+    // Extraire capacité du rayon (ex: "Rouleau (1/3)")
+    const capaciteMatch = rayonText.match(/\((\d+)\/(\d+)\)/);
+    if (capaciteMatch) {
+      const occuped = parseInt(capaciteMatch[1]);
+      const capaciteTotal = parseInt(capaciteMatch[2]);
+      const disponible = capaciteTotal - occuped;
+      
+      let html = '';
+      if (nb <= disponible) {
+        // ✅ OK - alerte verte
+        html = `
+          <div class="alert alert-success mb-0 py-2 px-3 small">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>✅ OK:</strong> ${nb} pièces / ${disponible} disponible(s)
+            <span class="text-muted">(${occuped}/${capaciteTotal})</span>
+          </div>
+        `;
+      } else {
+        // ❌ DÉPASSEMENT - alerte rouge
+        const depassement = nb - disponible;
+        html = `
+          <div class="alert alert-danger mb-0 py-2 px-3 small">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong>❌ CAPACITÉ DÉPASSÉE!</strong> 
+            Vous demandez ${nb} pièces mais seulement ${disponible} disponible(s)
+            <span class="text-muted">(${occuped}/${capaciteTotal})</span>
+            <br/>
+            <strong>Réduisez à ${disponible} pièces maximum</strong>
+          </div>
+        `;
+      }
+      alerteDiv.innerHTML = html;
+    } else {
+      alerteDiv.innerHTML = '';
+    }
+  };
+  
   nombrePieces?.addEventListener('input', updateLotPreview);
+  nombrePieces?.addEventListener('input', updateAlertCapaciteRayon);  // 🎁 NOUVEAU
   quantiteParPiece?.addEventListener('input', updateLotPreview);
   prixParUniteDetail?.addEventListener('input', updateLotPreview);
   uniteDetail?.addEventListener('change', updateLotPreview);
@@ -551,6 +604,12 @@ function showLotInterface() {
   if (quantiteParPiece) quantiteParPiece.addEventListener('input', updateRecapitulatif);
   if (prixParUniteDetail) prixParUniteDetail.addEventListener('input', updateRecapitulatif);
   if (uniteDetail) uniteDetail.addEventListener('change', updateRecapitulatif);
+  
+  // 🎁 Mettre à jour l'alerte quand le rayon change aussi
+  const rayonSelect = document.getElementById('rayonReception');
+  if (rayonSelect) {
+    rayonSelect.addEventListener('change', updateAlertCapaciteRayon);
+  }
 }
 
 // ================================// �🔄 QUAND UN PRODUIT EST SÉLECTIONNÉ
@@ -955,7 +1014,9 @@ async function createLotsForReception(reception, produitId) {
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     const lotsPromises = [];
     
-    console.log(`🎁 Création de ${nombrePieces} LOTs...`);
+    // 🎁 PHASE 1 v2: 1 PIÈCE = 1 LOT (pas consolidation)
+    // 30 rouleaux = 30 Lots différents, chacun avec son numeroLot unique
+    console.log(`🎁 Phase 1 v2: Création de ${nombrePieces} LOTs (1 par pièce)...`);
     
     for (let i = 1; i <= nombrePieces; i++) {
       const lotData = {
@@ -964,14 +1025,17 @@ async function createLotsForReception(reception, produitId) {
         typeProduitId: currentTypeProduit._id,
         receptionId: reception._id,
         unitePrincipale: currentTypeProduit.unitePrincipaleStockage,
-        quantiteInitiale: quantiteParPiece,
-        quantiteRestante: quantiteParPiece,
+        quantiteInitiale: parseFloat(quantiteParPiece),  // 1 pièce = quantiteParPiece unités (ex: 15m)
+        quantiteRestante: parseFloat(quantiteParPiece),
         uniteDetail: uniteDetail,
         prixParUnite: prixAchat,
-        prixTotal: quantiteParPiece * prixAchat,
+        prixTotal: parseFloat(quantiteParPiece) * prixAchat,
         rayonId: rayonId,
         dateReception: dateReception,
-        status: 'complet'
+        status: 'complet',
+        // 🎁 Métadonnées LOT
+        nombrePieces: 1,  // Chaque Lot = 1 pièce
+        quantiteParPiece: parseFloat(quantiteParPiece)
       };
       
       lotsPromises.push(
@@ -1000,7 +1064,7 @@ async function createLotsForReception(reception, produitId) {
       }
     }
     
-    console.log(`✅ ${lotCreated}/${nombrePieces} LOTs créés`);
+    console.log(`✅ ${lotCreated}/${nombrePieces} LOTs créés (1 par pièce)`);
     
   } catch (err) {
     console.error('❌ Erreur createLotsForReception:', err);
@@ -1095,6 +1159,33 @@ async function submitReception(e) {
         textSubmit.textContent = 'Enregistrer Réception';
         return;
       }
+
+      // 🎁 VALIDATION LOT: Vérifier que nombrePieces <= espace disponible du rayon
+      // Chaque pièce = 1 emplacement dans le rayon
+      const rayonElement = document.getElementById('rayonReception');
+      const rayonText = rayonElement?.options[rayonElement.selectedIndex]?.text || '';
+      const rayonOptionValue = rayonElement?.value;
+      
+      // Extraire capacité du texte du rayon (ex: "Rouleau (1/3)")
+      const capaciteMatch = rayonText.match(/\((\d+)\/(\d+)\)/);
+      if (capaciteMatch) {
+        const occuped = parseInt(capaciteMatch[1]);
+        const capaciteTotal = parseInt(capaciteMatch[2]);
+        const disponible = capaciteTotal - occuped;
+        
+        if (nombrePieces > disponible) {
+          showToast(
+            `❌ Rayon insuffisant: vous avez ${disponible} emplacement(s) disponible(s), mais vous voulez ajouter ${nombrePieces} pièces`,
+            'danger'
+          );
+          btnSubmit.disabled = false;
+          iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
+          textSubmit.textContent = 'Enregistrer Réception';
+          return;
+        }
+        console.log(`✅ Validation LOT: ${nombrePieces} pièces <= ${disponible} emplacements disponibles`);
+      }
+
       // Pour LOT, la quantité est juste le nombre de pièces (pas la quantité totale)
       quantite = nombrePieces;
     } else {

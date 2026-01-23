@@ -143,6 +143,8 @@
                           <span class="input-group-text">pièces</span>
                         </div>
                         <small class="text-muted d-block mt-2">Rouleaux, cartons, reams...</small>
+                        <!-- 🎁 Alerte capacité rayon en temps réel -->
+                        <div id="alerteCapaciteRayon" class="mt-2"></div>
                       </div>
                       <div class="col-md-4">
                         <label class="form-label fw-bold">

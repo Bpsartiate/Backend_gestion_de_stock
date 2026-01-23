@@ -77,6 +77,17 @@ const lotSchema = new mongoose.Schema({
     type: String                // ex: "MÈTRE" (la vraie unité de vente)
   },
 
+  // 🎁 CHAMPS LOT PHASE 1 v2
+  nombrePieces: {
+    type: Number,               // ex: 30 pièces reçues
+    default: 1
+  },
+
+  quantiteParPiece: {
+    type: Number,               // ex: 15 mètres par pièce
+    default: 1
+  },
+
   // STATUT
   status: {
     type: String,
