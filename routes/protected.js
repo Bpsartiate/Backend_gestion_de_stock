@@ -3000,6 +3000,30 @@ router.delete('/produits/:produitId', authMiddleware, async (req, res) => {
     const stockRayonsDeleteResult = await StockRayon.deleteMany({ produitId });
     console.log(`✅ ${stockRayonsDeleteResult.deletedCount} StockRayon(s) supprimés`);
 
+    // ⚠️ ÉTAPE 1B: Supprimer tous les LOTs associés à ce produit ET décrémenter les rayons
+    console.log('🔍 Suppression des LOTs et mise à jour des rayons...');
+    const lotsASupprimer = await Lot.find({ produitId });
+    console.log(`📦 ${lotsASupprimer.length} LOT(s) à supprimer`);
+    
+    // Décrémenter quantiteActuelle des rayons concernés
+    for (const lot of lotsASupprimer) {
+      if (lot.rayonId) {
+        try {
+          const rayon = await Rayon.findById(lot.rayonId);
+          if (rayon && rayon.quantiteActuelle > 0) {
+            rayon.quantiteActuelle -= 1;  // Chaque LOT = 1 emplacement
+            await rayon.save();
+            console.log(`   ✅ Rayon ${rayon.nomRayon}: quantiteActuelle = ${rayon.quantiteActuelle}`);
+          }
+        } catch (rayonErr) {
+          console.error(`   ⚠️ Erreur mise à jour rayon ${lot.rayonId}:`, rayonErr.message);
+        }
+      }
+    }
+    
+    const lotsDeleteResult = await Lot.deleteMany({ produitId });
+    console.log(`✅ ${lotsDeleteResult.deletedCount} LOT(s) supprimé(s)`);
+
     // ⚠️ ÉTAPE 2: Supprimer ou archiver les réceptions associées
     console.log('🔍 Suppression des réceptions...');
     const receptionsDeleteResult = await Reception.deleteMany({ produitId });
@@ -3404,7 +3428,7 @@ router.post('/lots', authMiddleware, checkMagasinAccess, async (req, res) => {
       prixTotal: (prixParUnite || 0) * quantiteInitiale,
       rayonId,
       dateReception: dateReception || new Date(),
-      status: 'complet',
+      status: 'ACTIF',
       peutEtreVendu: true
     });
 
