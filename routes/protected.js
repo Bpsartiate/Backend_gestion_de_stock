@@ -3439,7 +3439,19 @@ router.post('/lots', authMiddleware, checkMagasinAccess, async (req, res) => {
       try {
         const rayon = await Rayon.findById(rayonId);
         if (rayon) {
-          rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + 1;  // +1 emplacement
+          // ⚠️ VÉRIFIER LA CAPACITÉ AVANT D'AJOUTER
+          const nouvelleCapacite = (rayon.quantiteActuelle || 0) + 1;
+          if (nouvelleCapacite > rayon.capaciteMax) {
+            // BLOQUER - rayon plein!
+            return res.status(400).json({ 
+              success: false,
+              message: `❌ Rayon plein! Capacité: ${rayon.capaciteMax}, Articles actuels: ${rayon.quantiteActuelle}`,
+              capaciteMax: rayon.capaciteMax,
+              capaciteActuelle: rayon.quantiteActuelle
+            });
+          }
+          
+          rayon.quantiteActuelle = nouvelleCapacite;
           await rayon.save();
           console.log(`✅ Rayon mis à jour: ${rayon.nomRayon} (${rayon.quantiteActuelle}/${rayon.capaciteMax})`);
         }
