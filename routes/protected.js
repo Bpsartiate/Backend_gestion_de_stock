@@ -3365,6 +3365,22 @@ router.post('/lots', authMiddleware, checkMagasinAccess, async (req, res) => {
 
     await lot.save();
 
+    // 🎁 METTRE À JOUR LA CAPACITÉ DU RAYON
+    // Chaque LOT créé = 1 emplacement occupé
+    if (rayonId) {
+      try {
+        const rayon = await Rayon.findById(rayonId);
+        if (rayon) {
+          rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + 1;  // +1 emplacement
+          await rayon.save();
+          console.log(`✅ Rayon mis à jour: ${rayon.nomRayon} (${rayon.quantiteActuelle}/${rayon.capaciteMax})`);
+        }
+      } catch (rayonErr) {
+        console.error('⚠️ Erreur mise à jour rayon:', rayonErr);
+        // Ne pas bloquer - le LOT est créé même si rayon non mis à jour
+      }
+    }
+
     // Log activity
     try {
       const magasin = await Magasin.findById(magasinId);
