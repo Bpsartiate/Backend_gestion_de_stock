@@ -1951,7 +1951,7 @@ router.get('/magasins/:magasinId/stock-config', authMiddleware, async (req, res)
 
     // Récupérer rayons et types de produits
     const rayons = await Rayon.find({ magasinId })
-      .select('_id codeRayon nomRayon typeRayon capaciteMax couleurRayon iconeRayon typesProduitsAutorises status')
+      .select('_id codeRayon nomRayon typeRayon capaciteMax couleurRayon iconeRayon typesProduitsAutorises status quantiteActuelle')
       .sort({ codeRayon: 1 })
       .lean();
 

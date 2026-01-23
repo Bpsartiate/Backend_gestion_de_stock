@@ -488,53 +488,60 @@ function showLotInterface() {
   // 🎁 FONCTION: Mettre à jour l'alerte capacité rayon en temps réel
   const updateAlertCapaciteRayon = () => {
     const nb = parseInt(nombrePieces?.value) || 0;
-    const rayonElement = document.getElementById('rayonReception');
-    const rayonText = rayonElement?.options[rayonElement.selectedIndex]?.text || '';
+    const rayonSelect = document.getElementById('rayonReception');
+    const rayonId = rayonSelect?.value;
     const alerteDiv = document.getElementById('alerteCapaciteRayon');
     
     if (!alerteDiv) return;
     
     if (!nb || nb === 0) {
-      // Si pas de valeur, nettoyer l'alerte
       alerteDiv.innerHTML = '';
       return;
     }
     
-    // Extraire capacité du rayon (ex: "Rouleau (1/3)")
-    const capaciteMatch = rayonText.match(/\((\d+)\/(\d+)\)/);
-    if (capaciteMatch) {
-      const occuped = parseInt(capaciteMatch[1]);
-      const capaciteTotal = parseInt(capaciteMatch[2]);
-      const disponible = capaciteTotal - occuped;
-      
-      let html = '';
-      if (nb <= disponible) {
-        // ✅ OK - alerte verte
-        html = `
-          <div class="alert alert-success mb-0 py-2 px-3 small">
-            <i class="fas fa-check-circle me-2"></i>
-            <strong>✅ OK:</strong> ${nb} pièces / ${disponible} disponible(s)
-            <span class="text-muted">(${occuped}/${capaciteTotal})</span>
-          </div>
-        `;
-      } else {
-        // ❌ DÉPASSEMENT - alerte rouge
-        const depassement = nb - disponible;
-        html = `
-          <div class="alert alert-danger mb-0 py-2 px-3 small">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            <strong>❌ CAPACITÉ DÉPASSÉE!</strong> 
-            Vous demandez ${nb} pièces mais seulement ${disponible} disponible(s)
-            <span class="text-muted">(${occuped}/${capaciteTotal})</span>
-            <br/>
-            <strong>Réduisez à ${disponible} pièces maximum</strong>
-          </div>
-        `;
-      }
-      alerteDiv.innerHTML = html;
-    } else {
-      alerteDiv.innerHTML = '';
+    if (!rayonId) {
+      alerteDiv.innerHTML = '<div class="alert alert-warning mb-0 py-2 px-3 small">⚠️ Sélectionnez un rayon</div>';
+      return;
     }
+    
+    // Chercher le rayon dans RAYONS_RECEPTION
+    const rayon = RAYONS_RECEPTION?.find(r => r._id === rayonId);
+    if (!rayon) {
+      alerteDiv.innerHTML = '';
+      return;
+    }
+    
+    // Capacité totale du rayon (en nombre d'articles/emplacements)
+    const capaciteTotal = rayon.capaciteMax || 999;
+    
+    // Compter les emplacements occupés (StockRayons existants dans ce rayon)
+    const occuped = rayon.quantiteActuelle || 0;  // Nombre d'emplacements occupés
+    const disponible = capaciteTotal - occuped;
+    
+    let html = '';
+    if (nb <= disponible) {
+      // ✅ OK - alerte verte
+      html = `
+        <div class="alert alert-success mb-0 py-2 px-3 small">
+          <i class="fas fa-check-circle me-2"></i>
+          <strong>✅ OK:</strong> ${nb} pièce(s) / ${disponible} emplacement(s) disponible(s)
+          <span class="text-muted">(${occuped}/${capaciteTotal})</span>
+        </div>
+      `;
+    } else {
+      // ❌ DÉPASSEMENT - alerte rouge
+      html = `
+        <div class="alert alert-danger mb-0 py-2 px-3 small">
+          <i class="fas fa-exclamation-circle me-2"></i>
+          <strong>❌ CAPACITÉ RAYON DÉPASSÉE!</strong> 
+          <br/>Vous demandez ${nb} pièce(s) mais seulement ${disponible} emplacement(s) disponible(s)
+          <span class="text-muted">(${occuped}/${capaciteTotal})</span>
+          <br/>
+          <strong>Réduisez à ${disponible} pièce(s) maximum</strong>
+        </div>
+      `;
+    }
+    alerteDiv.innerHTML = html;
   };
   
   nombrePieces?.addEventListener('input', updateLotPreview);
