@@ -2068,20 +2068,33 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
       });
     }
 
-    // 🔄 SYNCHRONISATION STOCK - Recalculer quantiteActuelle depuis StockRayons pour chaque produit
+    // 🔄 SYNCHRONISATION STOCK - Recalculer quantiteActuelle depuis StockRayons + LOTs pour chaque produit
     const produitsSync = await Promise.all(
       produits.map(async (produit) => {
+        // Compter les StockRayons
         const stocksActuelsProduit = await StockRayon.find({
           produitId: produit._id,
           magasinId: magasinId
         });
-        
-        const quantiteReeleProduit = stocksActuelsProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+        const quantiteStockRayons = stocksActuelsProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
+
+        // Compter les LOTs
+        const lotsActuelsProduit = await Lot.find({
+          produitId: produit._id,
+          magasinId: magasinId,
+          status: 'ACTIF'
+        });
+        const quantiteLots = lotsActuelsProduit.reduce((sum, lot) => sum + (lot.quantiteInitiale || 0), 0);
+
+        // Total = StockRayons + LOTs
+        const quantiteReeleProduit = quantiteStockRayons + quantiteLots;
         
         if (quantiteReeleProduit !== produit.quantiteActuelle) {
           console.log(`⚠️ [SYNC LIST] Incohérence détectée pour produit ${produit.designation}:`);
           console.log(`   - quantiteActuelle en DB: ${produit.quantiteActuelle}`);
-          console.log(`   - Somme StockRayons: ${quantiteReeleProduit}`);
+          console.log(`   - Somme StockRayons: ${quantiteStockRayons}`);
+          console.log(`   - Somme LOTs: ${quantiteLots}`);
+          console.log(`   - Total: ${quantiteReeleProduit}`);
           produit.quantiteActuelle = quantiteReeleProduit;
           await produit.save();
           console.log(`   ✅ Produit mis à jour`);
