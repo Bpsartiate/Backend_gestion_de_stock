@@ -4164,84 +4164,17 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     await stockMovement.save();
     console.log(`✅ Mouvement de stock créé: ${stockMovement._id}`);
 
-    // ⚠️ SI LOT: Créer StockRayon avec le nombre de pièces
+    // 🎁 PHASE 1 v2 - LOT: Ne pas créer StockRayon ici!
+    // Le frontend crée les LOTs individuels via POST /lots
+    // Chaque POST /lots crée son propre StockRayon et met à jour le rayon
+    
     if (req.body.type === 'lot') {
-      console.log(`🎁 Type = LOT - Création StockRayon avec ${quantite} pièces`);
+      console.log(`🎁 Type = LOT - Réception créée, attente des LOTs individuels du frontend...`);
       
-      // Créer ou mettre à jour StockRayon pour les LOTs
-      let stockRayon = await StockRayon.findOne({
-        produitId,
-        magasinId,
-        rayonId
-      });
-
-      if (!stockRayon) {
-        // Créer une nouvelle entrée StockRayon
-        console.log(`   ➡️ Création nouveau StockRayon pour LOT...`);
-        stockRayon = new StockRayon({
-          produitId,
-          magasinId,
-          rayonId,
-          quantiteDisponible: parseFloat(quantite),
-          réceptions: [
-            {
-              receptionId: reception._id,
-              date: new Date(),
-              quantite: parseFloat(quantite)
-            }
-          ]
-        });
-      } else {
-        // Mettre à jour StockRayon existant
-        console.log(`   ➡️ Mise à jour StockRayon existant...`);
-        stockRayon.quantiteDisponible += parseFloat(quantite);
-        stockRayon.réceptions.push({
-          receptionId: reception._id,
-          date: new Date(),
-          quantite: parseFloat(quantite)
-        });
-      }
-
-      await stockRayon.save();
-      console.log(`✅ StockRayon sauvegardé (LOT): ${stockRayon._id}`);
-
-      // 4. Mettre à jour la quantité du rayon (AUSSI POUR LOT)
-      rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + parseFloat(quantite);
-      await rayon.save();
-      console.log(`✅ Rayon mis à jour: ${rayon.nomRayon} (${rayon.quantiteActuelle}/${rayon.capaciteMax})`);
-
-      // 5. Mettre à jour la quantité totale du produit (AUSSI POUR LOT)
-      const totalStockParProduitLot = await StockRayon.aggregate([
-        {
-          $match: {
-            produitId: new mongoose.Types.ObjectId(produitId),
-            magasinId: new mongoose.Types.ObjectId(magasinId)
-          }
-        },
-        {
-          $group: {
-            _id: '$produitId',
-            totalQuantite: { $sum: '$quantiteDisponible' }
-          }
-        }
-      ]);
-
-      const nouvelleQuantiteActuelleLot = (totalStockParProduitLot[0]?.totalQuantite || 0);
-      produit.quantiteActuelle = nouvelleQuantiteActuelleLot;
-      produit.quantiteEntree = (produit.quantiteEntree || 0) + parseFloat(quantite);
-      produit.dateLastMovement = new Date();
-
-      // Si le produit n'a pas encore de rayonId, assigner le premier
-      if (!produit.rayonId) {
-        produit.rayonId = rayonId;
-        console.log(`📍 Premier rayon assigné au produit: ${rayonId}`);
-      }
-
-      await produit.save();
-      console.log(`✅ Produit "${produit.designation}" mis à jour:`);
-      console.log(`   - quantiteActuelle: ${nouvelleQuantiteActuelleLot}`);
-      console.log(`   - quantiteEntree: ${produit.quantiteEntree}`);
-
+      // Juste enregistrer la réception et laisser le frontend créer les LOTs
+      reception.mouvementStockId = stockMovement._id;
+      await reception.save();
+      
       try {
         const magasinData = await Magasin.findById(magasinId);
         const activity = new Activity({
@@ -4259,20 +4192,21 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         console.error('activity.save.error', actErr);
       }
 
+      const populatedReception = await Reception.findById(reception._id)
+        .populate('produitId', 'designation reference image quantiteActuelle')
+        .populate('magasinId', 'nom')
+        .populate('rayonId', 'nom')
+        .populate('mouvementStockId');
+
       return res.status(201).json({
         success: true,
-        message: '✅ Réception LOT enregistrée avec succès',
-        reception,
-        produitUpdated: {
-          quantiteActuelle: nouvelleQuantiteActuelleLot,
-          quantiteEntree: produit.quantiteEntree
-        }
+        message: '✅ Réception LOT enregistrée (LOTs à créer via frontend)',
+        reception: populatedReception,
+        mouvement: stockMovement
       });
     }
 
-    // 3. 🆕 PHASE 1 v2: Utiliser consolidationService pour logique intelligente
-    console.log(`\n🆕 === PHASE 1 v2 - CONSOLIDATION SERVICE ===`);
-    console.log(`   Type: ${typeProduit?.typeStockage || 'unknown'}`);
+    // 🆕 PHASE 1 v2: Utiliser consolidationService pour logique intelligente (SIMPLE)
     
     let consolidationResult;
     try {
