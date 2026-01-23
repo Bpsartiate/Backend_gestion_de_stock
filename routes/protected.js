@@ -4112,6 +4112,7 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     }
 
     // ⚠️ VALIDATION 2: Vérifier la capacité TOTALE du rayon (nombre d'articles ET quantité totale)
+    // ⚠️ IMPORTANT: Pour LOTs, nombrePieces = nombre de LOTs à créer = nombre d'emplacements à réserver
     console.log('🔍 VALIDATION 2: Capacité rayon?');
     const allStocksInRayon = await StockRayon.find({
       rayonId,
@@ -4129,14 +4130,19 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     // 1. Nombre d'articles (produits différents)
     // 2. Quantité totale en fonction de la capacité du type
     
+    // 🎁 IMPORTANT: Pour LOT, ajouter "nombrePieces" articles (chaque pièce = 1 LOT = 1 emplacement)
+    // Pour SIMPLE, ajouter 1 article
+    const articlesAjouter = typeProduitId.typeStockage === 'lot' ? (nombrePieces || 1) : 1;
+    
     const produitExisteEnRayon = allStocksInRayon.some(stock => stock.produitId.toString() === produitId);
     const nombreArticlesActuel = allStocksInRayon.length + allLotsInRayon.length;  // StockRayons + LOTs
-    const nombreArticlesApreAjout = produitExisteEnRayon ? nombreArticlesActuel : nombreArticlesActuel + 1;
+    const nombreArticlesApreAjout = produitExisteEnRayon ? nombreArticlesActuel + articlesAjouter : nombreArticlesActuel + articlesAjouter;
     
     console.log(`   StockRayons dans ce rayon: ${allStocksInRayon.length}`);
     console.log(`   LOTs dans ce rayon: ${allLotsInRayon.length}`);
     console.log(`   Produit existe déjà en rayon?: ${produitExisteEnRayon}`);
     console.log(`   Nombre d'articles actuels: ${nombreArticlesActuel}`);
+    console.log(`   Articles à ajouter: ${articlesAjouter}`);
     console.log(`   Nombre d'articles après ajout: ${nombreArticlesApreAjout}`);
     console.log(`   Capacité max rayon (en articles): ${rayon.capaciteMax}`);
     
