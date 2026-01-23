@@ -4118,15 +4118,23 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       magasinId
     });
     
+    // Compter aussi les LOTs (chaque LOT = 1 article/emplacement)
+    const allLotsInRayon = await Lot.find({
+      rayonId,
+      magasinId,
+      status: { $ne: 'epuise' }  // Compter que les LOTs actifs
+    });
+    
     // Vérifier DEUX choses:
     // 1. Nombre d'articles (produits différents)
     // 2. Quantité totale en fonction de la capacité du type
     
     const produitExisteEnRayon = allStocksInRayon.some(stock => stock.produitId.toString() === produitId);
-    const nombreArticlesActuel = allStocksInRayon.length;
+    const nombreArticlesActuel = allStocksInRayon.length + allLotsInRayon.length;  // StockRayons + LOTs
     const nombreArticlesApreAjout = produitExisteEnRayon ? nombreArticlesActuel : nombreArticlesActuel + 1;
     
     console.log(`   StockRayons dans ce rayon: ${allStocksInRayon.length}`);
+    console.log(`   LOTs dans ce rayon: ${allLotsInRayon.length}`);
     console.log(`   Produit existe déjà en rayon?: ${produitExisteEnRayon}`);
     console.log(`   Nombre d'articles actuels: ${nombreArticlesActuel}`);
     console.log(`   Nombre d'articles après ajout: ${nombreArticlesApreAjout}`);
