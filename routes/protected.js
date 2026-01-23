@@ -1410,25 +1410,35 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
     const rayonsAvecStats = await Promise.all(rayons.map(async (rayon) => {
       // 1. Compter les articles (StockRayons distincts pour ce rayon)
       const stocks = await StockRayon.find({ rayonId: rayon._id }).select('_id quantiteDisponible produitId');
-      const nombreArticles = stocks.length;
+      const nombreArticlesSTOCK = stocks.length;
+      
+      // 1b. Compter les LOTs individuels pour ce rayon (Phase 1 v2)
+      const lots = await Lot.find({ rayonId: rayon._id }).select('_id');
+      const nombreArticlesLOT = lots.length;
+      
+      // Nombre total d'articles = StockRayons + LOTs
+      const nombreArticles = nombreArticlesSTOCK + nombreArticlesLOT;
       
       console.log(`📊 Rayon "${rayon.nomRayon}" (${rayon._id}):`);
-      console.log(`   - StockRayons trouvés: ${nombreArticles}`);
+      console.log(`   - StockRayons trouvés: ${nombreArticlesSTOCK}`);
+      console.log(`   - LOTs trouvés: ${nombreArticlesLOT}`);
+      console.log(`   - Total articles: ${nombreArticles}`);
       console.log(`   - StockRayons details: ${stocks.map(s => `${s.produitId} = ${s.quantiteDisponible}`).join(', ')}`);
       console.log(`   - rayon.quantiteActuelle AVANT SYNC: ${rayon.quantiteActuelle}`);
       
-      // 2. Calculer la quantité totale
+      // 2. Calculer la quantité totale (STOCK seulement, pas LOTs)
       const quantiteTotale = stocks.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
       console.log(`   - quantiteTotale (calculée): ${quantiteTotale}`);
       
       // 2️⃣.5️⃣ SYNCHRONISATION - Mettre à jour quantiteActuelle du rayon si incohérence
-      if (quantiteTotale !== rayon.quantiteActuelle) {
+      // quantiteActuelle = nombre d'articles (emplacements) = StockRayons + LOTs
+      if (nombreArticles !== rayon.quantiteActuelle) {
         console.log(`⚠️ [SYNC RAYON] Incohérence détectée pour rayon ${rayon.nomRayon}:`);
         console.log(`   - quantiteActuelle en DB: ${rayon.quantiteActuelle}`);
-        console.log(`   - Somme StockRayons: ${quantiteTotale}`);
-        rayon.quantiteActuelle = quantiteTotale;
-        await Rayon.findByIdAndUpdate(rayon._id, { quantiteActuelle: quantiteTotale });
-        console.log(`   ✅ Rayon mis à jour avec la quantité réelle`);
+        console.log(`   - Nombre articles (StockRayons + LOTs): ${nombreArticles}`);
+        rayon.quantiteActuelle = nombreArticles;  // ✅ Compter aussi les LOTs!
+        await Rayon.findByIdAndUpdate(rayon._id, { quantiteActuelle: nombreArticles });
+        console.log(`   ✅ Rayon mis à jour avec le nombre réel d'articles (${nombreArticles})`);
       }
       
       // 3. Calculer l'occupation (%) - basé sur NOMBRE D'ARTICLES DIFFÉRENTS
@@ -3379,6 +3389,42 @@ router.post('/lots', authMiddleware, checkMagasinAccess, async (req, res) => {
         console.error('⚠️ Erreur mise à jour rayon:', rayonErr);
         // Ne pas bloquer - le LOT est créé même si rayon non mis à jour
       }
+    }
+
+    // 🎁 METTRE À JOUR LA QUANTITÉ DU PRODUIT
+    // Recalculer la quantité totale du produit à partir des LOTs
+    try {
+      const lotsTotal = await Lot.aggregate([
+        {
+          $match: {
+            produitId: new mongoose.Types.ObjectId(produitId),
+            magasinId: new mongoose.Types.ObjectId(magasinId)
+          }
+        },
+        {
+          $group: {
+            _id: '$produitId',
+            totalQuantite: { $sum: '$quantiteInitiale' }
+          }
+        }
+      ]);
+
+      const nouvelleQuantiteActuelle = (lotsTotal[0]?.totalQuantite || 0);
+      produit.quantiteActuelle = nouvelleQuantiteActuelle;
+      produit.quantiteEntree = (produit.quantiteEntree || 0) + quantiteInitiale;
+      produit.dateLastMovement = new Date();
+      
+      if (!produit.rayonId) {
+        produit.rayonId = rayonId;
+      }
+      
+      await produit.save();
+      console.log(`✅ Produit "${produit.designation}" mis à jour:`);
+      console.log(`   - quantiteActuelle: ${nouvelleQuantiteActuelle}`);
+      console.log(`   - quantiteEntree: ${produit.quantiteEntree}`);
+    } catch (prodErr) {
+      console.error('⚠️ Erreur mise à jour produit:', prodErr);
+      // Ne pas bloquer - le LOT est créé même si produit non mis à jour
     }
 
     // Log activity
