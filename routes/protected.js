@@ -2078,11 +2078,11 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
         });
         const quantiteStockRayons = stocksActuelsProduit.reduce((sum, stock) => sum + stock.quantiteDisponible, 0);
 
-        // Compter les LOTs
+        // Compter les LOTs (tous sauf épuisés)
         const lotsActuelsProduit = await Lot.find({
           produitId: produit._id,
           magasinId: magasinId,
-          status: 'ACTIF'
+          status: { $ne: 'epuise' }
         });
         const quantiteLots = lotsActuelsProduit.reduce((sum, lot) => sum + (lot.quantiteInitiale || 0), 0);
 
@@ -3428,7 +3428,6 @@ router.post('/lots', authMiddleware, checkMagasinAccess, async (req, res) => {
       prixTotal: (prixParUnite || 0) * quantiteInitiale,
       rayonId,
       dateReception: dateReception || new Date(),
-      status: 'ACTIF',
       peutEtreVendu: true
     });
 
