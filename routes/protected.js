@@ -4136,7 +4136,15 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     
     const produitExisteEnRayon = allStocksInRayon.some(stock => stock.produitId.toString() === produitId);
     const nombreArticlesActuel = allStocksInRayon.length + allLotsInRayon.length;  // StockRayons + LOTs
-    const nombreArticlesApreAjout = produitExisteEnRayon ? nombreArticlesActuel + articlesAjouter : nombreArticlesActuel + articlesAjouter;
+    
+    // 🎁 IMPORTANT LOGIC:
+    // - SIMPLE + produit existe = CONSOLIDATION = pas d'article supplémentaire
+    // - SIMPLE + produit n'existe pas = NOUVEAU = +1 article
+    // - LOT = toujours +nombrePieces articles (chaque LOT = emplacement)
+    const nombreArticlesApreAjout = 
+      (typeProduitId.typeStockage === 'simple' && produitExisteEnRayon)
+        ? nombreArticlesActuel  // Consolidation = même nombre d'articles
+        : nombreArticlesActuel + articlesAjouter;  // Nouveau ou LOT
     
     console.log(`   StockRayons dans ce rayon: ${allStocksInRayon.length}`);
     console.log(`   LOTs dans ce rayon: ${allLotsInRayon.length}`);
