@@ -4413,6 +4413,11 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     if (consolidationResult.actionType === 'CREATE') {
       // Créé un NOUVEAU emplacement
       rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + 1;  // +1 emplacement
+    } else if (consolidationResult.actionType === 'CREATE_SPLIT') {
+      // 🆕 PHASE 1 v2: Créé plusieurs emplacements (Type SIMPLE split)
+      const nombreEmplacements = consolidationResult.nombreEmplacements || 1;
+      rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + nombreEmplacements;
+      console.log(`   🔄 SPLIT: +${nombreEmplacements} emplacements (total: ${rayon.quantiteActuelle})`);
     }
     // Si CONSOLIDATE: pas de changement à quantiteActuelle (même emplacement)
     await rayon.save();

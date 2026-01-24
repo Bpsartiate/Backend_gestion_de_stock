@@ -203,7 +203,9 @@ async function consolidateIntoExisting(params) {
 }
 
 /**
- * Crée un nouvel emplacement
+ * Crée un ou plusieurs nouveaux emplacements
+ * 
+ * IMPORTANT: Pour Type SIMPLE, si quantité > capaciteMax, crée plusieurs emplacements
  * 
  * @param {Object} params
  * @returns {Promise<Object>} { sr: StockRayon, isNew: true, actionType: "CREATE" }
@@ -220,7 +222,65 @@ async function createNewStockRayon(params) {
   } = params;
 
   try {
-    // Créer nouvel enregistrement
+    // 🆕 PHASE 1 v2: Type SIMPLE avec quantité > capaciteMax?
+    // Splitter en plusieurs emplacements
+    if (typeStockage === 'simple') {
+      const typeProduit = await TypeProduit.findById(typeProduitId);
+      const capaciteMax = typeProduit.capaciteMax || 1000;
+
+      if (quantiteAjouter > capaciteMax) {
+        console.log(`🔄 SPLIT Type SIMPLE: ${quantiteAjouter} > ${capaciteMax}`);
+        
+        // Calculer nombre d'emplacements nécessaires
+        const nombreEmplacements = Math.ceil(quantiteAjouter / capaciteMax);
+        console.log(`   Création de ${nombreEmplacements} emplacements`);
+
+        const stockRayons = [];
+        let quantiteRestante = quantiteAjouter;
+        let srPrincipal = null;
+
+        for (let i = 0; i < nombreEmplacements; i++) {
+          const quantiteEmplacement = Math.min(capaciteMax, quantiteRestante);
+
+          const newStockRayon = new StockRayon({
+            produitId,
+            rayonId,
+            magasinId,
+            quantiteDisponible: quantiteEmplacement,
+            quantiteRéservée: 0,
+            quantiteDamaged: 0,
+            typeStockage: 'simple',
+            réceptions: [
+              {
+                receptionId,
+                quantite: quantiteEmplacement,
+                dateReception: new Date()
+              }
+            ],
+            dateCreation: new Date(),
+            statut: 'EN_STOCK'
+          });
+
+          await newStockRayon.save();
+          stockRayons.push(newStockRayon);
+          if (i === 0) srPrincipal = newStockRayon; // Retourner le premier
+
+          console.log(`   ✅ Emplacement ${i + 1}/${nombreEmplacements}: ${quantiteEmplacement} unités`);
+          quantiteRestante -= quantiteEmplacement;
+        }
+
+        return {
+          sr: srPrincipal,
+          isNew: true,
+          actionType: 'CREATE_SPLIT',
+          typeStockage: 'simple',
+          nombreEmplacements,
+          stockRayons
+        };
+      }
+    }
+
+    // 📦 Cas normal: créer UN SEUL emplacement
     const newStockRayon = new StockRayon({
       produitId,
       rayonId,
