@@ -2471,7 +2471,7 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
         quantiteReservee: 0,
         emplacementDetaille: '',
         dateAjout: new Date(),
-        statut: 'ACTIF'
+        statut: 'EN_STOCK'  // ✅ CORRECT: enum valide du modèle
       });
       await stockRayon.save();
       console.log(`✅ StockRayon créé pour produit ${produit.reference} dans rayon ${rayonId}`);

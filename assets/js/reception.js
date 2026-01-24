@@ -491,16 +491,19 @@ function showLotInterface() {
     const rayonSelect = document.getElementById('rayonReception');
     const rayonId = rayonSelect?.value;
     const alerteDiv = document.getElementById('alerteCapaciteRayon');
+    const btnSubmit = document.getElementById('btnSubmitReception');
     
     if (!alerteDiv) return;
     
     if (!nb || nb === 0) {
       alerteDiv.innerHTML = '';
+      if (btnSubmit) btnSubmit.disabled = false;  // ✅ Réactiver si vide
       return;
     }
     
     if (!rayonId) {
       alerteDiv.innerHTML = '<div class="alert alert-warning mb-0 py-2 px-3 small">⚠️ Sélectionnez un rayon</div>';
+      if (btnSubmit) btnSubmit.disabled = false;  // ✅ Réactiver
       return;
     }
     
@@ -508,6 +511,7 @@ function showLotInterface() {
     const rayon = RAYONS_RECEPTION?.find(r => r._id === rayonId);
     if (!rayon) {
       alerteDiv.innerHTML = '';
+      if (btnSubmit) btnSubmit.disabled = false;  // ✅ Réactiver
       return;
     }
     
@@ -519,6 +523,8 @@ function showLotInterface() {
     const disponible = capaciteTotal - occuped;
     
     let html = '';
+    let isCapacityOK = true;
+    
     if (nb <= disponible) {
       // ✅ OK - alerte verte
       html = `
@@ -528,6 +534,7 @@ function showLotInterface() {
           <span class="text-muted">(${occuped}/${capaciteTotal})</span>
         </div>
       `;
+      isCapacityOK = true;
     } else {
       // ❌ DÉPASSEMENT - alerte rouge
       html = `
@@ -540,8 +547,19 @@ function showLotInterface() {
           <strong>Réduisez à ${disponible} pièce(s) maximum</strong>
         </div>
       `;
+      isCapacityOK = false;
     }
     alerteDiv.innerHTML = html;
+    
+    // 🚫 Désactiver le button si capacité dépassée
+    if (btnSubmit) {
+      btnSubmit.disabled = !isCapacityOK;
+      if (!isCapacityOK) {
+        btnSubmit.title = 'Capacité rayon dépassée - réduisez le nombre de pièces';
+      } else {
+        btnSubmit.title = '';
+      }
+    }
   };
   
   nombrePieces?.addEventListener('input', updateLotPreview);
