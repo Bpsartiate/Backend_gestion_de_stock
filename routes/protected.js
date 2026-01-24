@@ -4223,22 +4223,53 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       const quantiteApreAjoutProduit = quantiteActuelleProduit + parseFloat(quantite);
       
       if (quantiteApreAjoutProduit > typeProduit.capaciteMax) {
-        capaciteInfo = {
-          type: 'depassement',
-          capaciteMax: typeProduit.capaciteMax,
-          quantiteActuelle: quantiteActuelleProduit,
-          quantiteAjout: quantite,
-          quantiteApreAjout: quantiteApreAjoutProduit,
-          depassement: quantiteApreAjoutProduit - typeProduit.capaciteMax
-        };
-        console.log(`ℹ️ INFO: Dépassement de capacité type détecté`);
-        console.log(`   Type: ${typeProduit.nomType}, Max: ${typeProduit.capaciteMax}`);
-        console.log(`   Produit: ${produit.designation}`);
-        console.log(`   Actuel: ${quantiteActuelleProduit}, Ajout: ${quantite}, Total: ${quantiteApreAjoutProduit}`);
-        console.log(`   Dépassement: ${capaciteInfo.depassement} ${typeProduit.unitePrincipale || 'unités'}`);
-        console.log(`   ✅ Phase 1 v2 va gérer automatiquement:`);
-        console.log(`      - Type SIMPLE: consolidera en 1 emplacement`);
-        console.log(`      - Type LOT: créera nouvel emplacement avec numeroLot unique`);
+        // 🎁 Pour SIMPLE: dépassement capacité type est NORMAL (consolidation gère ça)
+        // 🎁 Pour LOT: chaque LOT = 1 emplacement distinct (pas de dépassement possible)
+        
+        if (typeProduit.typeStockage === 'simple') {
+          capaciteInfo = {
+            type: 'info_simple',
+            capaciteMax: typeProduit.capaciteMax,
+            quantiteActuelle: quantiteActuelleProduit,
+            quantiteAjout: quantite,
+            quantiteApreAjout: quantiteApreAjoutProduit,
+            nbEmplacements: Math.ceil(quantiteApreAjoutProduit / typeProduit.capaciteMax)
+          };
+          console.log(`ℹ️ INFO: Type SIMPLE - Consolidation multi-emplacements`);
+          console.log(`   Type: ${typeProduit.nomType}, Capacité par emplacement: ${typeProduit.capaciteMax}`);
+          console.log(`   Produit: ${produit.designation}`);
+          console.log(`   Actuel: ${quantiteActuelleProduit}, Ajout: ${quantite}, Total: ${quantiteApreAjoutProduit}`);
+          console.log(`   ✅ Nombre d'emplacements requis: ~${capaciteInfo.nbEmplacements}`);
+          console.log(`   ✅ consolidationService consoldera intelligemment dans les emplacements existants`);
+        } else if (typeProduit.typeStockage === 'lot') {
+          // Pour LOT: les emplacements sont gérés au niveau de chaque LOT individuel
+          capaciteInfo = {
+            type: 'info_lot',
+            capaciteMax: typeProduit.capaciteMax,
+            quantiteActuelle: quantiteActuelleProduit,
+            quantiteAjout: quantite,
+            quantiteApreAjout: quantiteApreAjoutProduit
+          };
+          console.log(`ℹ️ INFO: Type LOT - Emplacements individuels par LOT`);
+          console.log(`   Type: ${typeProduit.nomType}, Capacité par LOT: ${typeProduit.capaciteMax}`);
+          console.log(`   Produit: ${produit.designation}`);
+          console.log(`   Actuel: ${quantiteActuelleProduit}, Ajout: ${quantite}, Total: ${quantiteApreAjoutProduit}`);
+          console.log(`   ✅ Chaque pièce = 1 LOT (emplacements gérés par nombrePieces)`);
+        } else {
+          capaciteInfo = {
+            type: 'depassement',
+            capaciteMax: typeProduit.capaciteMax,
+            quantiteActuelle: quantiteActuelleProduit,
+            quantiteAjout: quantite,
+            quantiteApreAjout: quantiteApreAjoutProduit,
+            depassement: quantiteApreAjoutProduit - typeProduit.capaciteMax
+          };
+          console.log(`ℹ️ INFO: Dépassement de capacité type détecté`);
+          console.log(`   Type: ${typeProduit.nomType}, Max: ${typeProduit.capaciteMax}`);
+          console.log(`   Produit: ${produit.designation}`);
+          console.log(`   Actuel: ${quantiteActuelleProduit}, Ajout: ${quantite}, Total: ${quantiteApreAjoutProduit}`);
+          console.log(`   Dépassement: ${capaciteInfo.depassement} ${typeProduit.unitePrincipale || 'unités'}`);
+        }
       }
     }
 
@@ -4375,7 +4406,15 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     }
 
     // 4. Mettre à jour la quantité du rayon
-    rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + parseFloat(quantite);
+    // 🎁 IMPORTANT: 
+    // - Pour LOT: chaque LOT = 1 emplacement (déjà géré par POST /lots)
+    // - Pour SIMPLE: nouveaux StockRayons créés = +1 emplacement (pas +quantité)
+    // - Ici c'est POST /receptions: consolide OU crée nouveau
+    if (consolidationResult.actionType === 'CREATE') {
+      // Créé un NOUVEAU emplacement
+      rayon.quantiteActuelle = (rayon.quantiteActuelle || 0) + 1;  // +1 emplacement
+    }
+    // Si CONSOLIDATE: pas de changement à quantiteActuelle (même emplacement)
     await rayon.save();
     console.log(`✅ Rayon mis à jour: ${rayon.nomRayon} (${rayon.quantiteActuelle}/${rayon.capaciteMax})`);
 
