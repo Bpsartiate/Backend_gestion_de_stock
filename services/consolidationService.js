@@ -118,6 +118,12 @@ async function findCompatibleStockRayon(params) {
     const typeProduit = await TypeProduit.findById(typeProduitId);
     const capaciteMax = typeProduit.capaciteMax || 1000; // Default 1000
 
+    console.log(`🔍 findCompatibleStockRayon:`);
+    console.log(`   produitId: ${produitId}`);
+    console.log(`   rayonId: ${rayonId}`);
+    console.log(`   quantiteAjouter: ${quantiteAjouter}`);
+    console.log(`   capaciteMax du type: ${capaciteMax}`);
+
     // Chercher emplacements existants:
     // - Même produit
     // - Même rayon
@@ -129,15 +135,23 @@ async function findCompatibleStockRayon(params) {
       statut: { $ne: 'FERMÉ' } // Exclure fermés
     }).sort({ quantiteDisponible: -1 }); // Les plus remplis en premier
 
+    console.log(`   Trouvé ${existingRayons.length} StockRayons existants`);
+    existingRayons.forEach((r, i) => {
+      console.log(`     [${i}] _id=${r._id}, quantiteDisponible=${r.quantiteDisponible}, statut=${r.statut}`);
+    });
+
     for (const rayon of existingRayons) {
       const espaceDisponible = capaciteMax - rayon.quantiteDisponible;
+      console.log(`     Vérif rayon ${rayon._id}: espace=${espaceDisponible}, besoin=${quantiteAjouter}`);
 
       // Si la réception rentre dans l'espace disponible
       if (quantiteAjouter <= espaceDisponible) {
+        console.log(`     ✅ Compatible! Consolidation possible`);
         return rayon; // Compatible!
       }
     }
 
+    console.log(`   ❌ Aucun compatible trouvé`);
     return null; // Aucun compatible
 
   } catch (error) {
