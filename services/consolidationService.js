@@ -291,13 +291,17 @@ async function validateStockRayonCreation(params) {
       return { valid: false, message: `Quantité doit être > 0, reçu: ${quantite}` };
     }
 
-    // 4. Quantité <= capacité max?
-    if (quantite > typeProduit.capaciteMax) {
+    // 4. Validation type-aware de la capacité
+    // TYPE LOT: Chaque pièce doit tenir dans 1 emplacement
+    if (typeProduit.typeStockage === 'lot' && quantite > typeProduit.capaciteMax) {
       return {
         valid: false,
-        message: `Quantité ${quantite} > capacité max ${typeProduit.capaciteMax}`
+        message: `Type LOT: Chaque pièce ${quantite} > capacité max ${typeProduit.capaciteMax}`
       };
     }
+
+    // TYPE SIMPLE: Peut dépassser capaciteMax (consolidation sur plusieurs emplacements)
+    // Pas de validation ici - consolidationService gère la répartition
 
     // 5. Rayon accepte ce type?
     if (rayon.typesAutorisés && !rayon.typesAutorisés.includes(typeProduitId.toString())) {
