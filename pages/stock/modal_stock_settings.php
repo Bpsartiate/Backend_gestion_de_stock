@@ -2083,12 +2083,14 @@
           stocksSimple.forEach((stock, idx) => {
             const satutColor = stock.statut === 'EN_STOCK' ? 'success' : 
                               stock.statut === 'PARTIELLEMENT_VENDU' ? 'warning' : 'danger';
+            const produitNom = stock.produitId?.designation || 'Produit inconnu';
             
             htmlSimple += `
               <div class="col-md-6">
                 <div class="card border-${satutColor} border-1 h-100">
                   <div class="card-body p-2">
-                    <h6 class="card-title mb-1"><strong>Emplacement ${idx + 1}</strong></h6>
+                    <h6 class="card-title mb-1"><strong>${produitNom}</strong></h6>
+                    <small class="text-muted d-block mb-1">Emplacement ${idx + 1}</small>
                     <hr class="my-1">
                     <div class="d-flex justify-content-between mb-1">
                       <small>Quantité:</small>
@@ -2121,12 +2123,14 @@
           stocksLot.forEach((lot, idx) => {
             const satutColor = lot.status === 'complet' ? 'success' : 
                               lot.status === 'partiel_vendu' ? 'warning' : 'danger';
+            const produitNom = lot.produitId?.designation || 'Produit inconnu';
             
             htmlLot += `
               <div class="col-md-6">
                 <div class="card border-${satutColor} border-1 h-100">
                   <div class="card-body p-2">
-                    <h6 class="card-title mb-1"><strong>LOT ${idx + 1}</strong></h6>
+                    <h6 class="card-title mb-1"><strong>${produitNom}</strong></h6>
+                    <small class="text-muted d-block mb-1">LOT ${idx + 1}</small>
                     <hr class="my-1">
                     <div class="d-flex justify-content-between mb-1">
                       <small>Numéro:</small>
