@@ -1427,6 +1427,10 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
       console.log(`   - Total articles: ${nombreArticles}`);
       console.log(`   - StockRayons details:`);
       stocks.forEach((s, idx) => {
+        // DEBUG: Log produitId pour vérifier le populate
+        if (idx === 0) {
+          console.log(`🔍 DEBUG produitId structure:`, JSON.stringify(s.produitId, null, 2));
+        }
         const produitNom = s.produitId?.nom || 'Produit inconnu';
         const produitRef = s.produitId?.reference || 'N/A';
         console.log(`     [${idx + 1}] ${produitNom} (${produitRef}): ${s.quantiteDisponible} pièces | Type: ${s.typeStockage || 'simple'} | Statut: ${s.statut}`);
@@ -1696,7 +1700,7 @@ router.get('/magasins/:magasinId/rayons/:rayonId/stocks', authMiddleware, async 
     const stocksLot = await Lot.find({ 
       rayonId 
     })
-      .select('_id produitId numeroLot quantiteInitiale status')
+      .select('_id produitId quantiteInitiale quantiteRestante status nombrePieces')
       .populate('produitId', 'nom designation reference')
       .lean();
     

@@ -2130,7 +2130,7 @@
                     <hr class="my-1">
                     <div class="d-flex justify-content-between mb-1">
                       <small>Numéro:</small>
-                      <small class="fw-bold text-monospace" style="font-size: 0.8rem;">${lot.numeroLot || 'N/A'}</small>
+                      <small class="fw-bold text-monospace" style="font-size: 0.8rem;">${lot._id?.substring(0, 8) || 'N/A'}</small>
                     </div>
                     <div class="d-flex justify-content-between mb-1">
                       <small>Quantité:</small>
