@@ -1667,32 +1667,38 @@ router.delete('/rayons/:rayonId', authMiddleware, blockVendeur, async (req, res)
 });
 
 // GET /api/protected/rayons/:rayonId/stocks - Obtenir les stocks d'un rayon
-router.get('/rayons/:rayonId/stocks', async (req, res) => {
+router.get('/magasins/:magasinId/rayons/:rayonId/stocks', authMiddleware, async (req, res) => {
   try {
-    const { rayonId } = req.params;
+    const { magasinId, rayonId } = req.params;
     const requester = req.user;
 
-    // Récupérer le rayon
-    const rayon = await Rayon.findById(rayonId);
-    if (!rayon) {
-      return res.status(404).json({ message: 'Rayon non trouvé' });
-    }
-
     // Vérifier l'accès au magasin
-    const magasin = await Magasin.findById(rayon.magasinId);
+    const magasin = await Magasin.findById(magasinId);
     if (!magasin || (requester.role !== 'admin' && magasin.managerId?.toString() !== requester.id)) {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    // 🆕 PHASE 1 v2: Récupérer stocks SIMPLE et LOTs séparément
+    // Vérifier que le rayon appartient au magasin
+    const rayon = await Rayon.findById(rayonId);
+    if (!rayon || rayon.magasinId.toString() !== magasinId) {
+      return res.status(404).json({ message: 'Rayon non trouvé dans ce magasin' });
+    }
+
+    // 🆕 PHASE 1 v2: Récupérer stocks SIMPLE et LOTs séparément avec populate
     const stocksSimple = await StockRayon.find({ 
       rayonId,
       typeStockage: { $ne: 'lot' } // Exclure les LOTs
-    }).select('_id produitId quantiteDisponible statut typeStockage').lean();
+    })
+      .select('_id produitId quantiteDisponible statut typeStockage')
+      .populate('produitId', 'nom designation reference')
+      .lean();
 
     const stocksLot = await Lot.find({ 
       rayonId 
-    }).select('_id produitId numeroLot quantiteInitiale status').lean();
+    })
+      .select('_id produitId numeroLot quantiteInitiale status')
+      .populate('produitId', 'nom designation reference')
+      .lean();
     
     console.log(`✅ Récupéré ${stocksSimple.length} stocks SIMPLE et ${stocksLot.length} LOTs pour rayon ${rayonId}`);
     

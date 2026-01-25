@@ -2022,10 +2022,14 @@
     // 🆕 AFFICHER LES DÉTAILS DES STOCKS (SIMPLE et LOT)
     async function displayDetailStocks(rayonId) {
       try {
+        const API_BASE = typeof window.API_BASE !== 'undefined' && window.API_BASE 
+          ? window.API_BASE + '/api/protected'
+          : 'https://backend-gestion-de-stock.onrender.com/api/protected';
+        
         const magasinId = currentMagasinId || sessionStorage.getItem('currentMagasinId');
         
         // Récupérer les stocks du rayon depuis le backend
-        const resStocks = await fetch(`/api/protected/rayons/${rayonId}/stocks`, {
+        const resStocks = await fetch(`${API_BASE}/magasins/${magasinId}/rayons/${rayonId}/stocks`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -2039,14 +2043,26 @@
 
         if (!resStocks.ok) {
           console.error('❌ Erreur chargement stocks rayon:', resStocks.status);
-          // Si l'endpoint n'existe pas, afficher un message
-          containerEmpty.innerHTML = `
-            <div class="alert alert-warning py-2 px-3">
-              <i class="fas fa-exclamation-triangle me-2"></i>
-              <strong>Détail des stocks indisponible</strong><br>
-              <small>Veuillez redémarrer le serveur pour activer cette fonctionnalité</small>
-            </div>
-          `;
+          
+          // ℹ️ Fallback: Afficher un message si le serveur n'a pas l'endpoint
+          if (resStocks.status === 404) {
+            containerEmpty.innerHTML = `
+              <div class="alert alert-info py-3 px-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Détail des stocks en cours d'activation</strong><br>
+                <small>Le serveur a été mis à jour. Cette fonctionnalité sera disponible après redéploiement (quelques minutes).</small>
+              </div>
+            `;
+          } else {
+            containerEmpty.innerHTML = `
+              <div class="alert alert-warning py-3 px-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Erreur chargement détails</strong><br>
+                <small>Statut: ${resStocks.status}</small>
+              </div>
+            `;
+          }
+          
           containerEmpty.style.display = 'block';
           containerSimple.innerHTML = '';
           containerLot.innerHTML = '';
@@ -2143,7 +2159,7 @@
         console.error('❌ Erreur displayDetailStocks:', error);
         const containerEmpty = document.getElementById('detailStocksEmpty');
         containerEmpty.innerHTML = `
-          <div class="alert alert-danger py-2 px-3">
+          <div class="alert alert-danger py-3 px-3">
             <i class="fas fa-exclamation-circle me-2"></i>
             <strong>Erreur:</strong> ${error.message}
           </div>
