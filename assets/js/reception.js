@@ -1435,6 +1435,17 @@ async function submitReception(e) {
     // Recharger aussi les produits de réception
     await chargerProduitsReception();
     
+    // 🆕 METTRE À JOUR LE MODAL DES RAYONS SI OUVERT
+    try {
+      const rayonId = values.rayonId;
+      if (window.displayDetailStocks && rayonId) {
+        console.log('🔄 Mise à jour détail stocks du rayon:', rayonId);
+        await window.displayDetailStocks(rayonId);
+      }
+    } catch (err) {
+      console.warn('⚠️ Mise à jour modal stocks échouée (normal si modal fermé):', err.message);
+    }
+    
     // 🔄 RÉINITIALISER LES VARIABLES DE FORMULAIRE
     currentTypeProduit = null;
 

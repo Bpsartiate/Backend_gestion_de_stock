@@ -209,6 +209,28 @@
                         <small>Capacité</small>
                       </div>
                     </div>
+
+                    <!-- DÉTAIL DES STOCKS (Type SIMPLE et LOT) -->
+                    <div class="mt-4">
+                      <h6 class="fw-bold mb-3 text-dark">
+                        <i class="fas fa-box me-2 text-primary"></i>Détail des Produits en Stock
+                      </h6>
+                      
+                      <!-- Conteneur pour les stocks SIMPLE -->
+                      <div id="detailStocksSimple" class="mb-4">
+                        <!-- Rempli dynamiquement -->
+                      </div>
+
+                      <!-- Conteneur pour les stocks LOT -->
+                      <div id="detailStocksLot" class="mb-4">
+                        <!-- Rempli dynamiquement -->
+                      </div>
+
+                      <!-- Message vide -->
+                      <div id="detailStocksEmpty" class="alert alert-info alert-sm py-2 px-3">
+                        <i class="fas fa-info-circle me-2"></i>Sélectionnez un rayon pour voir les détails des stocks
+                      </div>
+                    </div>
                   </div>
 
                   <div class="card-footer border-0 bg-transparent">
@@ -1489,6 +1511,9 @@
         item.classList.remove('active');
       });
       document.querySelectorAll('#rayonsList .list-group-item')[idx]?.classList.add('active');
+      
+      // 🆕 Afficher les détails des stocks (SIMPLE et LOT)
+      displayDetailStocks(rayon._id);
     }
 
     // Sauvegarder ou créer un rayon via API
@@ -1993,6 +2018,141 @@
     window.editCategory = editCategory;
     window.saveRayon = saveRayon;
     window.saveCategory = saveCategory;
+
+    // 🆕 AFFICHER LES DÉTAILS DES STOCKS (SIMPLE et LOT)
+    async function displayDetailStocks(rayonId) {
+      try {
+        const magasinId = currentMagasinId || sessionStorage.getItem('currentMagasinId');
+        
+        // Récupérer les stocks du rayon depuis le backend
+        const resStocks = await fetch(`/api/protected/rayons/${rayonId}/stocks`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const containerSimple = document.getElementById('detailStocksSimple');
+        const containerLot = document.getElementById('detailStocksLot');
+        const containerEmpty = document.getElementById('detailStocksEmpty');
+
+        if (!resStocks.ok) {
+          console.error('❌ Erreur chargement stocks rayon:', resStocks.status);
+          // Si l'endpoint n'existe pas, afficher un message
+          containerEmpty.innerHTML = `
+            <div class="alert alert-warning py-2 px-3">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Détail des stocks indisponible</strong><br>
+              <small>Veuillez redémarrer le serveur pour activer cette fonctionnalité</small>
+            </div>
+          `;
+          containerEmpty.style.display = 'block';
+          containerSimple.innerHTML = '';
+          containerLot.innerHTML = '';
+          return;
+        }
+
+        const { stocksSimple, stocksLot } = await resStocks.json();
+
+        let htmlSimple = '';
+        if (stocksSimple && stocksSimple.length > 0) {
+          htmlSimple = `
+            <div class="alert alert-primary py-2 px-3 mb-3">
+              <i class="fas fa-cube me-2"></i><strong>Type SIMPLE (${stocksSimple.length} emplacements)</strong>
+            </div>
+            <div class="row g-2">
+          `;
+          
+          stocksSimple.forEach((stock, idx) => {
+            const satutColor = stock.statut === 'EN_STOCK' ? 'success' : 
+                              stock.statut === 'PARTIELLEMENT_VENDU' ? 'warning' : 'danger';
+            
+            htmlSimple += `
+              <div class="col-md-6">
+                <div class="card border-${satutColor} border-1 h-100">
+                  <div class="card-body p-2">
+                    <h6 class="card-title mb-1"><strong>Emplacement ${idx + 1}</strong></h6>
+                    <hr class="my-1">
+                    <div class="d-flex justify-content-between mb-1">
+                      <small>Quantité:</small>
+                      <small class="fw-bold">${stock.quantiteDisponible} pièces</small>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                      <small>Statut:</small>
+                      <span class="badge bg-${satutColor}">${stock.statut}</span>
+                    </div>
+                    <small class="text-muted d-block"><i class="fas fa-cube me-1"></i>Type: SIMPLE</small>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+
+          htmlSimple += `</div>`;
+        }
+
+        // Afficher les stocks LOT
+        let htmlLot = '';
+        if (stocksLot && stocksLot.length > 0) {
+          htmlLot = `
+            <div class="alert alert-warning py-2 px-3 mb-3">
+              <i class="fas fa-list-ol me-2"></i><strong>Type LOT (${stocksLot.length} pièces)</strong>
+            </div>
+            <div class="row g-2">
+          `;
+          
+          stocksLot.forEach((lot, idx) => {
+            const satutColor = lot.status === 'complet' ? 'success' : 
+                              lot.status === 'partiel_vendu' ? 'warning' : 'danger';
+            
+            htmlLot += `
+              <div class="col-md-6">
+                <div class="card border-${satutColor} border-1 h-100">
+                  <div class="card-body p-2">
+                    <h6 class="card-title mb-1"><strong>LOT ${idx + 1}</strong></h6>
+                    <hr class="my-1">
+                    <div class="d-flex justify-content-between mb-1">
+                      <small>Numéro:</small>
+                      <small class="fw-bold text-monospace" style="font-size: 0.8rem;">${lot.numeroLot || 'N/A'}</small>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                      <small>Quantité:</small>
+                      <small class="fw-bold">${lot.quantiteInitiale || 0} pièces</small>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                      <small>Statut:</small>
+                      <span class="badge bg-${satutColor}">${lot.status}</span>
+                    </div>
+                    <small class="text-muted d-block"><i class="fas fa-list-ol me-1"></i>Type: LOT</small>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+
+          htmlLot += `</div>`;
+        }
+
+        // Mettre à jour le DOM
+        containerSimple.innerHTML = htmlSimple;
+        containerLot.innerHTML = htmlLot;
+        containerEmpty.style.display = (stocksSimple?.length === 0 && stocksLot?.length === 0) ? 'block' : 'none';
+
+      } catch (error) {
+        console.error('❌ Erreur displayDetailStocks:', error);
+        const containerEmpty = document.getElementById('detailStocksEmpty');
+        containerEmpty.innerHTML = `
+          <div class="alert alert-danger py-2 px-3">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong>Erreur:</strong> ${error.message}
+          </div>
+        `;
+        containerEmpty.style.display = 'block';
+      }
+    }
+
+    window.displayDetailStocks = displayDetailStocks;
     
     })(); // Fin du module IIFE
   </script>

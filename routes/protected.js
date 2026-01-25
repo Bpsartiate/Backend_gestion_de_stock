@@ -1409,7 +1409,9 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
     // Enrichir chaque rayon avec les stats de stock
     const rayonsAvecStats = await Promise.all(rayons.map(async (rayon) => {
       // 1. Compter les articles (StockRayons distincts pour ce rayon)
-      const stocks = await StockRayon.find({ rayonId: rayon._id }).select('_id quantiteDisponible produitId');
+      const stocks = await StockRayon.find({ rayonId: rayon._id })
+        .select('_id quantiteDisponible produitId typeStockage statut')
+        .populate('produitId', 'nom designation reference');
       const nombreArticlesSTOCK = stocks.length;
       
       // 1b. Compter les LOTs individuels pour ce rayon (Phase 1 v2)
@@ -1423,7 +1425,12 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
       console.log(`   - StockRayons trouvés: ${nombreArticlesSTOCK}`);
       console.log(`   - LOTs trouvés: ${nombreArticlesLOT}`);
       console.log(`   - Total articles: ${nombreArticles}`);
-      console.log(`   - StockRayons details: ${stocks.map(s => `${s.produitId} = ${s.quantiteDisponible}`).join(', ')}`);
+      console.log(`   - StockRayons details:`);
+      stocks.forEach((s, idx) => {
+        const produitNom = s.produitId?.nom || 'Produit inconnu';
+        const produitRef = s.produitId?.reference || 'N/A';
+        console.log(`     [${idx + 1}] ${produitNom} (${produitRef}): ${s.quantiteDisponible} pièces | Type: ${s.typeStockage || 'simple'} | Statut: ${s.statut}`);
+      });
       console.log(`   - rayon.quantiteActuelle AVANT SYNC: ${rayon.quantiteActuelle}`);
       
       // 2. Calculer la quantité totale (STOCK seulement, pas LOTs)
@@ -1677,12 +1684,22 @@ router.get('/rayons/:rayonId/stocks', async (req, res) => {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    // Récupérer tous les stocks de ce rayon
-    const stocks = await StockRayon.find({ rayonId }).select('_id produitId quantiteDisponible');
+    // 🆕 PHASE 1 v2: Récupérer stocks SIMPLE et LOTs séparément
+    const stocksSimple = await StockRayon.find({ 
+      rayonId,
+      typeStockage: { $ne: 'lot' } // Exclure les LOTs
+    }).select('_id produitId quantiteDisponible statut typeStockage').lean();
+
+    const stocksLot = await Lot.find({ 
+      rayonId 
+    }).select('_id produitId numeroLot quantiteInitiale status').lean();
     
-    console.log(`✅ Récupéré ${stocks.length} produits pour rayon ${rayonId}`);
+    console.log(`✅ Récupéré ${stocksSimple.length} stocks SIMPLE et ${stocksLot.length} LOTs pour rayon ${rayonId}`);
     
-    return res.json(stocks);
+    return res.json({
+      stocksSimple,
+      stocksLot
+    });
   } catch (err) {
     console.error('rayons.stocks.error', err);
     return res.status(500).json({ message: 'Erreur: ' + err.message });
