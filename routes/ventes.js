@@ -650,4 +650,39 @@ router.get('/magasins/:magasinId/ventes/stats/jour', authMiddleware, async (req,
     }
 });
 
+/**
+ * 🆕 GET /api/protected/produits/:produitId/lots-disponibles
+ * Compter les LOTs disponibles pour un produit (PHASE 1 v2)
+ * Retourne le nombre de LOTs avec status 'complet' ou 'partiel_vendu'
+ */
+router.get('/produits/:produitId/lots-disponibles', authMiddleware, async (req, res) => {
+    try {
+        const { produitId } = req.params;
+        
+        // Vérifier que le produit existe
+        const produit = await Produit.findById(produitId);
+        if (!produit) {
+            return res.status(404).json({ error: 'Produit non trouvé' });
+        }
+        
+        // Compter les LOTs disponibles
+        const lotsCount = await Lot.countDocuments({
+            produitId,
+            status: { $in: ['complet', 'partiel_vendu'] }
+        });
+        
+        console.log(`📦 ${lotsCount} LOT(s) disponible(s) pour produit ${produitId}`);
+        
+        res.json({
+            produitId,
+            lotsDisponibles: lotsCount,
+            quantiteActuelle: produit.quantiteActuelle || 0
+        });
+        
+    } catch (error) {
+        console.error('❌ GET /produits/:produitId/lots-disponibles error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

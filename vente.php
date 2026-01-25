@@ -397,58 +397,103 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
+                                </div>
                                     <select id="venteSelectProduit" class="form-select form-select-sm" style="display: none;">
                                         <option value="">-- Cliquez sur un produit --</option>
                                     </select>
                                 </div>
 
-                                <!-- Quantité -->
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Quantité</label>
-                                    <div class="input-group input-group-sm">
-                                        <button class="btn btn-outline-secondary" type="button" id="btnMoinsQte">−</button>
-                                        <input type="number" id="venteQuantite" class="form-control text-center" value="1" min="1">
-                                        <button class="btn btn-outline-secondary" type="button" id="btnPlusQte">+</button>
+                                <!-- 🆕 Type de Vente (pour LOTs) - POSITIONNÉ EN HAUT -->
+                                <div class="mb-3 p-3 border border-warning rounded" id="typeVenteDiv" style="display: none; background-color: #fff8e6;">
+                                    <label class="form-label small fw-semibold mb-2">
+                                        <i class="fas fa-list-ol me-2" style="color: #ff9800;"></i>Mode de Vente (LOT)
+                                    </label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="venteTypeVente" id="radioPartiel" value="partiel" checked>
+                                        <label class="btn btn-outline-primary btn-sm" for="radioPartiel">
+                                            <i class="fas fa-scissors me-1"></i>Par unités
+                                        </label>
+                                        
+                                        <input type="radio" class="btn-check" name="venteTypeVente" id="radioEntier" value="entier">
+                                        <label class="btn btn-outline-danger btn-sm" for="radioEntier">
+                                            <i class="fas fa-cube me-1"></i>LOT entier
+                                        </label>
                                     </div>
+                                    <small class="text-muted d-block mt-2">
+                                        <span id="typeVenteDescription">✂️ Réduire les quantités du LOT par unités de vente</span>
+                                    </small>
+                                </div>
+
+                                <!-- Quantité avec affichage stock en temps réel -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label small fw-semibold mb-0">📦 Quantité à vendre</label>
+                                        <small class="badge bg-info">
+                                            📊 Stock: <span id="venteProduitStockReal">0</span>
+                                        </small>
+                                    </div>
+                                    <div class="input-group input-group-sm">
+                                        <button class="btn btn-outline-secondary" type="button" id="btnMoinsQte">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <input type="number" id="venteQuantite" class="form-control text-center fw-bold" value="1" min="1">
+                                        <button class="btn btn-outline-secondary" type="button" id="btnPlusQte">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="fas fa-info-circle me-1"></i><span id="quantiteWarning"></span>
+                                    </small>
                                 </div>
 
                                 <!-- Prix USD -->
                                 <div class="mb-3">
-                                    <label class="form-label small fw-semibold">💵 Prix Unitaire (USD)</label>
-                                    <input type="number" id="ventePrix" class="form-control form-control-sm" placeholder="0.00" step="0.01">
-                                    <small class="text-muted">Prix suggéré: <span id="ventePrixSuggere" class="badge bg-warning">0.00</span> USD</small>
+                                    <label class="form-label small fw-semibold">
+                                        <i class="fas fa-dollar-sign me-1" style="color: #28a745;"></i>Prix Unitaire (USD)
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">💵</span>
+                                        <input type="number" id="ventePrix" class="form-control text-center fw-bold" placeholder="0.00" step="0.01">
+                                    </div>
+                                    <small class="text-muted d-block mt-1">
+                                        💡 Prix catalogue: <span id="ventePrixSuggere" class="badge bg-warning fw-bold">0.00</span> USD
+                                    </small>
                                 </div>
 
-                                <!-- Total USD -->
-                                <div class="total-vente mb-3">
+                                <!-- Total USD - Prominent -->
+                                <div class="total-vente mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px; border-radius: 8px;">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <span>💵 Total USD:</span>
-                                        <span id="venteTotalPartiel" class="fs-5">0.00</span>
+                                        <span style="font-size: 1rem; color: white;">💵 Total USD:</span>
+                                        <span id="venteTotalPartiel" class="fw-bold" style="font-size: 1.3rem; color: white;">0.00</span>
                                     </div>
                                 </div>
 
                                 <!-- Taux de Conversion FC (optionnel) -->
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">🇨🇩 Taux FC/USD (optionnel)</label>
+                                <div class="mb-3 p-2 border-start border-primary border-4" style="background-color: #f0f7ff;">
+                                    <label class="form-label small fw-semibold mb-2">🇨🇩 Équivalent FC (optionnel)</label>
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="venteTauxFC" class="form-control" placeholder="Ex: 2650" step="0.01" value="">
-                                        <span class="input-group-text">FC</span>
+                                        <input type="number" id="venteTauxFC" class="form-control" placeholder="Taux: Ex: 2650" step="0.01" value="">
+                                        <span class="input-group-text">FC/USD</span>
                                     </div>
-                                    <small class="text-muted d-block mt-1">Équivalent: <span id="venteTotalFC" class="badge bg-info">-</span></small>
+                                    <small class="text-muted d-block mt-1">
+                                        = <span id="venteTotalFC" class="badge bg-info fw-bold">-</span> FC
+                                    </small>
                                 </div>
 
                                 <!-- Client (optional) -->
                                 <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Client (optionnel)</label>
-                                    <input type="text" id="venteClient" class="form-control form-control-sm" placeholder="Nom client">
+                                    <label class="form-label small fw-semibold">
+                                        <i class="fas fa-user me-1" style="color: #0066cc;"></i>Client (optionnel)
+                                    </label>
+                                    <input type="text" id="venteClient" class="form-control form-control-sm" placeholder="Nom du client">
                                 </div>
 
                                 <!-- Observations -->
                                 <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Observations</label>
-                                    <textarea id="venteObservations" class="form-control form-control-sm" rows="2" placeholder="Remarques..."></textarea>
+                                    <label class="form-label small fw-semibold">
+                                        <i class="fas fa-sticky-note me-1" style="color: #ff9800;"></i>Observations
+                                    </label>
+                                    <textarea id="venteObservations" class="form-control form-control-sm" rows="2" placeholder="Remarques, notes spéciales..."></textarea>
                                 </div>
 
                                 <!-- Bouton Ajouter au panier -->
@@ -456,6 +501,7 @@ if ($userRole && !in_array($userRole, ['VENDEUR', 'SUPERVISEUR', 'ADMIN'])) {
                                     <i class="fas fa-plus me-1"></i>Ajouter au panier
                                 </button>
                             </div>
+                        </div>
                         </div>
                     </div>
 

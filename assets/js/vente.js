@@ -666,43 +666,44 @@ class VenteManager {
     /**
      * Affiche les détails du produit sélectionné dans le panel 2
      */
-    displaySelectedProduit() {
+    async displaySelectedProduit() {
         const alertBox = document.getElementById('venteProduitSelected');
         if (!alertBox || !this.currentProduit) return;
 
         const produit = this.currentProduit;
         const nomProduit = produit.designation || produit.nomProduit || produit.nom || 'Sans nom';
         const rayonNom = produit.rayonId?.nomRayon || produit.rayonId?.nom || 'Non défini';
-        const quantite = produit.quantiteActuelle || 0;
+        let quantite = produit.quantiteActuelle || 0;  // Quantité totale (unités)
         const imageSrc = produit.photoUrl || 'assets/img/placeholder.svg';
         
         // Type de produit - champ: typeProduitId (objet imbriqué)
         let typeNom = 'Non défini';
         let typeIcone = '📦';
         let unitePrincipale = '';
+        let typeStockage = 'simple';  // 🆕 PHASE 1 v2
         if (produit.typeProduitId) {
             typeNom = produit.typeProduitId.nomType || 'Non défini';
             typeIcone = produit.typeProduitId.icone || '📦';
             unitePrincipale = produit.typeProduitId.unitePrincipale || '';
+            typeStockage = produit.typeProduitId.typeStockage || 'simple';  // 🆕 PHASE 1 v2
         }
         
         // Récupérer le magasin sélectionné du sélecteur ou de currentMagasin
         let magasinNom = 'Non défini';
         if (this.currentMagasin) {
             const magasinInfo = this.magasins.find(m => m._id === this.currentMagasin);
-            // Chercher le nom avec la bonne structure (nom_magasin est le champ réel)
             if (magasinInfo) {
                 magasinNom = magasinInfo.nom_magasin || magasinInfo.nom || magasinInfo.name || 'Non défini';
             }
         }
         
-        console.log(`📦 Affichage produit: ${nomProduit}, Type: ${typeNom} (${typeIcone}), Unité: ${unitePrincipale}, Magasin: ${magasinNom}, Rayon: ${rayonNom}`);
+        console.log(`📦 Affichage produit: ${nomProduit}, Type: ${typeNom}, Stock: ${quantite}, TypeStockage: ${typeStockage}`);
         
         // Mettre à jour l'image de fond
         const bgImg = document.getElementById('venteProduitBgImage');
         if (bgImg) bgImg.src = imageSrc;
         
-        // Mettre à jour les infos avec vérification null
+        // Mettre à jour les infos
         const nomEl = document.getElementById('venteProduitNom');
         if (nomEl) nomEl.textContent = nomProduit;
         
@@ -715,7 +716,13 @@ class VenteManager {
         const stockEl = document.getElementById('venteProduitStock');
         if (stockEl) stockEl.textContent = quantite;
         
-        // Ajouter le type et l'unité si disponibles
+        // 🆕 FIX: Affichage stock en temps réel - NE PAS modifier parentElement.innerHTML
+        const stockRealEl = document.getElementById('venteProduitStockReal');
+        if (stockRealEl) {
+            stockRealEl.textContent = quantite;  // Juste le nombre
+        }
+        
+        // Ajouter le type et l'unité
         const typeLabel = document.getElementById('venteProduitType');
         if (typeLabel) {
             typeLabel.innerHTML = `${typeIcone} ${typeNom}`;
@@ -727,6 +734,77 @@ class VenteManager {
             uniteLabel.textContent = unitePrincipale;
             uniteLabel.style.display = 'block';
         }
+        
+        // 🆕 FIX PHASE 1 v2: Gérer le Mode de Vente pour LOTs
+        const typeVenteDiv = document.getElementById('typeVenteDiv');
+        const radioPartiel = document.getElementById('radioPartiel');
+        const radioEntier = document.getElementById('radioEntier');
+        const typeVenteDesc = document.getElementById('typeVenteDescription');
+        
+        if (typeStockage === 'lot') {
+            console.log(`🎯 LOT Product detected! Setting mode selector visible`);
+            // Afficher le sélecteur pour les LOTs
+            if (typeVenteDiv) typeVenteDiv.style.display = 'block';
+            
+            // 🆕 PHASE 1 v2: Charger le nombre réel de LOTs disponibles
+            try {
+                const lotsResponse = await fetch(
+                    `${this.API_BASE}/api/protected/produits/${produit._id}/lots-disponibles`,
+                    { headers: this.authHeaders() }
+                );
+                
+                if (lotsResponse.ok) {
+                    const lotsData = await lotsResponse.json();
+                    const lotsCount = lotsData.lotsDisponibles || 0;
+                    
+                    // Afficher le nombre de LOTs au lieu du total d'unités
+                    const stockRealEl = document.getElementById('venteProduitStockReal');
+                    if (stockRealEl) {
+                        stockRealEl.textContent = lotsCount;
+                        console.log(`📦 LOTs disponibles: ${lotsCount}`);
+                    }
+                } else {
+                    console.warn('⚠️ Impossible de charger les LOTs disponibles');
+                }
+            } catch (error) {
+                console.error('❌ Erreur fetch lots-disponibles:', error);
+            }
+            
+            // 🆕 NE PAS modifier l'état des radios! 
+            // Seulement mettre à jour la description basée sur l'état COURANT
+            if (typeVenteDesc) {
+                if (radioPartiel && radioPartiel.checked) {
+                    typeVenteDesc.innerHTML = '✂️ Réduire les quantités du LOT par unités de vente';
+                    console.log(`✅ Description updated to "partiel"`);
+                } else if (radioEntier && radioEntier.checked) {
+                    typeVenteDesc.innerHTML = '🚀 Vendre le LOT entier (pas de réduction possible)';
+                    console.log(`✅ Description updated to "entier"`);
+                } else {
+                    // Par défaut à "partiel" si aucun n'est sélectionné
+                    typeVenteDesc.innerHTML = '✂️ Réduire les quantités du LOT par unités de vente';
+                    console.log(`✅ Description set to default "partiel"`);
+                }
+            }
+        } else {
+            // Masquer le sélecteur pour les SIMPLE
+            if (typeVenteDiv) typeVenteDiv.style.display = 'none';
+            console.log(`📦 SIMPLE Product - Mode selector hidden`);
+        }
+        
+        // 🆕 Récupérer le VRAI prix du produit
+        const prixInput = document.getElementById('ventePrix');
+        const prixUnitaire = produit.prixUnitaire || 0;
+        if (prixInput) {
+            prixInput.value = prixUnitaire.toFixed(2);
+        }
+        
+        const prixSuggere = document.getElementById('ventePrixSuggere');
+        if (prixSuggere) {
+            prixSuggere.textContent = prixUnitaire.toFixed(2);
+        }
+        
+        // Mettre à jour le total automatiquement
+        this.updateVenteTotalPartiel();
         
         alertBox.style.display = 'flex';
     }
@@ -827,6 +905,9 @@ class VenteManager {
             return;
         }
 
+        // 🆕 PHASE 1 v2: Vérifier le type de produit
+        const typeStockage = produit.typeProduitId?.typeStockage || 'simple';
+        
         // Vérification stock
         if (produit.quantiteActuelle < quantite) {
             alert(`⚠️ Stock insuffisant! Disponible: ${produit.quantiteActuelle}`);
@@ -849,28 +930,35 @@ class VenteManager {
         const magasinInfo = this.magasins.find(m => m._id === magasinId);
         const nomMagasin = magasinInfo?.nom_magasin || magasinInfo?.nom || 'Magasin inconnu';
 
-        // Ajouter au panier avec tous les détails nécessaires
+        // 🆕 PHASE 1 v2: Ajouter typeVente pour LOTs
         const rayonId = produit.rayonId?._id || produit.rayonId;
+        const typeVente = typeStockage === 'lot' ? 
+            (document.querySelector('input[name="venteTypeVente"]:checked')?.value || 'partiel') : 
+            undefined;  // undefined pour SIMPLE
+        
         const panierItem = {
             produitId,
             nomProduit: produit.designation || produit.nomProduit || 'Produit',
             nomMagasin: nomMagasin,
             magasinId: magasinId,
-            rayonId: rayonId,  // Récupérer l'ID du rayon (peut être string ou object._id)
+            rayonId: rayonId,
             quantite,
             prix,
             total: quantite * prix,
-            observations
+            observations,
+            typeStockage,  // 🆕 PHASE 1 v2
+            typeVente  // 🆕 PHASE 1 v2: Mode de vente pour LOTs
         };
         
         this.panier.push(panierItem);
 
-        console.log(` Article ajouté au panier:`, {
+        console.log(`✅ Article ajouté au panier (Phase 1 v2):`, {
             produit: produit.designation,
+            type: typeStockage,
+            typeVente: typeVente,
             quantite: quantite,
             magasin: nomMagasin,
             rayonId: rayonId,
-            rayonIdOriginal: produit.rayonId,
             prixUnitaire: prix,
             total: (quantite * prix).toFixed(2)
         });
@@ -1022,22 +1110,23 @@ class VenteManager {
             const totalMontant = this.panier.reduce((sum, item) => sum + item.total, 0);
 
             try {
-                // Préparer les articles avec tous les détails nécessaires
-                const articles = this.panier.map(item => ({
-                    produitId: item.produitId,
-                    designation: item.nomProduit,
-                    rayonId: item.rayonId || undefined,
-                    quantite: item.quantite,
-                    prixUnitaire: item.prix,
-                    montant: item.total,
-                    observations: item.observations
-                }));
+            // 🆕 PHASE 1 v2: Préparer les articles avec typeVente pour LOTs
+            const articles = this.panier.map(item => ({
+                produitId: item.produitId,
+                designation: item.nomProduit,
+                rayonId: item.rayonId || undefined,
+                quantite: item.quantite,
+                prixUnitaire: item.prix,
+                montant: item.total,
+                observations: item.observations,
+                typeVente: item.typeVente  // 🆕 PHASE 1 v2: Mode de vente pour LOTs
+            }));
 
-                console.log('📦 Articles à envoyer:', JSON.stringify(articles, null, 2));
-                console.log('🔍 Détail de chaque article:');
-                articles.forEach((art, idx) => {
-                    console.log(`  [${idx}] produitId=${art.produitId}, rayonId=${art.rayonId}, designation=${art.designation}, qty=${art.quantite}`);
-                });
+            console.log('📦 Articles à envoyer (Phase 1 v2):', JSON.stringify(articles, null, 2));
+            console.log('🔍 Détail de chaque article:');
+            articles.forEach((art, idx) => {
+                console.log(`  [${idx}] produitId=${art.produitId}, rayonId=${art.rayonId}, designation=${art.designation}, qty=${art.quantite}, typeVente=${art.typeVente}`);
+            });
 
                 // Créer la vente via la nouvelle API
                 const response = await fetch(
@@ -1511,6 +1600,31 @@ class VenteManager {
 
         // Refresh
         document.getElementById('refreshData')?.addEventListener('click', () => this.refresh());
+
+        // 🆕 PHASE 1 v2: Initialize Mode de Vente handlers ONCE
+        const radioPartiel = document.getElementById('radioPartiel');
+        const radioEntier = document.getElementById('radioEntier');
+        const typeVenteDesc = document.getElementById('typeVenteDescription');
+        
+        if (radioPartiel) {
+            radioPartiel.addEventListener('change', () => {
+                if (window.venteInitializing) return;  // Ignore during init
+                if (typeVenteDesc) {
+                    typeVenteDesc.innerHTML = '✂️ Réduire les quantités du LOT par unités de vente';
+                    console.log('✅ Mode changed to: Par unités (user click)');
+                }
+            });
+        }
+        
+        if (radioEntier) {
+            radioEntier.addEventListener('change', () => {
+                if (window.venteInitializing) return;  // Ignore during init
+                if (typeVenteDesc) {
+                    typeVenteDesc.innerHTML = '🚀 Vendre le LOT entier (pas de réduction possible)';
+                    console.log('✅ Mode changed to: LOT entier (user click)');
+                }
+            });
+        }
 
         console.log('📌 Écouteurs d\'événements attachés');
     }
