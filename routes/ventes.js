@@ -2,74 +2,250 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth');
 const Vente = require('../models/vente');
-const StockMovement = require('../models/stockMovement');  // ✅ CORRIGÉ: utiliser le modèle StockMovement
-const Produit = require('../models/produit');  // ✅ CORRIGÉ: utiliser le modèle Produit
+const StockMovement = require('../models/stockMovement');
+const Produit = require('../models/produit');
 const Magasin = require('../models/magasin');
 const Utilisateur = require('../models/utilisateur');
-const Guichet = require('../models/guichet');  // ✅ Pour valider le statut du guichet
+const Guichet = require('../models/guichet');
+const Rayon = require('../models/rayon');
+const StockRayon = require('../models/stockRayon');  // 🆕 PHASE 1 v2
+const Lot = require('../models/lot');                // 🆕 PHASE 1 v2
+const TypeProduit = require('../models/typeProduit'); // 🆕 PHASE 1 v2
+
+// ========================================
+// 🆕 HELPERS PHASE 1 v2 - VENTE
+// ========================================
+
+/**
+ * Vendre des LOTs
+ * @param {string} produitId - ID du produit
+ * @param {string} rayonId - ID du rayon
+ * @param {number} quantiteVendue - Quantité à vendre
+ * @param {string} typeVente - 'entier' (lot complet) ou 'partiel' (par unités)
+ * @returns {object} { lotsAffectes }
+ */
+async function sellLot(produitId, rayonId, quantiteVendue, typeVente = 'partiel') {
+  let quantiteRestante = quantiteVendue;
+  let lotsAffectes = [];
+  
+  // Chercher les LOTs du produit dans ce rayon (complèt ou partiels)
+  const lots = await Lot.find({
+    produitId,
+    rayonId,
+    status: { $in: ['complet', 'partiel_vendu'] }
+  }).sort({ dateReception: 1 }); // FIFO
+  
+  if (lots.length === 0) {
+    throw new Error(`❌ Aucun LOT trouvé pour le produit ${produitId} dans le rayon ${rayonId}`);
+  }
+  
+  for (const lot of lots) {
+    if (quantiteRestante <= 0) break;
+    
+    if (typeVente === 'entier') {
+      // 🎯 Vendre le LOT entièrement
+      const vendu = Math.min(quantiteRestante, lot.quantiteInitiale);
+      lot.quantiteRestante = 0;
+      lot.status = 'epuise';
+      lotsAffectes.push({
+        lotId: lot._id,
+        quantiteVendue: vendu,
+        ancienStatut: 'complet/partiel',
+        nouveauStatut: 'epuise'
+      });
+      quantiteRestante -= vendu;
+    } else {
+      // 🎯 Vendre par unités (réduire le LOT)
+      const vendu = Math.min(quantiteRestante, lot.quantiteRestante);
+      lot.quantiteRestante -= vendu;
+      
+      // Mettre à jour le statut
+      if (lot.quantiteRestante === 0) {
+        lot.status = 'epuise';
+      } else if (lot.quantiteRestante < lot.quantiteInitiale) {
+        lot.status = 'partiel_vendu';
+      }
+      
+      lotsAffectes.push({
+        lotId: lot._id,
+        quantiteVendue: vendu,
+        ancienStatut: 'complet/partiel',
+        nouveauStatut: lot.status
+      });
+      
+      quantiteRestante -= vendu;
+    }
+    
+    await lot.save();
+  }
+  
+  if (quantiteRestante > 0) {
+    throw new Error(`❌ Stock insuffisant! Demandé: ${quantiteVendue}, Disponible: ${quantiteVendue - quantiteRestante}`);
+  }
+  
+  return { lotsAffectes };
+}
+
+/**
+ * Vendre des articles SIMPLE (consolidés en emplacements)
+ * @param {string} produitId - ID du produit
+ * @param {string} rayonId - ID du rayon
+ * @param {number} quantiteVendue - Quantité à vendre
+ * @returns {object} { stocksAffectes }
+ */
+async function sellSimple(produitId, rayonId, quantiteVendue) {
+  let quantiteRestante = quantiteVendue;
+  let stocksAffectes = [];
+  
+  // Chercher les StockRayon du produit dans ce rayon (EN_STOCK ou PARTIELLEMENT_VENDU)
+  const stocks = await StockRayon.find({
+    produitId,
+    rayonId,
+    typeStockage: { $ne: 'lot' },
+    statut: { $in: ['EN_STOCK', 'PARTIELLEMENT_VENDU'] },
+    quantiteDisponible: { $gt: 0 }
+  }).sort({ dateCreation: 1 }); // FIFO
+  
+  if (stocks.length === 0) {
+    throw new Error(`❌ Aucun emplacement SIMPLE trouvé pour le produit ${produitId} dans le rayon ${rayonId}`);
+  }
+  
+  for (const stock of stocks) {
+    if (quantiteRestante <= 0) break;
+    
+    const vendu = Math.min(quantiteRestante, stock.quantiteDisponible);
+    stock.quantiteDisponible -= vendu;
+    
+    // Mettre à jour le statut
+    if (stock.quantiteDisponible === 0) {
+      stock.statut = 'VIDE';
+    } else if (stock.quantiteDisponible < stock.quantiteInitiale) {
+      stock.statut = 'PARTIELLEMENT_VENDU';
+    }
+    
+    stocksAffectes.push({
+      stockRayonId: stock._id,
+      quantiteVendue: vendu,
+      ancienStatut: 'EN_STOCK/PARTIELLEMENT_VENDU',
+      nouveauStatut: stock.statut
+    });
+    
+    await stock.save();
+    quantiteRestante -= vendu;
+  }
+  
+  if (quantiteRestante > 0) {
+    throw new Error(`❌ Stock insuffisant! Demandé: ${quantiteVendue}, Disponible: ${quantiteVendue - quantiteRestante}`);
+  }
+  
+  // Si des emplacements deviennent VIDE, mettre à jour le rayon
+  const rayon = await Rayon.findById(rayonId);
+  const emplacementsVides = await StockRayon.countDocuments({
+    rayonId,
+    produitId,
+    statut: 'VIDE'
+  });
+  
+  if (emplacementsVides > 0) {
+    rayon.quantiteActuelle = Math.max(0, rayon.quantiteActuelle - emplacementsVides);
+    await rayon.save();
+  }
+  
+  return { stocksAffectes };
+}
 
 /**
  * POST /api/protected/ventes
- * Créer une nouvelle vente avec panier
+ * Créer une nouvelle vente avec panier (PHASE 1 v2)
  */
 router.post('/ventes', authMiddleware, async (req, res) => {
     try {
-        console.log('\n=== POST /ventes START ===');
+        console.log('\n🛒 === POST /ventes (PHASE 1 v2) START ===');
         
         const {
             magasinId,
-            guichetId,     // 🎯 Nouveau: guichet
-            articles,      // Array d'articles
+            guichetId,
+            articles,      // Array: { produitId, rayonId, quantite, prixUnitaire, typeVente? }
             client,
             modePaiement,
             tauxFC,
             observations
         } = req.body;
         
-        // Validations
+        // ✅ VALIDATIONS
         if (!magasinId || !articles || articles.length === 0) {
             return res.status(400).json({
                 message: '❌ Magasin et articles requis'
             });
         }
         
-        // 🎯 NOUVEAU: Vérifier que le guichet est actif (si guichet fourni)
+        // Vérifier le guichet s'il est fourni
         if (guichetId) {
             const guichet = await Guichet.findById(guichetId);
             if (!guichet) {
-                return res.status(404).json({
-                    message: '❌ Guichet non trouvé'
-                });
+                return res.status(404).json({ message: '❌ Guichet non trouvé' });
             }
             if (guichet.status !== 1) {
                 return res.status(400).json({
-                    message: `❌ Le guichet ${guichet.nom_guichet} est inactif. Impossible de faire une vente.`,
-                    guichet: guichet.nom_guichet,
-                    status: guichet.status
+                    message: `❌ Le guichet ${guichet.nom_guichet} est inactif`
                 });
             }
         }
         
-        // Vérifier chaque article et calculer total
+        // ✅ TRAITER LES ARTICLES (PHASE 1 v2)
         let montantTotalUSD = 0;
         let articlesProcesses = [];
+        let mouvementsStock = [];  // Pour tracer les changements de stock
         
         for (const article of articles) {
             const produit = await Produit.findById(article.produitId);
-            
             if (!produit) {
                 return res.status(404).json({
                     message: `❌ Produit ${article.produitId} non trouvé`
                 });
             }
             
-            // Vérifier stock
-            if (produit.quantiteActuelle < article.quantite) {
+            const typeProduit = await TypeProduit.findById(produit.typeProduitId);
+            const typeStockage = typeProduit?.typeStockage || 'simple';
+            
+            console.log(`\n📦 Traiter article: ${produit.designation} (Type: ${typeStockage}, Qty: ${article.quantite})`);
+            
+            // 🆕 PHASE 1 v2: Traiter LOT vs SIMPLE différemment
+            let mouvementDetail = {
+                produitId: article.produitId,
+                designation: produit.designation,
+                rayonId: article.rayonId,
+                quantite: article.quantite,
+                prixUnitaire: article.prixUnitaire,
+                typeStockage,
+                typeVente: article.typeVente || 'partiel'
+            };
+            
+            try {
+                if (typeStockage === 'lot') {
+                    // 🎯 VENDRE DES LOTS
+                    const { lotsAffectes } = await sellLot(
+                        article.produitId,
+                        article.rayonId,
+                        article.quantite,
+                        article.typeVente || 'partiel'
+                    );
+                    mouvementDetail.lotsAffectes = lotsAffectes;
+                    console.log(`   ✅ LOTs vendus:`, lotsAffectes.length);
+                } else {
+                    // 🎯 VENDRE DES SIMPLES
+                    const { stocksAffectes } = await sellSimple(
+                        article.produitId,
+                        article.rayonId,
+                        article.quantite
+                    );
+                    mouvementDetail.stocksAffectes = stocksAffectes;
+                    console.log(`   ✅ Emplacements affectés:`, stocksAffectes.length);
+                }
+            } catch (err) {
                 return res.status(400).json({
-                    message: `❌ Stock insuffisant pour ${produit.designation}! Disponible: ${produit.quantiteActuelle}`,
-                    produit: produit.designation,
-                    disponible: produit.quantiteActuelle,
-                    demande: article.quantite
+                    message: err.message,
+                    produit: produit.designation
                 });
             }
             
@@ -79,20 +255,28 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             articlesProcesses.push({
                 produitId: article.produitId,
                 rayonId: article.rayonId,
-                nomProduit: produit.designation,  // Correspond à l'article.designation du frontend
+                nomProduit: produit.designation,
                 quantite: article.quantite,
                 prixUnitaire: article.prixUnitaire,
                 montantUSD: montantUSD,
                 observations: article.observations
             });
+            
+            mouvementsStock.push(mouvementDetail);
+            
+            // Mettre à jour quantiteActuelle du produit
+            await Produit.findByIdAndUpdate(
+                article.produitId,
+                { $inc: { quantiteActuelle: -article.quantite } }
+            );
         }
         
-        // Créer la vente
+        // ✅ CRÉER LA VENTE
         const vente = new Vente({
             dateVente: new Date(),
             magasinId,
             utilisateurId: req.user.id,
-            guichetId: guichetId || null,  // 🎯 Ajouter le guichet
+            guichetId: guichetId || null,
             client: client || null,
             articles: articlesProcesses,
             montantTotalUSD,
@@ -103,73 +287,66 @@ router.post('/ventes', authMiddleware, async (req, res) => {
         });
         
         await vente.save();
-        
         console.log(`✅ Vente créée: ${vente._id}`);
         
-        // Créer les mouvements de stock SORTIE
-        for (const article of articlesProcesses) {
-            const mouvement = new StockMovement({
+        // ✅ CRÉER LES MOUVEMENTS STOCK (StockMovement)
+        for (const mouvement of mouvementsStock) {
+            const sm = new StockMovement({
                 type: 'SORTIE',
-                produitId: article.produitId,
-                rayonId: article.rayonId,
-                quantite: article.quantite,
-                prix: article.prixUnitaire,
+                produitId: mouvement.produitId,
+                rayonId: mouvement.rayonId,
+                quantite: mouvement.quantite,
+                prix: mouvement.prixUnitaire,
                 magasinId,
                 utilisateurId: req.user.id,
-                venteId: vente._id,  // Lien avec la vente
-                observations: `Vente #${vente._id}`
+                venteId: vente._id,
+                observations: `Vente #${vente._id} (${mouvement.typeStockage})`
             });
-            
-            await mouvement.save();
-            
-            // Mettre à jour le produit
-            await Produit.findByIdAndUpdate(
-                article.produitId,
-                {
-                    $inc: { quantiteActuelle: -article.quantite }
-                }
-            );
-            
-            console.log(`✅ Mouvement créé pour ${article.designation}`);
+            await sm.save();
         }
+        console.log(`✅ ${mouvementsStock.length} mouvements créés`);
         
-        // Retourner la vente complètement populée pour le mobile dev
+        // ✅ RETOURNER LA VENTE COMPLÈTE
         const venteComplete = await Vente.findById(vente._id)
             .populate({
                 path: 'magasinId',
-                select: '_id nom_magasin nom adresse telephone photoUrl latitude longitude',
-                populate: { path: 'businessId', select: '_id nom_entreprise email' }
+                select: '_id nom_magasin nom adresse telephone',
+                populate: { path: 'businessId', select: '_id nom_entreprise' }
             })
             .populate({
                 path: 'utilisateurId',
-                select: '_id nom prenom email role photoUrl telephone'
+                select: '_id nom prenom email role'
             })
             .populate({
                 path: 'guichetId',
-                select: '_id nom_guichet code vendeurPrincipal',
-                populate: { path: 'vendeurPrincipal', select: '_id nom prenom' }
+                select: '_id nom_guichet code'
             })
             .populate({
                 path: 'articles.produitId',
-                select: '_id designation photoUrl prixUnitaire quantiteActuelle seuilAlerte',
-                populate: { path: 'typeProduitId', select: '_id nomType icone unitePrincipale capaciteMax typeStockage unitesVente unitePrincipaleStockage' }
+                select: '_id designation prixUnitaire quantiteActuelle',
+                populate: { path: 'typeProduitId', select: '_id nomType typeStockage' }
             })
             .populate({
                 path: 'articles.rayonId',
                 select: '_id nomRayon'
             });
         
-        console.log('=== POST /ventes END ===\n');
+        console.log('✅ === POST /ventes END ===\n');
         
         res.status(201).json({
             success: true,
-            message: '✅ Vente enregistrée avec succès',
-            vente: venteComplete
+            message: '✅ Vente enregistrée avec succès (Phase 1 v2)',
+            vente: venteComplete,
+            mouvementsStock
         });
         
     } catch (error) {
         console.error('❌ POST /ventes error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la vente',
+            error: error.message
+        });
     }
 });
 
