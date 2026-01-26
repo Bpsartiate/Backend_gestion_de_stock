@@ -1414,8 +1414,11 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
         .populate('produitId', 'designation reference');
       const nombreArticlesSTOCK = stocks.length;
       
-      // 1b. Compter les LOTs individuels pour ce rayon (Phase 1 v2)
-      const lots = await Lot.find({ rayonId: rayon._id }).select('_id');
+      // 1b. Compter les LOTs individuels pour ce rayon (Phase 1 v2) - SAUF épuisés
+      const lots = await Lot.find({ 
+        rayonId: rayon._id,
+        status: { $in: ['complet', 'partiel_vendu'] }  // 🆕 Exclure les LOTs épuisés
+      }).select('_id');
       const nombreArticlesLOT = lots.length;
       
       // Nombre total d'articles = StockRayons + LOTs

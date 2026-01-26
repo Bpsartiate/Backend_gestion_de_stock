@@ -676,6 +676,12 @@ class VenteManager {
         let quantite = produit.quantiteActuelle || 0;  // Quantité totale (unités)
         const imageSrc = produit.photoUrl || 'assets/img/placeholder.svg';
         
+        // 🆕 Stocker les infos de stock pour usage dans les handlers
+        window.currentStockInfo = {
+            quantiteActuelle: quantite,  // 320 unités
+            lotsDisponibles: 0  // Sera mis à jour ci-dessous
+        };
+        
         // Type de produit - champ: typeProduitId (objet imbriqué)
         let typeNom = 'Non défini';
         let typeIcone = '📦';
@@ -757,12 +763,12 @@ class VenteManager {
                     const lotsData = await lotsResponse.json();
                     const lotsCount = lotsData.lotsDisponibles || 0;
                     
-                    // Afficher le nombre de LOTs au lieu du total d'unités
-                    const stockRealEl = document.getElementById('venteProduitStockReal');
-                    if (stockRealEl) {
-                        stockRealEl.textContent = lotsCount;
-                        console.log(`📦 LOTs disponibles: ${lotsCount}`);
-                    }
+                    // 🆕 Stocker le lotsCount pour usage dans les handlers
+                    window.currentStockInfo.lotsDisponibles = lotsCount;
+                    console.log(`📦 LOTs disponibles: ${lotsCount}`);
+                    
+                    // 🆕 Afficher le stock selon le mode sélectionné
+                    this.updateStockDisplay();
                 } else {
                     console.warn('⚠️ Impossible de charger les LOTs disponibles');
                 }
@@ -879,6 +885,30 @@ class VenteManager {
             document.getElementById('venteTotalFC').textContent = totalFC.toFixed(0) + ' FC';
         } else {
             document.getElementById('venteTotalFC').textContent = '-';
+        }
+    }
+
+    /**
+     * 🆕 Met à jour l'affichage du stock selon le Mode de Vente sélectionné
+     */
+    updateStockDisplay() {
+        const stockRealEl = document.getElementById('venteProduitStockReal');
+        if (!stockRealEl) return;
+        
+        const radioPartiel = document.getElementById('radioPartiel');
+        const radioEntier = document.getElementById('radioEntier');
+        const stockInfo = window.currentStockInfo || {};
+        
+        if (radioPartiel && radioPartiel.checked) {
+            // Mode "Par unités" → Afficher quantiteActuelle (320)
+            const stock = stockInfo.quantiteActuelle || 0;
+            stockRealEl.textContent = stock;
+            console.log(`📊 Stock affichage: ${stock} UNITÉS (mode par unités)`);
+        } else if (radioEntier && radioEntier.checked) {
+            // Mode "LOT entier" → Afficher lotsDisponibles (9)
+            const stock = stockInfo.lotsDisponibles || 0;
+            stockRealEl.textContent = stock;
+            console.log(`📊 Stock affichage: ${stock} LOTS (mode LOT entier)`);
         }
     }
 
@@ -1613,6 +1643,8 @@ class VenteManager {
                     typeVenteDesc.innerHTML = '✂️ Réduire les quantités du LOT par unités de vente';
                     console.log('✅ Mode changed to: Par unités (user click)');
                 }
+                // 🆕 Mettre à jour l'affichage du stock
+                this.updateStockDisplay();
             });
         }
         
@@ -1623,6 +1655,8 @@ class VenteManager {
                     typeVenteDesc.innerHTML = '🚀 Vendre le LOT entier (pas de réduction possible)';
                     console.log('✅ Mode changed to: LOT entier (user click)');
                 }
+                // 🆕 Mettre à jour l'affichage du stock
+                this.updateStockDisplay();
             });
         }
 
