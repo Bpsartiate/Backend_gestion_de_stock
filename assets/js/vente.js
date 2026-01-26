@@ -1962,6 +1962,19 @@ class VenteManager {
             const quantite = article.quantite || 0;
             const sousTotal = prixUnitaire * quantite;
 
+            // 🆕 Affichage du mode de vente pour LOTs
+            let typeVenteDisplay = '';
+            const typeStockage = produit.typeProduitId?.typeStockage || article.typeStockage || 'simple';
+            if (typeStockage === 'lot' && article.typeVente) {
+                const modeIcon = article.typeVente === 'entier' ? '🚀' : '✂️';
+                const modeTexte = article.typeVente === 'entier' ? 'LOT entier' : 'Par unités';
+                typeVenteDisplay = `
+                    <div class="col-auto">
+                        <i class="fas fa-cube me-1"></i>Mode: ${modeIcon} ${modeTexte}
+                    </div>
+                `;
+            }
+
             const html = `
                 <div class="list-group-item border-0 border-bottom pb-3 mb-3">
                     <div class="row g-3">
@@ -1986,6 +1999,7 @@ class VenteManager {
                                 <div class="col-auto">
                                     <i class="fas fa-barcode me-1"></i>Code Rayon: ${codeAffiche}
                                 </div>
+                                ${typeVenteDisplay}
                             </div>
                         </div>
 

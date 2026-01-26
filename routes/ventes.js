@@ -310,7 +310,7 @@ router.post('/ventes', authMiddleware, async (req, res) => {
             .populate({
                 path: 'magasinId',
                 select: '_id nom_magasin nom adresse telephone',
-                populate: { path: 'businessId', select: '_id nom_entreprise' }
+                populate: { path: 'businessId', select: '_id nomEntreprise' }
             })
             .populate({
                 path: 'utilisateurId',
