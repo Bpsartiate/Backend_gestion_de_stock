@@ -1408,8 +1408,11 @@ router.get('/magasins/:magasinId/rayons', authMiddleware, async (req, res) => {
 
     // Enrichir chaque rayon avec les stats de stock
     const rayonsAvecStats = await Promise.all(rayons.map(async (rayon) => {
-      // 1. Compter les articles (StockRayons distincts pour ce rayon)
-      const stocks = await StockRayon.find({ rayonId: rayon._id })
+      // 1. Compter les articles (StockRayons distincts pour ce rayon) - SAUF VIDES
+      const stocks = await StockRayon.find({ 
+        rayonId: rayon._id,
+        statut: { $ne: 'VIDE' }  // 🆕 Exclure les emplacements vides
+      })
         .select('_id quantiteDisponible produitId typeStockage statut')
         .populate('produitId', 'designation reference');
       const nombreArticlesSTOCK = stocks.length;
@@ -4142,7 +4145,8 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     console.log('🔍 VALIDATION 2: Capacité rayon?');
     const allStocksInRayon = await StockRayon.find({
       rayonId,
-      magasinId
+      magasinId,
+      statut: { $ne: 'VIDE' }  // 🆕 Exclure les emplacements vides
     });
     
     // Compter aussi les LOTs (chaque LOT = 1 article/emplacement)
