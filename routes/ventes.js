@@ -43,17 +43,16 @@ async function sellLot(produitId, rayonId, quantiteVendue, typeVente = 'partiel'
     if (quantiteRestante <= 0) break;
     
     if (typeVente === 'entier') {
-      // 🎯 Vendre le LOT entièrement
-      const vendu = Math.min(quantiteRestante, lot.quantiteInitiale);
+      // 🎯 Vendre le LOT entièrement - 1 LOT = 1 unité de vente
       lot.quantiteRestante = 0;
       lot.status = 'epuise';
       lotsAffectes.push({
         lotId: lot._id,
-        quantiteVendue: vendu,
+        quantiteVendue: lot.quantiteInitiale,  // Nombre de pièces du LOT
         ancienStatut: 'complet/partiel',
         nouveauStatut: 'epuise'
       });
-      quantiteRestante -= vendu;
+      quantiteRestante -= 1;  // 🆕 Diminuer par 1 LOT, pas par quantiteInitiale
     } else {
       // 🎯 Vendre par unités (réduire le LOT)
       const vendu = Math.min(quantiteRestante, lot.quantiteRestante);

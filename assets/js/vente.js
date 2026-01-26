@@ -221,15 +221,22 @@ class VenteManager {
             
             this.displayMagasins();
             
+            // 🆕 Restaurer le magasin depuis localStorage s'il existe
+            const savedMagasinId = localStorage.getItem('venteSelectedMagasin');
+            if (savedMagasinId && this.magasins.some(m => m._id === savedMagasinId)) {
+                this.currentMagasin = savedMagasinId;
+                console.log(`📍 Magasin restauré depuis localStorage: ${savedMagasinId}`);
+            }
+            
             // Mettre à jour le header avec le nom du magasin
             if (this.magasins.length > 0) {
-                const magasin = this.magasins[0];
+                const magasin = this.magasins.find(m => m._id === this.currentMagasin) || this.magasins[0];
                 const magasinName = magasin.nom_magasin || magasin.nom || 'Magasin';
                 const badge = document.getElementById('currentMagasinName');
                 if (badge) badge.textContent = magasinName;
             }
             
-            // Charger les données du premier magasin
+            // Charger les données du magasin sélectionné
             if (this.magasins.length > 0 && !this.currentMagasin) {
                 this.currentMagasin = this.magasins[0]._id;
                 await this.onMagasinChange(this.currentMagasin);
@@ -305,6 +312,9 @@ class VenteManager {
      */
     selectMagasinModal(magasinId, magasinNom) {
         this.currentMagasin = magasinId;
+        
+        // 🆕 Sauvegarder le magasin dans localStorage
+        localStorage.setItem('venteSelectedMagasin', magasinId);
         
         // Mettre à jour le label du bouton
         const btnLabel = document.getElementById('magasinActuelTextVente');
@@ -1185,14 +1195,18 @@ class VenteManager {
                 console.log(` Vente créée: ${result.vente._id}`);
                 alert(` Vente enregistrée!\nMontant: ${totalMontant.toFixed(2)} USD${tauxFC > 0 ? ' (' + (totalMontant * tauxFC).toFixed(0) + ' FC)' : ''}`);
                 
-                // Réinitialiser
+                // 🆕 Réinitialiser et actualiser TOUS les panneaux
                 this.panier = [];
                 this.displayPanier();
                 document.getElementById('venteClient').value = '';
                 document.getElementById('venteTauxFC').value = '';
-                await this.loadVentesHistorique();
                 
-                console.log(' Vente finalisée');
+                // 🆕 Actualiser COMPLÈTEMENT: produits (stock), ventes et KPIs
+                console.log('🔄 Actualisation complète après vente...');
+                await this.loadProduits(this.currentMagasin);  // Rafraîchir les produits (stock)
+                await this.loadVentesHistorique();  // Rafraîchir les ventes et KPIs
+                
+                console.log(' Vente finalisée et panneaux actualisés');
                 restoreButton();
             } catch (error) {
                 console.error('❌ Erreur vente:', error);
