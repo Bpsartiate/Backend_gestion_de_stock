@@ -201,7 +201,11 @@ router.post('/commandes', authMiddleware, async (req, res) => {
 
   } catch (error) {
     console.error('❌ POST /commandes error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message,
+      message: error.message,
+      details: error.toString()
+    });
   }
 });
 

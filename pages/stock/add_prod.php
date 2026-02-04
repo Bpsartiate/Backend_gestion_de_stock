@@ -1575,6 +1575,20 @@
 
         showNotification(`✅ Produit "${designation}" enregistré avec succès!`, 'success');
 
+        // 📦 AVANT de réinitialiser, sauvegarder les infos de commande si nécessaire
+        let commandeData = null;
+        if (isEnCommande) {
+          console.log('📦 Mode EN COMMANDE - Sauvegarder les données avant réinitialisation');
+          commandeData = {
+            fournisseurId: document.getElementById('produitFournisseur').value,
+            quantiteCommande: parseFloat(document.getElementById('produitQuantiteCommande').value),
+            dateReceptionCommande: document.getElementById('produitDateReception').value,
+            etatCommande: document.getElementById('produitEtatCommande').value,
+            remarquesCommande: document.getElementById('produitRemarquesCommande').value
+          };
+          console.log('💾 Données commande sauvegardées:', commandeData);
+        }
+
         // Réinitialiser le formulaire
         document.getElementById('formAddProduit').reset();
         document.getElementById('selectedCategoriesList').innerHTML = '';
@@ -1590,14 +1604,14 @@
         }
 
         // 📦 Créer la commande si mode "En Commande"
-        if (isEnCommande) {
+        if (isEnCommande && commandeData) {
           console.log('📦 Mode EN COMMANDE - Créer la commande automatiquement');
           
-          const fournisseurId = document.getElementById('produitFournisseur').value;
-          const quantiteCommande = parseFloat(document.getElementById('produitQuantiteCommande').value);
-          const dateReceptionCommande = document.getElementById('produitDateReception').value;
-          const etatCommande = document.getElementById('produitEtatCommande').value;
-          const remarquesCommande = document.getElementById('produitRemarquesCommande').value;
+          const fournisseurId = commandeData.fournisseurId;
+          const quantiteCommande = commandeData.quantiteCommande;
+          const dateReceptionCommande = commandeData.dateReceptionCommande;
+          const etatCommande = commandeData.etatCommande;
+          const remarquesCommande = commandeData.remarquesCommande;
 
           if (!fournisseurId || !quantiteCommande || !dateReceptionCommande || !etatCommande) {
             showNotification('⚠️ Veuillez remplir tous les champs de commande obligatoires', 'warning');
@@ -1614,6 +1628,18 @@
           try {
             showNotification('📤 Création de la commande...', 'info');
 
+            // Récupérer magasinId
+            const magasinId = sessionStorage.getItem('currentMagasinId') || 
+                             (typeof window.stockConfig !== 'undefined' ? window.stockConfig.magasinId : null) ||
+                             localStorage.getItem('currentMagasinId');
+
+            if (!magasinId) {
+              showNotification('⚠️ Erreur: magasinId non trouvé', 'warning');
+              return;
+            }
+
+            console.log('📦 Création commande avec:', { produitId: produit._id, magasinId, fournisseurId, quantiteCommande, dateReceptionCommande });
+
             const commandeResponse = await fetch(`${API_BASE}/commandes`, {
               method: 'POST',
               headers: {
@@ -1622,12 +1648,14 @@
               },
               body: JSON.stringify({
                 produitId: produit._id || produit.id,
+                magasinId: magasinId,
                 fournisseurId: fournisseurId,
                 quantiteCommandee: quantiteCommande,
                 delaiLivraisonPrevu: delaiLivraisonPrevu,
-                dateReceptionPrevue: dateReceptionCommande,
+                dateEcheance: dateReceptionCommande,
                 etatPrevu: etatCommande,
-                remarques: remarquesCommande
+                remarques: remarquesCommande,
+                prixUnitaire: 0  // À remplir ultérieurement
               })
             });
 
@@ -1637,7 +1665,9 @@
               console.log('✅ Commande créée:', commande);
             } else {
               const error = await commandeResponse.json();
-              showNotification(`⚠️ Commande non créée: ${error.message || 'Erreur'}`, 'warning');
+              const errorMsg = error.message || error.error || error.details || 'Erreur inconnue';
+              console.error('❌ Erreur backend:', error);
+              showNotification(`⚠️ Commande non créée: ${errorMsg}`, 'warning');
             }
           } catch (error) {
             console.error('❌ Erreur création commande:', error);
