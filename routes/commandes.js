@@ -187,10 +187,11 @@ router.post('/commandes', authMiddleware, async (req, res) => {
       { new: true }
     );
 
-    const commandePopulated = await newCommande
-      .populate('produitId')
-      .populate('magasinId')
-      .populate('fournisseurId')
+    // Recharger et peupler la commande
+    const commandePopulated = await Commande.findById(newCommande._id)
+      .populate('produitId', 'designation reference typeStockage')
+      .populate('magasinId', 'nom')
+      .populate('fournisseurId', 'nom telephone email')
       .populate('createdBy', 'nom prenom email');
 
     res.status(201).json({
