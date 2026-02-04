@@ -13,6 +13,31 @@
         <div class="modal-body">
           <input type="hidden" id="produitId" />
           
+          <!-- 1.5. MODE: Stock Initial OU En Commande -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-12">
+              <label class="form-label fw-bold d-flex align-items-center">
+                <i class="fas fa-route me-2 text-primary"></i>
+                Mode d'Entrée <span class="text-danger">*</span>
+              </label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="modeEntree" id="modeStockInitial" value="stock" checked>
+                <label class="btn btn-outline-success" for="modeStockInitial">
+                  <i class="fas fa-warehouse me-2"></i>Stock Initial (Ajouter au rayon)
+                </label>
+                
+                <input type="radio" class="btn-check" name="modeEntree" id="modeEnCommande" value="commande">
+                <label class="btn btn-outline-warning" for="modeEnCommande">
+                  <i class="fas fa-truck me-2"></i>En Commande (Créer + Commander)
+                </label>
+              </div>
+              <small class="text-muted d-block mt-2">
+                <strong>Stock Initial:</strong> Ajouter directement le produit en rayon<br>
+                <strong>En Commande:</strong> Créer produit + Créer commande fournisseur en même temps
+              </small>
+            </div>
+          </div>
+
           <!-- 1. INFOS PRINCIPALES -->
           <div class="row g-3 mb-4">
             <div class="col-md-6">
@@ -249,6 +274,84 @@
             </div>
           </div>
 
+          <!-- ===== SECTION COMMANDE (Visible seulement si mode "En Commande") ===== -->
+          <div id="sectionCommande" style="display: none;" class="mt-4">
+            <div class="card border-warning mb-4">
+              <div class="card-header bg-warning bg-opacity-10 border-warning py-2">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-shopping-cart me-2 text-warning"></i>Informations Commande Fournisseur</h6>
+              </div>
+              <div class="card-body">
+                <div class="alert alert-info py-2 px-3 mb-3">
+                  <small>
+                    <i class="fas fa-info-circle me-2"></i>
+                    Le stock ne sera ajouté au rayon que lors de la réception. Remplissez les détails de la commande.
+                  </small>
+                </div>
+                <div class="row g-3">
+                  <!-- Fournisseur -->
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold">
+                      <i class="fas fa-user-tie me-2 text-warning"></i>Fournisseur <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                      <select id="produitFournisseur" class="form-select">
+                        <option value="">-- Choisir Fournisseur --</option>
+                      </select>
+                      <button class="btn btn-outline-warning" type="button" id="btnProduitNewFournisseur" title="Créer un nouveau fournisseur">
+                        <i class="fas fa-plus me-1"></i> Nouveau
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Quantité Prévue -->
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold">
+                      <i class="fas fa-boxes me-2 text-warning"></i>Quantité Prévue <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                      <input type="number" id="produitQuantiteCommande" class="form-control" min="1" step="1" placeholder="100">
+                      <span class="input-group-text" id="produitCommandeQuantiteUnit">unité</span>
+                    </div>
+                  </div>
+
+                  <!-- Date Réception Prévue -->
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold">
+                      <i class="fas fa-calendar-check me-2 text-warning"></i>Date Réception Prévue <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                      <input type="date" id="produitDateReception" class="form-control">
+                    </div>
+                    <small class="text-muted d-block mt-1">Délai calculé: <strong id="produitDelaiCalc">-</strong> jours</small>
+                  </div>
+
+                  <!-- État Attendu -->
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold">
+                      <i class="fas fa-check-circle me-2 text-warning"></i>État Attendu <span class="text-danger">*</span>
+                    </label>
+                    <select id="produitEtatCommande" class="form-select">
+                      <option value="">-- Choisir État --</option>
+                      <option value="Neuf">Neuf</option>
+                      <option value="Bon état">Bon état</option>
+                      <option value="Usagé">Usagé</option>
+                      <option value="Endommagé">Endommagé</option>
+                    </select>
+                  </div>
+
+                  <!-- Remarques -->
+                  <div class="col-12">
+                    <label class="form-label fw-bold">
+                      <i class="fas fa-comment me-2 text-warning"></i>Remarques & Spécifications
+                    </label>
+                    <textarea id="produitRemarquesCommande" class="form-control" rows="2" placeholder="Spécifications, conditionnement, etc."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- PRÉVIEW PHOTO -->
           <div class="mt-4">
             <label class="form-label fw-bold">Photo Produit</label>
@@ -299,6 +402,12 @@
                   <small class="text-muted">Désignation</small><br>
                   <strong id="commande_designation">-</strong>
                 </div>
+              </div>
+              <div class="alert alert-info mt-3 mb-0 py-2 px-3">
+                <small>
+                  <i class="fas fa-info-circle me-2"></i>
+                  <strong>Note:</strong> Le stock ne sera ajouté au rayon que lors de la réception. Créez la commande maintenant pour tracer l'arrivée prévue.
+                </small>
               </div>
             </div>
           </div>
@@ -1117,6 +1226,89 @@
     // Charger les catégories
     loadCategories();
 
+    // ===== GESTION MODE ENTRÉE (Stock Initial vs En Commande) =====
+    const modeStockRadio = document.getElementById('modeStockInitial');
+    const modeCommandeRadio = document.getElementById('modeEnCommande');
+    const sectionCommande = document.getElementById('sectionCommande');
+
+    function toggleSectionCommande() {
+      const isCommande = document.querySelector('input[name="modeEntree"]:checked').value === 'commande';
+      sectionCommande.style.display = isCommande ? 'block' : 'none';
+      
+      if (isCommande) {
+        console.log('📦 Mode EN COMMANDE activé');
+        // Charger les fournisseurs pour le mode commande
+        loadFournisseursProduit();
+      } else {
+        console.log('📦 Mode STOCK INITIAL activé');
+      }
+    }
+
+    if (modeStockRadio) modeStockRadio.addEventListener('change', toggleSectionCommande);
+    if (modeCommandeRadio) modeCommandeRadio.addEventListener('change', toggleSectionCommande);
+
+    // Charger les fournisseurs pour le mode commande dans produit
+    async function loadFournisseursProduit() {
+      try {
+        console.log('🔵 Chargement des fournisseurs...');
+        const response = await fetch(`${API_BASE}/fournisseurs`, {
+          headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+        });
+
+        if (response.ok) {
+          const fournisseurs = await response.json();
+          const select = document.getElementById('produitFournisseur');
+          select.innerHTML = '<option value="">-- Choisir Fournisseur --</option>';
+          
+          fournisseurs.forEach(f => {
+            const option = document.createElement('option');
+            option.value = f._id;
+            option.textContent = f.nom || f.name;
+            select.appendChild(option);
+          });
+          console.log(`✅ ${fournisseurs.length} fournisseurs chargés`);
+        } else {
+          console.error('❌ Erreur chargement fournisseurs:', response.status);
+          const select = document.getElementById('produitFournisseur');
+          select.innerHTML = '<option value="">Erreur chargement fournisseurs</option>';
+        }
+      } catch (error) {
+        console.error('❌ Erreur chargement fournisseurs:', error);
+        const select = document.getElementById('produitFournisseur');
+        select.innerHTML = '<option value="">Erreur réseau</option>';
+      }
+    }
+
+    // Calculer délai automatiquement
+    document.getElementById('produitDateReception').addEventListener('change', function() {
+      const dateInput = this.value;
+      if (!dateInput) {
+        document.getElementById('produitDelaiCalc').textContent = '-';
+        return;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(dateInput + 'T00:00:00');
+      const diffTime = selectedDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 0) {
+        document.getElementById('produitDelaiCalc').innerHTML = `<span class="text-danger">${-diffDays} jours (PASSÉ)</span>`;
+      } else {
+        document.getElementById('produitDelaiCalc').textContent = diffDays + ' jours';
+      }
+    });
+
+    // Bouton créer nouveau fournisseur dans la section commande produit
+    document.getElementById('btnProduitNewFournisseur').addEventListener('click', function(e) {
+      e.preventDefault();
+      // Réutiliser la même logique que modalCreerFournisseur
+      document.getElementById('formCreerFournisseur').reset();
+      const modal = new bootstrap.Modal(document.getElementById('modalCreerFournisseur'));
+      modal.show();
+    });
+
     // ✅ Listener pour vérifier rayon plein
     const rayonSelect = document.getElementById('rayonId');
     if (rayonSelect) {
@@ -1329,12 +1521,17 @@
       }
 
       // Préparer les données du produit
+      const modeEntree = document.querySelector('input[name="modeEntree"]:checked').value;
+      const isEnCommande = modeEntree === 'commande';
+      
       const produitData = {
         reference,
         designation,
         typeProduitId: categorieId,
         rayonId,
-        quantiteEntree: quantite,
+        // 🎯 Mode Stock Initial: utiliser la quantité saisie
+        // Mode En Commande: quantité = 0 (sera ajoutée à la réception)
+        quantiteEntree: isEnCommande ? 0 : quantite,
         prixUnitaire: parseFloat(document.getElementById('prixUnitaire').value) || 0,
         etat: document.getElementById('etat').value,
         dateReception,
@@ -1392,16 +1589,71 @@
           window.loadProduits();
         }
 
-        // 📦 Ouvrir le modal de création commande
-        setTimeout(() => {
+        // 📦 Créer la commande si mode "En Commande"
+        if (isEnCommande) {
+          console.log('📦 Mode EN COMMANDE - Créer la commande automatiquement');
+          
+          const fournisseurId = document.getElementById('produitFournisseur').value;
+          const quantiteCommande = parseFloat(document.getElementById('produitQuantiteCommande').value);
+          const dateReceptionCommande = document.getElementById('produitDateReception').value;
+          const etatCommande = document.getElementById('produitEtatCommande').value;
+          const remarquesCommande = document.getElementById('produitRemarquesCommande').value;
+
+          if (!fournisseurId || !quantiteCommande || !dateReceptionCommande || !etatCommande) {
+            showNotification('⚠️ Veuillez remplir tous les champs de commande obligatoires', 'warning');
+            return;
+          }
+
+          // Calculer délai
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const selectedDate = new Date(dateReceptionCommande + 'T00:00:00');
+          const diffTime = selectedDate - today;
+          const delaiLivraisonPrevu = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          try {
+            showNotification('📤 Création de la commande...', 'info');
+
+            const commandeResponse = await fetch(`${API_BASE}/commandes`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAuthToken()}`
+              },
+              body: JSON.stringify({
+                produitId: produit._id || produit.id,
+                fournisseurId: fournisseurId,
+                quantiteCommandee: quantiteCommande,
+                delaiLivraisonPrevu: delaiLivraisonPrevu,
+                dateReceptionPrevue: dateReceptionCommande,
+                etatPrevu: etatCommande,
+                remarques: remarquesCommande
+              })
+            });
+
+            if (commandeResponse.ok) {
+              const commande = await commandeResponse.json();
+              showNotification('✅ Commande créée avec succès!', 'success');
+              console.log('✅ Commande créée:', commande);
+            } else {
+              const error = await commandeResponse.json();
+              showNotification(`⚠️ Commande non créée: ${error.message || 'Erreur'}`, 'warning');
+            }
+          } catch (error) {
+            console.error('❌ Erreur création commande:', error);
+            showNotification(`⚠️ Erreur création commande: ${error.message}`, 'warning');
+          }
+
+          // Fermer et réinitialiser
           const modalProduit = bootstrap.Modal.getInstance(document.getElementById('modalProduit'));
           if (modalProduit) modalProduit.hide();
-          
-          // Ouvrir modal commande après fermeture de modal produit
+        } else {
+          // Mode Stock Initial: ancieno workflow (pas de commande)
           setTimeout(() => {
-            window.openCommandeModal(produit);
-          }, 300);
-        }, 1000);
+            const modalProduit = bootstrap.Modal.getInstance(document.getElementById('modalProduit'));
+            if (modalProduit) modalProduit.hide();
+          }, 500);
+        }
 
       } catch (error) {
         console.error('❌ Erreur création produit:', error);
@@ -1464,7 +1716,8 @@
     // Charger les fournisseurs disponibles
     async function loadFournisseursForCommande() {
       try {
-        const response = await fetch(`${API_BASE}/protected/fournisseurs`, {
+        console.log('🔵 Chargement des fournisseurs...');
+        const response = await fetch(`${API_BASE}/fournisseurs`, {
           headers: {
             'Authorization': `Bearer ${getAuthToken()}`
           }
@@ -1481,6 +1734,9 @@
             option.textContent = f.nom || f.name;
             select.appendChild(option);
           });
+          console.log(`✅ ${fournisseurs.length} fournisseurs chargés`);
+        } else {
+          console.error('❌ Erreur chargement fournisseurs:', response.status);
         }
       } catch (error) {
         console.error('❌ Erreur chargement fournisseurs:', error);
@@ -1549,7 +1805,7 @@
         submitBtn.disabled = true;
         showNotification('📤 Création du fournisseur...', 'info');
         
-        const response = await fetch(`${API_BASE}/protected/fournisseurs`, {
+        const response = await fetch(`${API_BASE}/fournisseurs`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1637,7 +1893,7 @@
         submitBtn.disabled = true;
         showNotification('📤 Création de la commande...', 'info');
 
-        const response = await fetch(`${API_BASE}/protected/commandes`, {
+        const response = await fetch(`${API_BASE}/commandes`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

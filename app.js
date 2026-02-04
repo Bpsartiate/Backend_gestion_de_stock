@@ -5,6 +5,7 @@ const utilisateurRoutes = require('./routes/auth');
 const protectedRoutes = require('./routes/protected');
 const ventesRoutes = require('./routes/ventes');
 const commandesRoutes = require('./routes/commandes');
+const fournisseursRoutes = require('./routes/fournisseurs');
 const fournisseurRatingRoutes = require('./routes/fournisseurRating');
 const businessRoutes = require('./routes/business'); // routes pour profil entrepris
 const path = require('path');
@@ -38,6 +39,7 @@ app.use('/api/auth', utilisateurRoutes);
 app.use('/api/protected', protectedRoutes);
 app.use('/api/protected', ventesRoutes);
 app.use('/api/protected', commandesRoutes);
+app.use('/api/protected', fournisseursRoutes);
 app.use('/api/protected', fournisseurRatingRoutes);
 app.use('/api/business', businessRoutes);
 // Activity routes mounted under business path (mergeParams used in router)
