@@ -138,7 +138,7 @@ const commandeSchema = new mongoose.Schema(
 // Index pour recherche rapide
 commandeSchema.index({ magasinId: 1, statut: 1 });
 commandeSchema.index({ produitId: 1 });
-commandeSchema.index({ numeroCommande: 1 });
+// numeroCommande a déjà un index via 'unique: true'
 commandeSchema.index({ dateCommande: -1 });
 
 // Virtual pour résumer
