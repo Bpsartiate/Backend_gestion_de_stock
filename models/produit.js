@@ -78,7 +78,7 @@ const produitSchema = new mongoose.Schema({
   // INFORMATIONS SUPPLÉMENTAIRES
   etat: {
     type: String,
-    enum: ['Neuf', 'Bon état', 'Usagé', 'Endommagé'],
+    enum: ['Neuf', 'Bon état', 'Usagé', 'Endommagé', 'EN_COMMANDE', 'STOCKÉ'],
     default: 'Neuf'
   },
   dateEntree: {
@@ -103,6 +103,14 @@ const produitSchema = new mongoose.Schema({
 
   // NOTES
   notes: String,
+
+  // 🆕 COMMANDES LIÉES
+  commandesIds: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Commande'
+    }
+  ],
 
   // STATUT
   statut: {

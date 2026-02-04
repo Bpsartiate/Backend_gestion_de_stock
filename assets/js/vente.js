@@ -77,7 +77,7 @@ class VenteManager {
         
         if (!this.TOKEN) {
             console.error('❌ Aucun token JWT trouvé! Impossible de charger les données.');
-            alert('⚠️ Authentification requise. Veuillez vous reconnecter.');
+            this.showAlert('⚠️ Authentification requise. Veuillez vous reconnecter.', 'warning');
             this.showKPIsLoading(false);
             return;
         }
@@ -246,7 +246,7 @@ class VenteManager {
             
         } catch (error) {
             console.error('❌ Erreur chargement magasins:', error);
-            alert('❌ Erreur lors du chargement des magasins');
+            this.showAlert('❌ Erreur lors du chargement des magasins', 'danger');
         }
     }
 
@@ -483,7 +483,7 @@ class VenteManager {
             html += guichetsInactifs.map(guichet => `
                 <div class="card mb-2" 
                      style="cursor: not-allowed; transition: all 0.2s ease; background: #f8f9fa; opacity: 0.6;">
-                    <div class="card-body p-2" onclick="event.stopPropagation(); alert('❌ Ce guichet est inactif. Impossible de faire une vente.');">
+                    <div class="card-body p-2" onclick="event.stopPropagation(); window.venteManager.showAlert('❌ Ce guichet est inactif. Impossible de faire une vente.', 'danger');">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h6 class="mb-1 fw-bold text-muted">
@@ -935,13 +935,13 @@ class VenteManager {
         const observations = document.getElementById('venteObservations').value;
 
         if (!produitId || !magasinId || quantite < 1) {
-            alert('⚠️ Veuillez sélectionner un produit, un magasin et une quantité');
+            this.showAlert('⚠️ Veuillez sélectionner un produit, un magasin et une quantité', 'warning');
             return;
         }
 
         const produit = this.currentProduit;
         if (!produit) {
-            alert('⚠️ Produit non trouvé');
+            this.showAlert('⚠️ Produit non trouvé', 'warning');
             return;
         }
 
@@ -950,7 +950,7 @@ class VenteManager {
         
         // Vérification stock
         if (produit.quantiteActuelle < quantite) {
-            alert(`⚠️ Stock insuffisant! Disponible: ${produit.quantiteActuelle}`);
+            this.showAlert(`⚠️ Stock insuffisant! Disponible: ${produit.quantiteActuelle}`, 'warning');
             return;
         }
 
@@ -1118,12 +1118,12 @@ class VenteManager {
         const btnValider = document.getElementById('btnValiderVente');
         
         if (this.panier.length === 0) {
-            alert('⚠️ Panier vide');
+            this.showAlert('⚠️ Panier vide', 'warning');
             return;
         }
 
         if (!this.currentMagasin) {
-            alert('⚠️ Veuillez sélectionner un magasin');
+            this.showAlert('⚠️ Veuillez sélectionner un magasin', 'warning');
             return;
         }
 
@@ -1193,7 +1193,7 @@ class VenteManager {
                 const result = await response.json();
                 
                 console.log(` Vente créée: ${result.vente._id}`);
-                alert(` Vente enregistrée!\nMontant: ${totalMontant.toFixed(2)} USD${tauxFC > 0 ? ' (' + (totalMontant * tauxFC).toFixed(0) + ' FC)' : ''}`);
+                this.showAlert(` Vente enregistrée!\nMontant: ${totalMontant.toFixed(2)} USD${tauxFC > 0 ? ' (' + (totalMontant * tauxFC).toFixed(0) + ' FC)' : ''}`, 'success');
                 
                 // 🆕 Réinitialiser et actualiser TOUS les panneaux
                 this.panier = [];
@@ -1210,7 +1210,7 @@ class VenteManager {
                 restoreButton();
             } catch (error) {
                 console.error('❌ Erreur vente:', error);
-                alert('❌ Erreur: ' + error.message);
+                this.showAlert('❌ Erreur: ' + error.message, 'danger');
                 restoreButton();
             }
         }

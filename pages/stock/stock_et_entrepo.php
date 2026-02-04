@@ -480,3 +480,5 @@
 <script src="<?php echo BASE_URL; ?>assets/js/reception.js"></script>
 <!-- 📊 RÉCEPTION HISTORY SYSTEM SCRIPT -->
 <script src="<?php echo BASE_URL; ?>assets/js/reception-history.js"></script>
+<!-- 📦 COMMANDE RÉCEPTION INTEGRATION SCRIPT (Prévisions & Scoring) -->
+<script src="<?php echo BASE_URL; ?>assets/js/commande-reception.js"></script>

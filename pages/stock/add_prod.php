@@ -272,6 +272,222 @@
   </div>
 </div>
 
+<!-- ===== MODAL CREATION COMMANDE LIÉE ===== -->
+<div class="modal fade" id="modalCreerCommande" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-info bg-opacity-10 border-info">
+        <h5 class="modal-title fw-bold">
+          <i class="fas fa-shopping-cart me-2 text-info"></i>Créer Commande Liée
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formCreerCommande">
+        <div class="modal-body">
+          <!-- Produit créé (info) -->
+          <div class="card bg-success bg-opacity-10 border-success mb-4">
+            <div class="card-body">
+              <h6 class="card-title text-success mb-3">
+                <i class="fas fa-box me-2"></i>Produit Créé
+              </h6>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <small class="text-muted">Référence</small><br>
+                  <strong id="commande_reference">-</strong>
+                </div>
+                <div class="col-md-6">
+                  <small class="text-muted">Désignation</small><br>
+                  <strong id="commande_designation">-</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Informations Commande -->
+          <div class="card border-info mb-4">
+            <div class="card-header bg-info bg-opacity-10 border-info py-2">
+              <h6 class="mb-0 fw-bold"><i class="fas fa-truck me-2 text-info"></i>Informations Commande</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <!-- Fournisseur -->
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-user-tie me-2 text-info"></i>Fournisseur <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <select id="commandeFournisseur" class="form-select" required>
+                      <option value="">-- Choisir Fournisseur --</option>
+                    </select>
+                    <button class="btn btn-outline-info" type="button" id="btnNewFournisseur" title="Créer un nouveau fournisseur">
+                      <i class="fas fa-plus me-1"></i> Nouveau
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Quantité Prévue -->
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-boxes me-2 text-info"></i>Quantité Prévue <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <input type="number" id="commandeQuantite" class="form-control" min="1" step="1" required placeholder="100">
+                    <span class="input-group-text" id="commandeQuantiteUnit">unité</span>
+                  </div>
+                </div>
+
+                <!-- Date Réception Prévue -->
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-calendar-check me-2 text-info"></i>Date Réception Prévue <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                    <input type="date" id="commandeDateReception" class="form-control" required>
+                  </div>
+                  <small class="text-muted d-block mt-1">Délai calculé: <strong id="delimCalc">-</strong> jours</small>
+                </div>
+
+                <!-- État Attendu -->
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-check-circle me-2 text-info"></i>État Attendu <span class="text-danger">*</span>
+                  </label>
+                  <select id="commandeEtat" class="form-select" required>
+                    <option value="">-- Choisir État --</option>
+                    <option value="Neuf">Neuf</option>
+                    <option value="Bon état">Bon état</option>
+                    <option value="Usagé">Usagé</option>
+                    <option value="Endommagé">Endommagé</option>
+                  </select>
+                </div>
+
+                <!-- Remarques -->
+                <div class="col-12">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-comment me-2 text-info"></i>Remarques & Spécifications
+                  </label>
+                  <textarea id="commandeRemarques" class="form-control" rows="3" placeholder="Spécifications, conditionnement, etc."></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Récapitulatif -->
+          <div class="card bg-light border-secondary">
+            <div class="card-body">
+              <h6 class="card-title mb-3">
+                <i class="fas fa-eye me-2 text-secondary"></i>Récapitulatif Commande
+              </h6>
+              <div class="row g-3">
+                <div class="col-md-4 text-center">
+                  <small class="text-muted">Fournisseur</small><br>
+                  <strong id="recap_fournisseur" class="text-primary">-</strong>
+                </div>
+                <div class="col-md-4 text-center">
+                  <small class="text-muted">Quantité</small><br>
+                  <strong id="recap_quantite" class="text-success">-</strong>
+                </div>
+                <div class="col-md-4 text-center">
+                  <small class="text-muted">Délai</small><br>
+                  <strong id="recap_delai" class="text-warning">-</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" id="btnCreerCommande" class="btn btn-success px-4">
+            <i class="fas fa-cart-plus me-2"></i>Créer Commande
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL CRÉER FOURNISSEUR ===== -->
+<div class="modal fade" id="modalCreerFournisseur" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning bg-opacity-10 border-warning">
+        <h5 class="modal-title fw-bold">
+          <i class="fas fa-user-plus me-2 text-warning"></i>Créer Nouveau Fournisseur
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formCreerFournisseur">
+        <div class="modal-body">
+          <div class="row g-3">
+            <!-- Nom Fournisseur -->
+            <div class="col-md-12">
+              <label class="form-label fw-bold">
+                <i class="fas fa-building me-2 text-warning"></i>Nom Fournisseur <span class="text-danger">*</span>
+              </label>
+              <input type="text" id="fournisseurNom" class="form-control" required placeholder="Ex: Entreprise ABC">
+              <small class="text-muted d-block mt-1">Nom complet de la société</small>
+            </div>
+
+            <!-- Téléphone -->
+            <div class="col-md-6">
+              <label class="form-label fw-bold">
+                <i class="fas fa-phone me-2 text-warning"></i>Numéro Téléphone <span class="text-danger">*</span>
+              </label>
+              <input type="tel" id="fournisseurTel" class="form-control" required placeholder="Ex: +243 123456789">
+              <small class="text-muted d-block mt-1">Numéro de contact principal</small>
+            </div>
+
+            <!-- Email -->
+            <div class="col-md-6">
+              <label class="form-label fw-bold">
+                <i class="fas fa-envelope me-2 text-warning"></i>Email
+              </label>
+              <input type="email" id="fournisseurEmail" class="form-control" placeholder="Ex: contact@fournisseur.com">
+              <small class="text-muted d-block mt-1">Adresse email (optionnel)</small>
+            </div>
+
+            <!-- Adresse -->
+            <div class="col-md-12">
+              <label class="form-label fw-bold">
+                <i class="fas fa-map-marker-alt me-2 text-warning"></i>Adresse <span class="text-danger">*</span>
+              </label>
+              <input type="text" id="fournisseurAdresse" class="form-control" required placeholder="Ex: Avenue de la Paix, 123">
+              <small class="text-muted d-block mt-1">Adresse complète du fournisseur</small>
+            </div>
+
+            <!-- Ville -->
+            <div class="col-md-6">
+              <label class="form-label fw-bold">
+                <i class="fas fa-city me-2 text-warning"></i>Ville
+              </label>
+              <input type="text" id="fournisseurVille" class="form-control" placeholder="Ex: Kinshasa">
+              <small class="text-muted d-block mt-1">Ville (optionnel)</small>
+            </div>
+
+            <!-- Code Postal -->
+            <div class="col-md-6">
+              <label class="form-label fw-bold">
+                <i class="fas fa-mailbox me-2 text-warning"></i>Code Postal
+              </label>
+              <input type="text" id="fournisseurCP" class="form-control" placeholder="Ex: 1234">
+              <small class="text-muted d-block mt-1">Code postal (optionnel)</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" id="btnSaveNewFournisseur" class="btn btn-warning px-4">
+            <i class="fas fa-save me-2"></i>Créer Fournisseur
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- ===== STYLES FIFO/LIFO ===== -->
 <style>
   /* Animation slideDown pour dropdown */
@@ -1176,11 +1392,16 @@
           window.loadProduits();
         }
 
-        // Fermer le modal après 1.5s
+        // 📦 Ouvrir le modal de création commande
         setTimeout(() => {
-          const modal = bootstrap.Modal.getInstance(document.getElementById('modalProduit'));
-          if (modal) modal.hide();
-        }, 1500);
+          const modalProduit = bootstrap.Modal.getInstance(document.getElementById('modalProduit'));
+          if (modalProduit) modalProduit.hide();
+          
+          // Ouvrir modal commande après fermeture de modal produit
+          setTimeout(() => {
+            window.openCommandeModal(produit);
+          }, 300);
+        }, 1000);
 
       } catch (error) {
         console.error('❌ Erreur création produit:', error);
@@ -1215,6 +1436,248 @@
       // Supprimer après disparition
       setTimeout(() => toastContainer.remove(), 5000);
     }
+
+    // ===== GESTION MODAL COMMANDE =====
+    let lastCreatedProduct = null;
+
+    document.getElementById('formAddProduit').addEventListener('submit', async function(e) {
+      // Après succès de création, sauvegarder les infos pour la commande
+      if (window.lastProductSubmitSuccess) {
+        window.lastProductSubmitSuccess = false;
+      }
+    });
+
+    // Quand le produit est créé avec succès, ouvrir la modal commande
+    window.openCommandeModal = function(productData) {
+      lastCreatedProduct = productData;
+      document.getElementById('commande_reference').textContent = productData.reference || '-';
+      document.getElementById('commande_designation').textContent = productData.designation || '-';
+      
+      // Charger les fournisseurs
+      loadFournisseursForCommande();
+      
+      // Ouvrir le modal
+      const modal = new bootstrap.Modal(document.getElementById('modalCreerCommande'));
+      modal.show();
+    };
+
+    // Charger les fournisseurs disponibles
+    async function loadFournisseursForCommande() {
+      try {
+        const response = await fetch(`${API_BASE}/protected/fournisseurs`, {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+          }
+        });
+
+        if (response.ok) {
+          const fournisseurs = await response.json();
+          const select = document.getElementById('commandeFournisseur');
+          select.innerHTML = '<option value="">-- Choisir Fournisseur --</option>';
+          
+          fournisseurs.forEach(f => {
+            const option = document.createElement('option');
+            option.value = f._id;
+            option.textContent = f.nom || f.name;
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('❌ Erreur chargement fournisseurs:', error);
+      }
+    }
+
+    // Mise à jour du récapitulatif commande
+    document.getElementById('commandeFournisseur').addEventListener('change', updateCommandeRecap);
+    document.getElementById('commandeQuantite').addEventListener('change', updateCommandeRecap);
+    document.getElementById('commandeDateReception').addEventListener('change', updateCommandeRecap);
+
+    // ===== CALCUL AUTOMATIQUE DÉLAI =====
+    document.getElementById('commandeDateReception').addEventListener('change', function() {
+      const dateInput = this.value;
+      if (!dateInput) {
+        document.getElementById('delimCalc').textContent = '-';
+        return;
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const selectedDate = new Date(dateInput + 'T00:00:00');
+      const diffTime = selectedDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 0) {
+        document.getElementById('delimCalc').innerHTML = `<span class="text-danger">${-diffDays} jours (PASSÉ)</span>`;
+      } else {
+        document.getElementById('delimCalc').textContent = diffDays + ' jours';
+      }
+
+      updateCommandeRecap();
+    });
+
+    // ===== BOUTON CRÉER NOUVEAU FOURNISSEUR =====
+    document.getElementById('btnNewFournisseur').addEventListener('click', async function(e) {
+      e.preventDefault();
+      
+      // Réinitialiser le formulaire
+      document.getElementById('formCreerFournisseur').reset();
+      
+      // Ouvrir la modal
+      const modal = new bootstrap.Modal(document.getElementById('modalCreerFournisseur'));
+      modal.show();
+    });
+
+    // ===== SOUMETTRE LA CRÉATION DU FOURNISSEUR =====
+    document.getElementById('formCreerFournisseur').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const nom = document.getElementById('fournisseurNom').value.trim();
+      const telephone = document.getElementById('fournisseurTel').value.trim();
+      const email = document.getElementById('fournisseurEmail').value.trim();
+      const adresse = document.getElementById('fournisseurAdresse').value.trim();
+      const ville = document.getElementById('fournisseurVille').value.trim();
+      const codePostal = document.getElementById('fournisseurCP').value.trim();
+
+      if (!nom || !telephone || !adresse) {
+        showNotification('⚠️ Veuillez remplir tous les champs obligatoires (Nom, Téléphone, Adresse)', 'warning');
+        return;
+      }
+
+      try {
+        const submitBtn = document.getElementById('btnSaveNewFournisseur');
+        submitBtn.disabled = true;
+        showNotification('📤 Création du fournisseur...', 'info');
+        
+        const response = await fetch(`${API_BASE}/protected/fournisseurs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getAuthToken()}`
+          },
+          body: JSON.stringify({
+            nom: nom,
+            telephone: telephone,
+            email: email,
+            adresse: adresse,
+            ville: ville,
+            codePostal: codePostal,
+            paysId: null
+          })
+        });
+
+        if (response.ok) {
+          const newFournisseur = await response.json();
+          showNotification(`✅ Fournisseur "${nom}" créé avec succès!`, 'success');
+          
+          // Fermer la modal
+          bootstrap.Modal.getInstance(document.getElementById('modalCreerFournisseur')).hide();
+          
+          // Recharger les fournisseurs
+          loadFournisseursForCommande();
+          
+          // Sélectionner le nouveau fournisseur
+          setTimeout(() => {
+            const select = document.getElementById('commandeFournisseur');
+            select.value = newFournisseur._id || newFournisseur.id;
+            updateCommandeRecap();
+          }, 500);
+        } else {
+          const error = await response.json();
+          showNotification(`❌ Erreur: ${error.message || 'Erreur création fournisseur'}`, 'danger');
+        }
+
+        submitBtn.disabled = false;
+      } catch (error) {
+        console.error('❌ Erreur:', error);
+        showNotification(`❌ Erreur réseau: ${error.message}`, 'danger');
+        document.getElementById('btnSaveNewFournisseur').disabled = false;
+      }
+    });
+
+    function updateCommandeRecap() {
+      const fournisseur = document.querySelector('#commandeFournisseur option:checked').textContent;
+      const quantite = document.getElementById('commandeQuantite').value || '-';
+      const delai = document.getElementById('delimCalc').textContent || '-';
+      
+      document.getElementById('recap_fournisseur').textContent = fournisseur;
+      document.getElementById('recap_quantite').textContent = quantite + ' unités';
+      document.getElementById('recap_delai').textContent = delai;
+    }
+
+    // Soumettre la commande
+    document.getElementById('formCreerCommande').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      if (!lastCreatedProduct) {
+        showNotification('❌ Erreur: produit non trouvé', 'danger');
+        return;
+      }
+
+      const fournisseurId = document.getElementById('commandeFournisseur').value;
+      const quantite = parseFloat(document.getElementById('commandeQuantite').value);
+      const dateReception = document.getElementById('commandeDateReception').value;
+      const etat = document.getElementById('commandeEtat').value;
+      const remarques = document.getElementById('commandeRemarques').value;
+
+      if (!fournisseurId || !quantite || !dateReception || !etat) {
+        showNotification('⚠️ Veuillez remplir tous les champs obligatoires', 'warning');
+        return;
+      }
+
+      // Calculer le délai en jours
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(dateReception + 'T00:00:00');
+      const diffTime = selectedDate - today;
+      const delaiLivraisonPrevu = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      try {
+        const submitBtn = document.getElementById('btnCreerCommande');
+        submitBtn.disabled = true;
+        showNotification('📤 Création de la commande...', 'info');
+
+        const response = await fetch(`${API_BASE}/protected/commandes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getAuthToken()}`
+          },
+          body: JSON.stringify({
+            produitId: lastCreatedProduct._id || lastCreatedProduct.id,
+            fournisseurId: fournisseurId,
+            quantiteCommandee: quantite,
+            delaiLivraisonPrevu: delaiLivraisonPrevu,
+            dateReceptionPrevue: dateReception,
+            etatPrevu: etat,
+            remarques: remarques
+          })
+        });
+
+        if (response.ok) {
+          const commande = await response.json();
+          showNotification('✅ Commande créée avec succès!', 'success');
+          
+          // Fermer les modals
+          bootstrap.Modal.getInstance(document.getElementById('modalCreerCommande')).hide();
+          bootstrap.Modal.getInstance(document.getElementById('modalProduit')).hide();
+          
+          // Réinitialiser le formulaire
+          document.getElementById('formCreerCommande').reset();
+          lastCreatedProduct = null;
+          updateCommandeRecap();
+        } else {
+          const error = await response.json();
+          showNotification(`❌ Erreur: ${error.message || 'Erreur lors de la création'}`, 'danger');
+        }
+
+        submitBtn.disabled = false;
+      } catch (error) {
+        console.error('❌ Erreur:', error);
+        showNotification(`❌ Erreur réseau: ${error.message}`, 'danger');
+        document.getElementById('btnCreerCommande').disabled = false;
+      }
+    });
 
     // Recharger les catégories quand le modal s'ouvre
     const modalElement = document.getElementById('modalProduit');

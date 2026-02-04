@@ -16,7 +16,9 @@
                 'href="magasin.php"': baseUrl + '/magasin.php',
                 'href="guichet.php"': baseUrl + '/guichet.php',
                 'href="setting.php"': baseUrl + '/setting.php',
-                'href="pages/stocks_et_entreposage.php"': baseUrl + '/pages/stocks_et_entreposage.php'
+                'href="pages/stocks_et_entreposage.php"': baseUrl + '/pages/stocks_et_entreposage.php',
+                'href="pages/stock/commandes.php"': baseUrl + '/pages/stock/commandes.php',
+                'href="pages/stock/fournisseurs.php"': baseUrl + '/pages/stock/fournisseurs.php'
               };
               
               // Update all navigation links
@@ -102,6 +104,18 @@
                   
                     <li class="nav-item"><a class="nav-link" href="pages/stocks_et_entreposage.php">
                         <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Stocks et entreposage</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="pages/stock/commandes.php">
+                        <div class="d-flex align-items-center"><i class="fas fa-boxes me-2"></i><span class="nav-link-text ps-1">Commandes & Réceptions</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="pages/stock/fournisseurs.php">
+                        <div class="d-flex align-items-center"><i class="fas fa-star me-2"></i><span class="nav-link-text ps-1">Évaluation des Fournisseurs</span>
                         </div>
                       </a>
                       <!-- more inner pages-->

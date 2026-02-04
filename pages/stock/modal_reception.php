@@ -45,6 +45,33 @@
                 </div>
               </div>
 
+              <!-- PRÉVISIONS DE COMMANDE (Auto-chargement) -->
+              <div id="sectionPrevisions" class="card bg-info bg-opacity-10 border-info mb-4" style="display: none;">
+                <div class="card-header bg-info bg-opacity-10 border-info py-2">
+                  <h6 class="mb-0 fw-bold">
+                    <i class="fas fa-clipboard-check me-2 text-info"></i>Prévisions de Commande
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <small class="text-muted">Quantité Prévue</small><br>
+                      <strong id="prevQuantite" class="text-primary">-</strong>
+                      <span id="prevQuantiteUnit" class="text-muted"> unités</span>
+                    </div>
+                    <div class="col-md-4">
+                      <small class="text-muted">Délai Prévu</small><br>
+                      <strong id="prevDelai" class="text-warning">-</strong>
+                      <span class="text-muted"> jours</span>
+                    </div>
+                    <div class="col-md-4">
+                      <small class="text-muted">État Attendu</small><br>
+                      <strong id="prevEtat" class="text-success">-</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- 2.5 MARQUE DU PRODUIT (NOUVEAU!) -->
               <div class="row g-3 mb-4">
                 <div class="col-md-6">
@@ -212,6 +239,88 @@
                   </div>
                 </div>
               </div>
+
+          <!-- RÉALITÉ & COMPARAISON AVEC PRÉVISIONS -->
+          <div class="card bg-warning bg-opacity-10 border-warning mb-4">
+            <div class="card-header bg-warning bg-opacity-10 border-warning py-2">
+              <h6 class="mb-0 fw-bold">
+                <i class="fas fa-check-square me-2 text-warning"></i>Réalité Reçue & Comparaison
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-calendar me-2"></i>Date Réception Réelle
+                  </label>
+                  <input type="date" id="dateReceptionReelle" class="form-control" />
+                  <small id="comparaisonDelai" class="text-muted d-block mt-1">Comparaison délai: -</small>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-check-circle me-2"></i>État Réel Reçu
+                  </label>
+                  <select id="etatReel" class="form-select">
+                    <option value="">-- Choisir État --</option>
+                    <option value="Neuf">Neuf</option>
+                    <option value="Bon état">Bon état</option>
+                    <option value="Usagé">Usagé</option>
+                    <option value="Endommagé">Endommagé</option>
+                  </select>
+                  <small id="comparaisonEtat" class="text-muted d-block mt-1">Comparaison état: -</small>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Problèmes Identifiés
+                  </label>
+                  <input type="text" id="problemesIdentifies" class="form-control" placeholder="Ex: 5 pièces cassées, délai retard 2j" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCORE FOURNISSEUR (Auto-calculé) -->
+          <div id="sectionScoreFournisseur" class="card border-success mb-4" style="display: none;">
+            <div class="card-header bg-success bg-opacity-10 border-success py-2">
+              <h6 class="mb-0 fw-bold">
+                <i class="fas fa-star me-2 text-success"></i>Score Fournisseur (Auto-calculé)
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 mb-3">
+                <div class="col-md-3 text-center">
+                  <small class="text-muted">Quantité (30 pts)</small><br>
+                  <strong id="scoreQuantite" class="text-primary fs-5">0</strong>
+                </div>
+                <div class="col-md-3 text-center">
+                  <small class="text-muted">Délai (25 pts)</small><br>
+                  <strong id="scoreDelai" class="text-info fs-5">0</strong>
+                </div>
+                <div class="col-md-3 text-center">
+                  <small class="text-muted">Qualité (25 pts)</small><br>
+                  <strong id="scoreQualite" class="text-warning fs-5">0</strong>
+                </div>
+                <div class="col-md-3 text-center">
+                  <small class="text-muted">Conformité (20 pts)</small><br>
+                  <strong id="scoreConformite" class="text-danger fs-5">0</strong>
+                </div>
+              </div>
+              
+              <div class="alert alert-info mb-0 py-2 px-3">
+                <div class="row text-center align-items-center">
+                  <div class="col-md-6">
+                    <h6 class="mb-0">
+                      <i class="fas fa-calculator me-2"></i>Score Total
+                    </h6>
+                  </div>
+                  <div class="col-md-6">
+                    <strong class="fs-4" id="scoreTotal" style="color: #0dcaf0;">0 / 100</strong><br>
+                    <small id="scoreLevelText" class="text-muted">Évaluation: -</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- 5. PHOTO OBLIGATOIRE (NOUVEAU !) -->
           <div class="row g-3 mb-4">
