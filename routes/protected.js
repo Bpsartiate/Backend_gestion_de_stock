@@ -4490,11 +4490,11 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     console.log(`   - quantiteActuelle: ${nouvelleQuantiteActuelle}`);
     console.log(`   - quantiteEntree: ${produit.quantiteEntree}`);
 
-    // ✅ NOUVEAU: Si le produit était EN_COMMANDE, le passer à ACTIF
+    // ✅ NOUVEAU: Si le produit était EN_COMMANDE, le passer à STOCKÉ
     if (produit.etat === 'EN_COMMANDE') {
-      produit.etat = 'ACTIF';
+      produit.etat = 'STOCKÉ';
       await produit.save();
-      console.log(`✅ État du produit mis à jour: EN_COMMANDE → ACTIF`);
+      console.log(`✅ État du produit mis à jour: EN_COMMANDE → STOCKÉ`);
 
       // Mettre à jour le statut de la commande associée
       const Commande = require('../models/commande');
