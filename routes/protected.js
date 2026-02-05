@@ -2083,6 +2083,11 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
         path: 'rayonId',
         select: 'nomRayon codeRayon typeRayon iconeRayon capaciteMax quantiteActuelle'
       })
+      .populate({
+        path: 'commandesIds',
+        select: 'quantiteCommandee quantiteRecue etatPrevu statut dateEcheance',
+        options: { limit: 1, sort: { dateCommande: -1 } }  // Dernière commande seulement
+      })
       .sort({ designation: 1 });
 
     console.log(`📦 [PRODUITS LIST] Magasin ${magasinId}: ${produits.length} produits trouvés`);

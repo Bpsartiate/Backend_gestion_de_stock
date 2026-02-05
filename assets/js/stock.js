@@ -1023,9 +1023,31 @@ function afficherTableProduits(produits) {
   produits.forEach((produit, index) => {
     const row = document.createElement('tr');
     
-    // Détermine l'état du stock
+    // ✅ DÉTERMINER L'ÉTAT ET LA QUANTITÉ À AFFICHER
     let etatBadge = '<span class="badge bg-success">Disponible</span>';
-    if (produit.quantiteActuelle === 0) {
+    let quantiteAffichee = produit.quantiteActuelle;
+    let seuilAffiche = produit.seuilAlerte || 10;
+    
+    // 📦 SI LE PRODUIT EST EN COMMANDE
+    if (produit.etat === 'EN_COMMANDE' || produit.etat === 'EN_COMMANDE') {
+      etatBadge = '<span class="badge bg-info">🛒 En commande</span>';
+      
+      // Afficher la quantité commandée si disponible
+      if (produit.commandesIds && produit.commandesIds.length > 0) {
+        // La dernière commande active
+        const commande = Array.isArray(produit.commandesIds) ? 
+          produit.commandesIds[produit.commandesIds.length - 1] : 
+          produit.commandesIds;
+        
+        // Si c'est un objet avec quantiteCommandee
+        if (commande && typeof commande === 'object' && commande.quantiteCommandee) {
+          quantiteAffichee = commande.quantiteCommandee;
+          seuilAffiche = commande.quantiteCommandee;
+        }
+      }
+    } 
+    // SINON: Déterminer l'état normal du stock
+    else if (produit.quantiteActuelle === 0) {
       etatBadge = '<span class="badge bg-danger">En rupture</span>';
     } else if (produit.quantiteActuelle < (produit.seuilAlerte || 10)) {
       etatBadge = '<span class="badge bg-warning">Stock faible</span>';
@@ -1050,8 +1072,8 @@ function afficherTableProduits(produits) {
       </td>
       <td class="categorie" style="display:none;">${produit.typeProduitId?.nomType || 'N/A'}</td>
       <td class="quantite">
-        <strong>${produit.quantiteActuelle}</strong> 
-        <small class="text-muted">(seuil: ${produit.seuilAlerte || 10})</small>
+        <strong>${quantiteAffichee}</strong> 
+        <small class="text-muted">(seuil: ${seuilAffiche})</small>
       </td>
       <td class="emplacement">${produit.rayonId?.nomRayon || 'N/A'}</td>
       <td class="etat">${etatBadge}</td>
