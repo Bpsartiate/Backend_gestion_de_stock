@@ -4,6 +4,25 @@
  */
 
 (function() {
+  // Fonction utilitaire pour récupérer le token d'authentification
+  function getAuthToken() {
+    let token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+    }
+    if (!token) {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'token' || name === 'authToken') {
+          token = decodeURIComponent(value);
+          break;
+        }
+      }
+    }
+    return token || '';
+  }
+
   // Cache pour stocker la commande sélectionnée
   let selectedCommande = null;
   let commandesList = {};
@@ -21,7 +40,8 @@
 
     try {
       // Charger la commande liée au produit
-      const response = await fetch(`${API_BASE}/protected/commandes/produit/${produitId}`, {
+      const apiBase = window.API_BASE || 'https://backend-gestion-de-stock.onrender.com';
+      const response = await fetch(`${apiBase}/api/protected/commandes/produit/${produitId}`, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`
         }
@@ -35,8 +55,13 @@
         // Afficher les prévisions
         displayPrevisions(commande);
         document.getElementById('sectionPrevisions').style.display = 'block';
+      } else if (response.status === 404) {
+        // Pas de commande pour ce produit - c'est normal
+        console.log('ℹ️ Aucune commande trouvée pour ce produit');
+        document.getElementById('sectionPrevisions').style.display = 'none';
+        clearPrevisionsDisplay();
       } else {
-        // Pas de commande pour ce produit
+        console.error('❌ Erreur API:', response.status, response.statusText);
         document.getElementById('sectionPrevisions').style.display = 'none';
         clearPrevisionsDisplay();
       }
@@ -54,6 +79,46 @@
     document.getElementById('prevQuantiteUnit').textContent = quantiteUnit;
     document.getElementById('prevDelai').textContent = commande.delaiLivraisonPrevu || '-';
     document.getElementById('prevEtat').textContent = commande.etatPrevu || '-';
+
+    // ✅ AFFICHER LA SECTION RÉALITÉ & COMPARAISON POUR LES COMMANDES
+    const sectionRealite = document.getElementById('sectionRealiteComparaison');
+    if (sectionRealite) {
+      sectionRealite.style.display = 'block';
+      
+      // Déterminer le type de produit (simple ou LOT)
+      const produitId = document.getElementById('produitReception').value;
+      const produit = window.PRODUITS_RECEPTION?.find(p => p._id === produitId);
+      
+      if (produit) {
+        // Vérifier si c'est un produit LOT (typeProduitId.typeStockage === 'lot')
+        const isLot = produit.typeProduitId?.typeStockage === 'lot';
+        
+        // Afficher les champs appropriés
+        const realiteSimple = document.getElementById('realiteSimple');
+        const realieLot = document.getElementById('realieLot');
+        
+        if (isLot) {
+          realiteSimple.style.display = 'none';
+          realieLot.style.display = 'block';
+          // Pré-remplir les prévisions du LOT
+          document.getElementById('prevPiecesVal').textContent = commande.quantiteCommandee || '-';
+        } else {
+          realiteSimple.style.display = 'block';
+          realieLot.style.display = 'none';
+          // Pré-remplir les prévisions simples
+          document.getElementById('prevQuantiteVal').textContent = commande.quantiteCommandee || '-';
+          document.getElementById('uniteRealReception').textContent = quantiteUnit;
+        }
+        
+        // Pré-remplir les dates et états
+        if (commande.dateEcheance) {
+          const dateEcheance = new Date(commande.dateEcheance).toISOString().split('T')[0];
+          document.getElementById('prevDateVal').textContent = dateEcheance;
+        }
+        
+        document.getElementById('prevEtatVal').textContent = commande.etatPrevu || '-';
+      }
+    }
   }
 
   // Réinitialiser l'affichage des prévisions
@@ -61,11 +126,19 @@
     document.getElementById('prevQuantite').textContent = '-';
     document.getElementById('prevDelai').textContent = '-';
     document.getElementById('prevEtat').textContent = '-';
+    
+    // ✅ MASQUER LA SECTION RÉALITÉ & COMPARAISON QUAND PAS DE COMMANDE
+    const sectionRealite = document.getElementById('sectionRealiteComparaison');
+    if (sectionRealite) {
+      sectionRealite.style.display = 'none';
+    }
   }
 
   // Calculer le score quand on change les champs de réalité
   const fieldsToWatch = [
     'quantiteReception',
+    'quantiteRealReception',
+    'nombrePiecesReelles',
     'dateReceptionReelle',
     'etatReel',
     'problemesIdentifies'
@@ -74,10 +147,79 @@
   fieldsToWatch.forEach(fieldId => {
     const field = document.getElementById(fieldId);
     if (field) {
-      field.addEventListener('change', calculateScore);
-      field.addEventListener('input', calculateScore);
+      field.addEventListener('change', () => {
+        calculateScore();
+        updateComparaisons();
+      });
+      field.addEventListener('input', updateComparaisons);
     }
   });
+
+  // 📊 CALCULER LES ÉCARTS EN TEMPS RÉEL
+  function updateComparaisons() {
+    if (!selectedCommande) return;
+
+    // Écart quantité (produit simple)
+    const quantiteRealInput = document.getElementById('quantiteRealReception');
+    if (quantiteRealInput && quantiteRealInput.value) {
+      const quantiteReelle = parseFloat(quantiteRealInput.value) || 0;
+      const quantitePrevue = selectedCommande.quantiteCommandee || 0;
+      const ecart = quantiteReelle - quantitePrevue;
+      const ecartPourcent = quantitePrevue > 0 ? Math.round((ecart / quantitePrevue) * 100) : 0;
+      
+      const ecartQtyEl = document.getElementById('ecartQuantiteVal');
+      if (ecartQtyEl) {
+        ecartQtyEl.textContent = 
+          `${ecart >= 0 ? '+' : ''}${ecart.toFixed(2)} (${ecartPourcent >= 0 ? '+' : ''}${ecartPourcent}%)`;
+        ecartQtyEl.style.color = ecart >= 0 ? 'green' : 'red';
+      }
+    }
+
+    // Écart pièces (produit LOT)
+    const piecesRealInput = document.getElementById('nombrePiecesReelles');
+    if (piecesRealInput && piecesRealInput.value) {
+      const piecesReelles = parseInt(piecesRealInput.value) || 0;
+      const piecesPrevues = selectedCommande.quantiteCommandee || 0;
+      const ecart = piecesReelles - piecesPrevues;
+      const ecartPourcent = piecesPrevues > 0 ? Math.round((ecart / piecesPrevues) * 100) : 0;
+      
+      const ecartPiecesEl = document.getElementById('ecartPiecesVal');
+      if (ecartPiecesEl) {
+        ecartPiecesEl.textContent = 
+          `${ecart >= 0 ? '+' : ''}${ecart} (${ecartPourcent >= 0 ? '+' : ''}${ecartPourcent}%)`;
+        ecartPiecesEl.style.color = ecart >= 0 ? 'green' : 'red';
+      }
+    }
+
+    // Comparaison délai (date)
+    const dateReelleInput = document.getElementById('dateReceptionReelle');
+    if (dateReelleInput && dateReelleInput.value) {
+      const dateReelle = new Date(dateReelleInput.value);
+      const dateEcheance = new Date(selectedCommande.dateEcheance);
+      const delaiReelJours = Math.round((dateEcheance - dateReelle) / (1000 * 60 * 60 * 24));
+      
+      const delaiReel = delaiReelJours >= 0 ? `À temps (${delaiReelJours}j avant)` : `${Math.abs(delaiReelJours)}j en retard`;
+      const delaiEl = document.getElementById('delaiReel');
+      if (delaiEl) {
+        delaiEl.textContent = delaiReel;
+        delaiEl.style.color = delaiReelJours >= 0 ? 'green' : 'red';
+      }
+    }
+
+    // Comparaison état
+    const etatRealSelect = document.getElementById('etatReel');
+    if (etatRealSelect && etatRealSelect.value) {
+      const etatReel = etatRealSelect.value;
+      const etatPrvu = selectedCommande.etatPrevu || 'Neuf';
+      const conform = etatReel === etatPrvu;
+      
+      const conformEl = document.getElementById('conformeEtat');
+      if (conformEl) {
+        conformEl.textContent = conform ? '✓ Oui' : '✗ Non';
+        conformEl.style.color = conform ? 'green' : 'red';
+      }
+    }
+  }
 
   // Calculer le score fournisseur
   function calculateScore() {

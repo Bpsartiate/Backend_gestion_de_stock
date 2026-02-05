@@ -240,8 +240,8 @@
                 </div>
               </div>
 
-          <!-- RÉALITÉ & COMPARAISON AVEC PRÉVISIONS -->
-          <div class="card bg-warning bg-opacity-10 border-warning mb-4">
+          <!-- RÉALITÉ & COMPARAISON AVEC PRÉVISIONS (UNIQUEMENT POUR EN COMMANDE) -->
+          <div id="sectionRealiteComparaison" class="card bg-warning bg-opacity-10 border-warning mb-4" style="display: none;">
             <div class="card-header bg-warning bg-opacity-10 border-warning py-2">
               <h6 class="mb-0 fw-bold">
                 <i class="fas fa-check-square me-2 text-warning"></i>Réalité Reçue & Comparaison
@@ -249,13 +249,49 @@
             </div>
             <div class="card-body">
               <div class="row g-3">
+                <!-- POUR PRODUITS SIMPLES: Quantité Reçue -->
+                <div id="realiteSimple" class="col-md-4" style="display: none;">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-weight me-2"></i>Quantité Reçue Réelle <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <input type="number" id="quantiteRealReception" class="form-control" min="0.01" step="0.01" />
+                    <span class="input-group-text" id="uniteRealReception">unités</span>
+                  </div>
+                  <small id="comparaisonQuantite" class="text-muted d-block mt-1">
+                    <strong>Prévue:</strong> <span id="prevQuantiteVal">-</span> | 
+                    <strong>Écart:</strong> <span id="ecartQuantiteVal" class="text-danger">-</span>
+                  </small>
+                </div>
+
+                <!-- POUR PRODUITS LOT: Nombre de Pièces Reçues -->
+                <div id="realieLot" class="col-md-4" style="display: none;">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-cube me-2"></i>Nombre de Pièces Reçues <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <input type="number" id="nombrePiecesReelles" class="form-control" min="1" step="1" />
+                    <span class="input-group-text">pièces</span>
+                  </div>
+                  <small id="comparaisonPieces" class="text-muted d-block mt-1">
+                    <strong>Prévues:</strong> <span id="prevPiecesVal">-</span> | 
+                    <strong>Écart:</strong> <span id="ecartPiecesVal" class="text-danger">-</span>
+                  </small>
+                </div>
+
+                <!-- Date Réception Réelle (pour les deux) -->
                 <div class="col-md-4">
                   <label class="form-label fw-bold">
                     <i class="fas fa-calendar me-2"></i>Date Réception Réelle
                   </label>
                   <input type="date" id="dateReceptionReelle" class="form-control" />
-                  <small id="comparaisonDelai" class="text-muted d-block mt-1">Comparaison délai: -</small>
+                  <small id="comparaisonDelai" class="text-muted d-block mt-1">
+                    <strong>Prévue:</strong> <span id="prevDateVal">-</span> | 
+                    <strong>Délai réel:</strong> <span id="delaiReel" class="text-warning">-</span>
+                  </small>
                 </div>
+
+                <!-- État Réel Reçu (pour les deux) -->
                 <div class="col-md-4">
                   <label class="form-label fw-bold">
                     <i class="fas fa-check-circle me-2"></i>État Réel Reçu
@@ -267,8 +303,13 @@
                     <option value="Usagé">Usagé</option>
                     <option value="Endommagé">Endommagé</option>
                   </select>
-                  <small id="comparaisonEtat" class="text-muted d-block mt-1">Comparaison état: -</small>
+                  <small id="comparaisonEtat" class="text-muted d-block mt-1">
+                    <strong>Attendu:</strong> <span id="prevEtatVal">-</span> | 
+                    <strong>Conforme:</strong> <span id="conformeEtat" class="text-success">✓</span>
+                  </small>
                 </div>
+
+                <!-- Problèmes Identifiés (pour les deux) -->
                 <div class="col-md-4">
                   <label class="form-label fw-bold">
                     <i class="fas fa-exclamation-triangle me-2"></i>Problèmes Identifiés

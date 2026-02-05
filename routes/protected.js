@@ -4490,6 +4490,23 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     console.log(`   - quantiteActuelle: ${nouvelleQuantiteActuelle}`);
     console.log(`   - quantiteEntree: ${produit.quantiteEntree}`);
 
+    // ✅ NOUVEAU: Si le produit était EN_COMMANDE, le passer à ACTIF
+    if (produit.etat === 'EN_COMMANDE') {
+      produit.etat = 'ACTIF';
+      await produit.save();
+      console.log(`✅ État du produit mis à jour: EN_COMMANDE → ACTIF`);
+
+      // Mettre à jour le statut de la commande associée
+      const Commande = require('../models/commande');
+      const commande = await Commande.findOne({ produitId: produitId });
+      if (commande) {
+        commande.statut = 'REÇUE';
+        commande.dateReception = new Date();
+        await commande.save();
+        console.log(`✅ Commande mise à jour: statut = REÇUE`);
+      }
+    }
+
     // 6. Lier le mouvement à la réception
     reception.mouvementStockId = stockMovement._id;
     await reception.save();
