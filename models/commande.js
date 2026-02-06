@@ -31,6 +31,23 @@ const commandeSchema = new mongoose.Schema(
       min: 0
     },
 
+    // 🆕 DÉTAILS POUR PRODUITS LOT
+    nombrePieces: {
+      type: Number,
+      default: null
+      // Ex: 5 rouleaux, 10 cartons, etc.
+    },
+    quantiteParPiece: {
+      type: Number,
+      default: null
+      // Ex: 100 mètres par rouleau, 20 kg par carton
+    },
+    uniteDetail: {
+      type: String,
+      default: null
+      // Ex: mètre, kg, litre, etc.
+    },
+
     // Coûts
     prixUnitaire: {
       type: Number,

@@ -1605,15 +1605,16 @@
       const datePeremption = document.getElementById('datePeremption').value;
       const statut = document.getElementById('statutProduit').value;
       const priorite = document.getElementById('prioriteProduit').value;
+      isEnCommande = document.querySelector('input[name="modeEntree"]:checked')?.value === 'commande';
 
       if (!reference || !designation || !rayonId || !dateReception) {
         showNotification('⚠️ Veuillez remplir tous les champs obligatoires', 'warning');
         return;
       }
 
-      // ✨ Pour SIMPLE: valider la quantité initiale
-      // Pour LOT: la quantité n'est pas requise (elle sera définie via réception)
-      if (selectedCategorie && selectedCategorie.typeStockage === 'simple' && quantite <= 0) {
+      // ✨ VALIDATION QUANTITÉ: Seulement en mode STOCK INITIAL
+      // En mode EN COMMANDE: la quantité est définie lors de la réception
+      if (!isEnCommande && selectedCategorie && selectedCategorie.typeStockage === 'simple' && quantite <= 0) {
         showNotification('⚠️ Veuillez entrer une quantité initiale valide', 'warning');
         return;
       }
@@ -1669,7 +1670,7 @@
 
       // Préparer les données du produit
       const modeEntree = document.querySelector('input[name="modeEntree"]:checked').value;
-      const isEnCommande = modeEntree === 'commande';
+      isEnCommande = modeEntree === 'commande';
       
       const produitData = {
         reference,
@@ -1680,7 +1681,7 @@
         // Mode En Commande: quantité = 0 (sera ajoutée à la réception)
         quantiteEntree: isEnCommande ? 0 : quantite,
         prixUnitaire: parseFloat(document.getElementById('prixUnitaire').value) || 0,
-        etat: document.getElementById('etat').value,
+        etat: isEnCommande ? 'EN_COMMANDE' : document.getElementById('etat').value,
         dateReception,
         dateFabrication,
         datePeremption,
@@ -1829,6 +1830,10 @@
                 dateEcheance: dateReceptionCommande,
                 etatPrevu: etatCommande,
                 remarques: remarquesCommande,
+                // 🆕 Ajouter les données LOT si présentes
+                nombrePieces: commandeData.nombrePieces || null,
+                quantiteParPiece: commandeData.quantiteParPiece || null,
+                uniteDetail: commandeData.uniteDetail || null,
                 prixUnitaire: 0  // À remplir ultérieurement
               })
             });

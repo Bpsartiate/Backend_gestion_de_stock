@@ -129,7 +129,11 @@ router.post('/commandes', authMiddleware, async (req, res) => {
       numeroCommande,
       delaiLivraisonPrevu,  // Nouveau: délai prévu en jours
       etatPrevu,             // Nouveau: état attendu
-      remarques              // Nouveau: remarques fournisseur
+      remarques,             // Nouveau: remarques fournisseur
+      marque,                // 🆕 Marque du produit
+      nombrePieces,          // 🆕 Données LOT: nombre de pièces
+      quantiteParPiece,      // 🆕 Données LOT: quantité par pièce
+      uniteDetail            // 🆕 Données LOT: unité de détail
     } = req.body;
 
     // Validation
@@ -172,7 +176,13 @@ router.post('/commandes', authMiddleware, async (req, res) => {
       // Nouveaux champs pour prévisions
       delaiLivraisonPrevu: delaiLivraisonPrevu || 7,  // Par défaut 7 jours
       etatPrevu: etatPrevu || 'Neuf',
-      remarques: remarques || ''
+      remarques: remarques || '',
+      // 🆕 Marque
+      marque: marque || null,
+      // 🆕 Données LOT
+      nombrePieces: nombrePieces || null,
+      quantiteParPiece: quantiteParPiece || null,
+      uniteDetail: uniteDetail || null
     });
 
     await newCommande.save();
