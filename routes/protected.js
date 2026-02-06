@@ -2085,8 +2085,8 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
       })
       .populate({
         path: 'commandesIds',
-        select: 'quantiteCommandee quantiteRecue etatPrevu statut dateEcheance',
-        options: { limit: 1, sort: { dateCommande: -1 } }  // Dernière commande seulement
+        select: 'quantiteCommandee quantiteRecue etatPrevu statut dateEcheance nombrePieces quantiteParPiece uniteDetail marque',
+        options: { sort: { dateCommande: -1 } }  // Toutes les commandes triées par date DESC
       })
       .sort({ designation: 1 });
 

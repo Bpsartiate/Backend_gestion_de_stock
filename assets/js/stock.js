@@ -1034,15 +1034,18 @@ function afficherTableProduits(produits) {
       
       // Afficher la quantité commandée si disponible
       if (produit.commandesIds && produit.commandesIds.length > 0) {
-        // La dernière commande active
+        // La première commande (la plus récente, déjà triée DESC)
         const commande = Array.isArray(produit.commandesIds) ? 
-          produit.commandesIds[produit.commandesIds.length - 1] : 
+          produit.commandesIds[0] :  // ✅ Première = plus récente
           produit.commandesIds;
         
         // Si c'est un objet avec quantiteCommandee
         if (commande && typeof commande === 'object' && commande.quantiteCommandee) {
           quantiteAffichee = commande.quantiteCommandee;
           seuilAffiche = commande.quantiteCommandee;
+          console.log(`🛒 Produit EN_COMMANDE: ${produit.designation} avec quantité: ${commande.quantiteCommandee}`);
+        } else {
+          console.warn(`⚠️ Commande non peuplée ou sans quantiteCommandee pour ${produit.designation}:`, commande);
         }
       }
     } 
