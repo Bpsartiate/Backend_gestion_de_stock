@@ -2386,7 +2386,8 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
       priorite,
       seuilAlerte,
       photoUrl,
-      notes
+      notes,
+      isParentLot  // ← NOUVEAU: Flag pour indiquer c'est un parent LOT (ne pas créer de StockRayon)
     } = req.body;
 
     const magasin = await Magasin.findById(magasinId);
@@ -2424,15 +2425,26 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
     }
 
     // ⚠️ VÉRIFIER LA CAPACITÉ DU RAYON
-    const protuitsRayon = await Produit.countDocuments({ rayonId });
-    if (rayon.capaciteMax && protuitsRayon >= rayon.capaciteMax) {
-      return res.status(400).json({ 
-        message: `❌ Rayon plein! Capacité max: ${rayon.capaciteMax} produits, actuels: ${protuitsRayon}`,
-        rayonNom: rayon.nomRayon,
-        capaciteMax: rayon.capaciteMax,
-        articles: protuitsRayon,
-        occupation: ((protuitsRayon / rayon.capaciteMax) * 100).toFixed(0) + '%'
-      });
+    // 🎁 Pour les parent LOT: skip la validation (ils n'occupent pas vraiment de place)
+    // Les LOTs enfants seront validés lors de la réception
+    // 📦 Pour SIMPLE en mode EN_COMMANDE (quantiteEntree=0): skip aussi (pas d'occupation)
+    if (!isParentLot && (quantiteEntree && quantiteEntree > 0)) {
+      const protuitsRayon = await Produit.countDocuments({ rayonId });
+      if (rayon.capaciteMax && protuitsRayon >= rayon.capaciteMax) {
+        return res.status(400).json({ 
+          message: `❌ Rayon plein! Capacité max: ${rayon.capaciteMax} produits, actuels: ${protuitsRayon}`,
+          rayonNom: rayon.nomRayon,
+          capaciteMax: rayon.capaciteMax,
+          articles: protuitsRayon,
+          occupation: ((protuitsRayon / rayon.capaciteMax) * 100).toFixed(0) + '%'
+        });
+      }
+    } else {
+      if (isParentLot) {
+        console.log(`🎁 Parent LOT - Validation capacité rayon skippée`);
+      } else if (!quantiteEntree || quantiteEntree === 0) {
+        console.log(`📦 Produit EN_COMMANDE (quantité=0) - Validation capacité skippée`);
+      }
     }
 
     const produit = new Produit({
@@ -2495,30 +2507,43 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
 
     // ⚡ CRÉER UN STOCK RAYON pour enregistrer que ce produit est dans ce rayon
     // Le StockRayon lie un produit à un rayon spécifique
+    // 🎁 IMPORTANT: Ne pas créer de StockRayon pour les parents LOT (flag isParentLot)
+    // 📦 IMPORTANT: Ne pas créer de StockRayon si quantité=0 (EN_COMMANDE ou produit vide)
+    // Les LOTs enfants créeront leurs propres StockRayons lors de la réception
     const StockRayon = require('../models/stockRayon'); // À adapter si le modèle a un autre nom
-    try {
-      const stockRayon = new StockRayon({
-        magasinId,
-        produitId: produit._id,
-        rayonId,
-        quantiteDisponible: quantiteEntree || 0,
-        quantiteReservee: 0,
-        emplacementDetaille: '',
-        dateAjout: new Date(),
-        statut: 'EN_STOCK'  // ✅ CORRECT: enum valide du modèle
-      });
-      await stockRayon.save();
-      console.log(`✅ StockRayon créé pour produit ${produit.reference} dans rayon ${rayonId}`);
-    } catch (stockErr) {
-      console.error('⚠️ Erreur création StockRayon (non bloquant):', stockErr.message);
-      // Ne pas bloquer la création du produit si le StockRayon échoue
+    if (!isParentLot && quantiteEntree && quantiteEntree > 0) {
+      try {
+        const stockRayon = new StockRayon({
+          magasinId,
+          produitId: produit._id,
+          rayonId,
+          quantiteDisponible: quantiteEntree,
+          quantiteReservee: 0,
+          emplacementDetaille: '',
+          dateAjout: new Date(),
+          statut: 'EN_STOCK'  // ✅ CORRECT: enum valide du modèle
+        });
+        await stockRayon.save();
+        console.log(`✅ StockRayon créé pour produit ${produit.reference} dans rayon ${rayonId} (quantité: ${quantiteEntree})`);
+      } catch (stockErr) {
+        console.error('⚠️ Erreur création StockRayon (non bloquant):', stockErr.message);
+        // Ne pas bloquer la création du produit si le StockRayon échoue
+      }
+    } else {
+      if (isParentLot) {
+        console.log(`🎁 Produit parent LOT - Pas de StockRayon créé (les enfants seront créés à la réception)`);
+      } else if (!quantiteEntree || quantiteEntree === 0) {
+        console.log(`📦 Produit EN_COMMANDE (quantité=0) - Pas de StockRayon créé (sera ajouté à la réception)`);
+      }
     }
 
     // ⚠️ NOTE: Le mouvement RECEPTION est créé automatiquement par le LOT créé par le frontend
     // Donc on ne crée PAS un mouvement supplémentaire ici pour éviter la duplication
-
+    // 🎁 Pour les parent LOT: ne pas créer de mouvement puisqu'on ne crée pas de StockRayon
+    
     // 🎬 Créer un mouvement de stock pour tracker le stock initial
-    if (quantiteEntree && quantiteEntree > 0) {
+    // 🎁 SAUF pour les parent LOT
+    if (quantiteEntree && quantiteEntree > 0 && !isParentLot) {
       try {
         const movement = new StockMovement({
           magasinId,

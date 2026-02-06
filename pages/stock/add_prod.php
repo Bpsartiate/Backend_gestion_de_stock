@@ -1680,8 +1680,9 @@
         reference,
         designation,
         typeProduitId: categorieId,
-        // 🎁 IMPORTANT: Ne pas ajouter au rayon si LOT (seuls les LOTs enfants seront ajoutés après réception)
-        rayonId: isLot ? null : rayonId,
+        // 🎁 IMPORTANT: Pour LOT, on envoie quand même le rayon, mais avec un flag pour ne pas créer de StockRayon
+        rayonId: rayonId,
+        isParentLot: isLot,  // ← Flag pour le backend: ne pas créer StockRayon pour ce produit
         // 🎯 Mode Stock Initial: utiliser la quantité saisie
         // Mode En Commande: quantité = 0 (sera ajoutée à la réception)
         quantiteEntree: isEnCommande ? 0 : quantite,
