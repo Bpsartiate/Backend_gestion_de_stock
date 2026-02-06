@@ -53,20 +53,70 @@
                   </h6>
                 </div>
                 <div class="card-body">
-                  <div class="row g-3">
-                    <div class="col-md-4">
+                  <!-- POUR PRODUITS SIMPLES -->
+                  <div id="prevSimpleSection" class="row g-3">
+                    <div class="col-md-6">
                       <small class="text-muted">Quantité Prévue</small><br>
                       <strong id="prevQuantite" class="text-primary">-</strong>
                       <span id="prevQuantiteUnit" class="text-muted"> unités</span>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
+                      <small class="text-muted">Marque</small><br>
+                      <strong id="prevMarque" class="text-info">-</strong>
+                    </div>
+                    <div class="col-md-6">
                       <small class="text-muted">Délai Prévu</small><br>
                       <strong id="prevDelai" class="text-warning">-</strong>
                       <span class="text-muted"> jours</span>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                       <small class="text-muted">État Attendu</small><br>
                       <strong id="prevEtat" class="text-success">-</strong>
+                    </div>
+                  </div>
+
+                  <!-- POUR PRODUITS LOT -->
+                  <div id="prevLotSection" class="row g-3" style="display: none;">
+                    <div class="col-12">
+                      <div class="alert alert-info py-2 px-3 mb-2" style="border-left: 4px solid #0dcaf0;">
+                        <strong><i class="fas fa-cube me-2"></i>Détails du Lot Prévu</strong>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <small class="text-muted">Nombre de Pièces</small><br>
+                      <strong id="prevNombrePieces" class="text-primary fs-5">-</strong>
+                      <span id="prevPiecesUnit" class="text-muted"> pièces</span>
+                    </div>
+                    <div class="col-md-3">
+                      <small class="text-muted">Quantité par Pièce</small><br>
+                      <strong id="prevQuantiteParPiece" class="text-primary fs-5">-</strong>
+                      <span id="prevQtyUnit" class="text-muted"> /pièce</span>
+                    </div>
+                    <div class="col-md-3">
+                      <small class="text-muted">Unité de Détail</small><br>
+                      <strong id="prevUniteDetail" class="text-info">-</strong>
+                    </div>
+                    <div class="col-md-3">
+                      <small class="text-muted">Marque</small><br>
+                      <strong id="prevMarqueLot" class="text-info">-</strong>
+                    </div>
+                    <div class="col-12 pt-3 border-top">
+                      <div class="bg-success bg-opacity-10 p-3 rounded border border-success">
+                        <strong class="text-success">
+                          <i class="fas fa-calculator me-2"></i>Total Prévu: 
+                          <span id="prevTotalLot" class="fs-5">-</span>
+                          <span id="prevTotalLotUnit" class="text-muted"></span>
+                        </strong>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <small class="text-muted">Délai Prévu</small><br>
+                      <strong id="prevDelaiLot" class="text-warning">-</strong>
+                      <span class="text-muted"> jours</span>
+                    </div>
+                    <div class="col-md-6">
+                      <small class="text-muted">État Attendu</small><br>
+                      <strong id="prevEtatLot" class="text-success">-</strong>
                     </div>
                   </div>
                 </div>
@@ -264,19 +314,62 @@
                   </small>
                 </div>
 
-                <!-- POUR PRODUITS LOT: Nombre de Pièces Reçues -->
-                <div id="realieLot" class="col-md-4" style="display: none;">
-                  <label class="form-label fw-bold">
-                    <i class="fas fa-cube me-2"></i>Nombre de Pièces Reçues <span class="text-danger">*</span>
-                  </label>
-                  <div class="input-group">
-                    <input type="number" id="nombrePiecesReelles" class="form-control" min="1" step="1" />
-                    <span class="input-group-text">pièces</span>
+                <!-- POUR PRODUITS LOT: Nombre de Pièces Reçues ET Quantité par Pièce -->
+                <div id="realieLot" style="display: none;">
+                  <div class="row g-3">
+                    <div class="col-md-3">
+                      <label class="form-label fw-bold">
+                        <i class="fas fa-cube me-2"></i>Nombre de Pièces Reçues <span class="text-danger">*</span>
+                      </label>
+                      <div class="input-group">
+                        <input type="number" id="nombrePiecesReelles" class="form-control" min="1" step="1" />
+                        <span class="input-group-text">pièces</span>
+                      </div>
+                      <small id="comparaisonPieces" class="text-muted d-block mt-1">
+                        <strong>Prévues:</strong> <span id="prevPiecesVal">-</span> | 
+                        <strong>Écart:</strong> <span id="ecartPiecesVal" class="text-danger">-</span>
+                      </small>
+                    </div>
+
+                    <div class="col-md-3">
+                      <label class="form-label fw-bold">
+                        <i class="fas fa-weight me-2"></i>Quantité par Pièce Reçue <span class="text-danger">*</span>
+                      </label>
+                      <div class="input-group">
+                        <input type="number" id="quantiteParPieceReelle" class="form-control" min="0.01" step="0.01" />
+                        <span class="input-group-text" id="uniteParPieceReelle">unité</span>
+                      </div>
+                      <small id="comparaisonQtyParPiece" class="text-muted d-block mt-1">
+                        <strong>Prévue:</strong> <span id="prevQtyParPieceVal">-</span> | 
+                        <strong>Écart:</strong> <span id="ecartQtyParPieceVal" class="text-danger">-</span>
+                      </small>
+                    </div>
+
+                    <div class="col-md-3">
+                      <label class="form-label fw-bold text-success">
+                        <i class="fas fa-calculator me-2"></i>Total Reçu
+                      </label>
+                      <div class="input-group">
+                        <input type="number" id="totalReceptionsLot" class="form-control fw-bold text-success" readonly />
+                        <span class="input-group-text" id="uniteTotalReception">unité</span>
+                      </div>
+                      <small class="text-muted d-block mt-1">
+                        <strong>Formule:</strong> Pièces × Qté/pièce
+                      </small>
+                    </div>
+
+                    <div class="col-md-3">
+                      <label class="form-label fw-bold text-info">
+                        <i class="fas fa-balance-scale me-2"></i>Comparaison Total
+                      </label>
+                      <div class="input-group">
+                        <input type="text" id="ecartTotalLot" class="form-control fw-bold" readonly />
+                      </div>
+                      <small id="ecartTotalLotText" class="text-muted d-block mt-1">
+                        <strong>Prévu:</strong> <span id="prevTotalVal">-</span>
+                      </small>
+                    </div>
                   </div>
-                  <small id="comparaisonPieces" class="text-muted d-block mt-1">
-                    <strong>Prévues:</strong> <span id="prevPiecesVal">-</span> | 
-                    <strong>Écart:</strong> <span id="ecartPiecesVal" class="text-danger">-</span>
-                  </small>
                 </div>
 
                 <!-- Date Réception Réelle (pour les deux) -->
@@ -307,6 +400,19 @@
                     <strong>Attendu:</strong> <span id="prevEtatVal">-</span> | 
                     <strong>Conforme:</strong> <span id="conformeEtat" class="text-success">✓</span>
                   </small>
+                </div>
+
+                <!-- Marque Reçue (pour les deux) -->
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">
+                    <i class="fas fa-tag me-2"></i>Marque Reçue <span class="text-danger">*</span>
+                  </label>
+                  <input type="text" id="marqueReelle" class="form-control" placeholder="Ex: Vebis, Premium..." required />
+                  <small id="comparaisonMarque" class="text-muted d-block mt-1">
+                    <strong>Prévue:</strong> <span id="prevMarqueVal">-</span> | 
+                    <strong>Conforme:</strong> <span id="conformeMarque" class="text-success">✓</span>
+                  </small>
+                  <div class="invalid-feedback">Marque obligatoire</div>
                 </div>
 
                 <!-- Problèmes Identifiés (pour les deux) -->

@@ -4500,10 +4500,22 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       const Commande = require('../models/commande');
       const commande = await Commande.findOne({ produitId: produitId });
       if (commande) {
-        commande.statut = 'REÇUE';
+        // ✅ CORRECTION: Utiliser les valeurs d'enum valides
+        // Vérifier si c'est une réception complète ou partielle
+        const quantiteCommandee = commande.quantiteCommandee || 0;
+        const quantiteTotal = (commande.quantiteRecue || 0) + parseFloat(quantite);
+        
+        if (quantiteTotal >= quantiteCommandee) {
+          commande.statut = 'REÇUE_COMPLÈTEMENT';  // ✅ Valeur enum correcte
+          console.log(`✅ Commande mise à jour: statut = REÇUE_COMPLÈTEMENT (${quantiteTotal}/${quantiteCommandee})`);
+        } else {
+          commande.statut = 'REÇUE_PARTIELLEMENT';  // ✅ Valeur enum correcte
+          console.log(`⚠️ Commande mise à jour: statut = REÇUE_PARTIELLEMENT (${quantiteTotal}/${quantiteCommandee})`);
+        }
+        
+        commande.quantiteRecue = quantiteTotal;
         commande.dateReception = new Date();
         await commande.save();
-        console.log(`✅ Commande mise à jour: statut = REÇUE`);
       }
     }
 

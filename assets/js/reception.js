@@ -1214,8 +1214,8 @@ async function submitReception(e) {
       // Pour LOT, la quantité est juste le nombre de pièces (pas la quantité totale)
       quantite = nombrePieces;
     } else {
-      // Pour SIMPLE: vérifier le champ quantite standard
-      quantite = parseFloat(document.getElementById('quantiteReception').value);
+      // Pour SIMPLE: récupérer la quantité RÉELLE reçue (pas la prévue!)
+      quantite = parseFloat(document.getElementById('quantiteRealReception').value);
 
       if (!produitId || !quantite || !rayonId || prixAchat === null || prixAchat === undefined) {
         console.error('❌ Champs requis manquants!', {
@@ -1408,6 +1408,52 @@ async function submitReception(e) {
       await createLotsForReception(result.reception, produitId);
     }
 
+    // 🔄 METTRE À JOUR LE PRODUIT: passer EN_COMMANDE → Disponible + quantité reçue
+    // ✅ Vale pour SIMPLE ET LOT
+    try {
+      // Calculer la quantité totale reçue selon le type
+      let totalRecu = 0;
+      
+      if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
+        // LOT: pièces × quantité/pièce
+        const nombrePieces = parseInt(document.getElementById('nombrePiecesReelles').value) || 0;
+        const quantiteParPiece = parseFloat(document.getElementById('quantiteParPieceReelle').value) || 0;
+        totalRecu = nombrePieces * quantiteParPiece;
+        console.log(`🎁 LOT total reçu: ${nombrePieces} pièces × ${quantiteParPiece} = ${totalRecu}`);
+      } else {
+        // SIMPLE: quantité directe
+        totalRecu = parseFloat(document.getElementById('quantiteRealReception').value) || 0;
+        console.log(`📦 SIMPLE total reçu: ${totalRecu}`);
+      }
+
+      const updateProduitData = {
+        etat: 'Disponible',  // Passer de EN_COMMANDE à Disponible
+        quantite: totalRecu  // Quantité reçue
+      };
+
+      console.log('🔄 Mise à jour produit:', { produitId, ...updateProduitData });
+
+      const updateResponse = await fetch(
+        `${API_CONFIG.BASE_URL}/api/protected/produits/${produitId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify(updateProduitData)
+        }
+      );
+
+      if (updateResponse.ok) {
+        console.log('✅ Produit mis à jour: EN_COMMANDE → Disponible');
+      } else {
+        console.warn('⚠️ Erreur mise à jour produit:', await updateResponse.text());
+      }
+    } catch (err) {
+      console.warn('⚠️ Erreur lors de la mise à jour du produit:', err.message);
+    }
+
     showToast(' Réception enregistrée avec succès!', 'success');
 
     // Fermer le modal
@@ -1437,7 +1483,7 @@ async function submitReception(e) {
     
     // 🆕 METTRE À JOUR LE MODAL DES RAYONS SI OUVERT
     try {
-      const rayonId = values.rayonId;
+      const rayonId = document.getElementById('rayonReception')?.value;
       if (window.displayDetailStocks && rayonId) {
         console.log('🔄 Mise à jour détail stocks du rayon:', rayonId);
         await window.displayDetailStocks(rayonId);

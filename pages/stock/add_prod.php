@@ -1672,11 +1672,16 @@
       const modeEntree = document.querySelector('input[name="modeEntree"]:checked').value;
       isEnCommande = modeEntree === 'commande';
       
+      // 🎁 Déterminer si c'est un LOT OR SIMPLE
+      const lotDiv = document.getElementById('quantitePrevisionsLot');
+      const isLot = lotDiv && lotDiv.style.display !== 'none';
+      
       const produitData = {
         reference,
         designation,
         typeProduitId: categorieId,
-        rayonId,
+        // 🎁 IMPORTANT: Ne pas ajouter au rayon si LOT (seuls les LOTs enfants seront ajoutés après réception)
+        rayonId: isLot ? null : rayonId,
         // 🎯 Mode Stock Initial: utiliser la quantité saisie
         // Mode En Commande: quantité = 0 (sera ajoutée à la réception)
         quantiteEntree: isEnCommande ? 0 : quantite,
