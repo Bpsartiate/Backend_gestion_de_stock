@@ -49,6 +49,14 @@ const commandeSchema = new mongoose.Schema(
       maxlength: 200
     },
 
+    // 🆕 MARQUE DU PRODUIT
+    marque: {
+      type: String,
+      maxlength: 100,
+      trim: true
+      // Ex: Samsung, LG, Dell, etc.
+    },
+
     // 🆕 PRÉVISIONS & SPÉCIFICATIONS
     etatPrevu: {
       type: String,

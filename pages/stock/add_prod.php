@@ -108,7 +108,7 @@
             <div class="col-md-12">
               <label class="form-label fw-bold" id="labelQuantite">Stock Initial <span class="text-danger">*</span></label>
               <div class="input-group">
-                <input type="number" name="quantite" id="quantite" class="form-control" min="0" step="0.01" required />
+                <input type="number" name="quantite" id="quantite" class="form-control" min="0" step="0.01" placeholder="0 accepté pour commandes" required />
                 <span class="input-group-text" id="uniteLabel">unités</span>
               </div>
               <div class="invalid-feedback">Quantité obligatoire</div>
@@ -303,14 +303,72 @@
                     </div>
                   </div>
 
-                  <!-- Quantité Prévue -->
+                  <!-- Marque -->
                   <div class="col-md-6">
+                    <label class="form-label fw-bold">
+                      <i class="fas fa-tag me-2 text-warning"></i>Marque <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" id="produitMarque" class="form-control" placeholder="Ex: Samsung, LG, etc." />
+                    <div class="invalid-feedback">Marque obligatoire</div>
+                  </div>
+
+                  <!-- Quantité Prévue - SIMPLE (défaut) -->
+                  <div class="col-md-6" id="quantitePrevisionsSimple">
                     <label class="form-label fw-bold">
                       <i class="fas fa-boxes me-2 text-warning"></i>Quantité Prévue <span class="text-danger">*</span>
                     </label>
                     <div class="input-group">
-                      <input type="number" id="produitQuantiteCommande" class="form-control" min="1" step="1" placeholder="100">
+                      <input type="number" id="produitQuantiteCommande" class="form-control" min="1" step="0.01" placeholder="100">
                       <span class="input-group-text" id="produitCommandeQuantiteUnit">unité</span>
+                    </div>
+                  </div>
+
+                  <!-- Quantité Prévue - LOT (caché au départ) -->
+                  <div id="quantitePrevisionsLot" style="display: none;" class="col-md-12">
+                    <div class="card bg-info bg-opacity-10 border-info mb-3">
+                      <div class="card-header bg-info bg-opacity-10 border-info py-2">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="fas fa-cube me-2"></i>Détails Quantité Prévue (LOT)
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="row g-3">
+                          <!-- Nombre de Pièces -->
+                          <div class="col-md-4">
+                            <label class="form-label fw-bold">
+                              <i class="fas fa-cube me-2"></i>Nombre de Pièces <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                              <input type="number" id="produitNombrePieces" class="form-control form-control-lg" min="1" step="1" placeholder="Ex: 5">
+                              <span class="input-group-text">pièces</span>
+                            </div>
+                            <small class="text-muted d-block mt-2">Rouleaux, cartons, reams...</small>
+                          </div>
+                          
+                          <!-- Quantité par Pièce -->
+                          <div class="col-md-4">
+                            <label class="form-label fw-bold">
+                              <i class="fas fa-weight me-2"></i>Quantité par Pièce <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                              <input type="number" id="produitQuantiteParPiece" class="form-control form-control-lg" min="0.01" step="0.01" placeholder="100">
+                              <span class="input-group-text" id="produitQuantiteParPieceUnit">unité</span>
+                            </div>
+                            <small class="text-muted d-block mt-2">Mètres, kg, litres...</small>
+                          </div>
+                          
+                          <!-- Unité -->
+                          <div class="col-md-4">
+                            <label class="form-label fw-bold">
+                              <i class="fas fa-ruler me-2"></i>Unité <span class="text-danger">*</span>
+                            </label>
+                            <select id="produitUniteDetail" class="form-select form-select-lg">
+                              <option value="">-- Choisir unité --</option>
+                            </select>
+                            <small class="text-muted d-block mt-2">Mètre, kg, litre, etc.</small>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1207,6 +1265,9 @@
     } else {
       clearSupplementaryFields();
     }
+
+    // 5️⃣ ✅ NOUVEAU: Adapter les champs de quantité prévue si en mode commande
+    adaptQuantitePrevisionsToType();
   }
 
   // Afficher les champs supplémentaires
@@ -1219,6 +1280,60 @@
     console.log('🧹 Champs supplémentaires effacés');
   }
 
+  // ✅ NOUVEAU: Adapter les champs de quantité selon le type de produit (LOT vs SIMPLE)
+  function adaptQuantitePrevisionsToType() {
+    const categorieId = document.getElementById('categorieId').value;
+    if (!categorieId) {
+      console.log('❌ Aucune catégorie sélectionnée');
+      return;
+    }
+
+    // Trouver la catégorie sélectionnée
+    const categorie = allCategories.find(c => c._id === categorieId);
+    if (!categorie) {
+      console.log('❌ Catégorie non trouvée');
+      return;
+    }
+
+    const isLot = categorie.typeStockage === 'lot';
+    console.log(`📊 Adaptation quantité prévisions: ${isLot ? 'LOT' : 'SIMPLE'}`);
+
+    const simpleDiv = document.getElementById('quantitePrevisionsSimple');
+    const lotDiv = document.getElementById('quantitePrevisionsLot');
+
+    if (isLot) {
+      // Afficher les champs LOT, masquer le simple
+      simpleDiv.style.display = 'none';
+      lotDiv.style.display = 'block';
+
+      // Remplir les unités de vente disponibles
+      const unitSelect = document.getElementById('produitUniteDetail');
+      unitSelect.innerHTML = '<option value="">-- Choisir unité --</option>';
+      
+      if (categorie.unitesVente && categorie.unitesVente.length > 0) {
+        categorie.unitesVente.forEach(unite => {
+          const option = document.createElement('option');
+          option.value = unite;
+          option.textContent = unite;
+          unitSelect.appendChild(option);
+        });
+        console.log(`✅ ${categorie.unitesVente.length} unités disponibles`);
+      } else {
+        console.log('⚠️ Pas d\'unités configurées pour ce LOT');
+      }
+    } else {
+      // Afficher le simple, masquer LOT
+      simpleDiv.style.display = 'block';
+      lotDiv.style.display = 'none';
+    }
+
+    // Mettre à jour les labels des unités
+    const unitLabel = document.getElementById('produitCommandeQuantiteUnit');
+    if (unitLabel) {
+      unitLabel.textContent = categorie.unitePrincipaleStockage || 'unité';
+    }
+  }
+
   // ===== ÉVÉNEMENTS =====
   document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 DOMContentLoaded - add_prod.php');
@@ -1229,16 +1344,45 @@
     // ===== GESTION MODE ENTRÉE (Stock Initial vs En Commande) =====
     const modeStockRadio = document.getElementById('modeStockInitial');
     const modeCommandeRadio = document.getElementById('modeEnCommande');
-    const sectionCommande = document.getElementById('sectionCommande');
 
     function toggleSectionCommande() {
-      const isCommande = document.querySelector('input[name="modeEntree"]:checked').value === 'commande';
-      sectionCommande.style.display = isCommande ? 'block' : 'none';
+      const sectionCommande = document.getElementById('sectionCommande');
+      const stockContainer = document.getElementById('stockInitialContainer');
+      const isCommande = document.querySelector('input[name="modeEntree"]:checked')?.value === 'commande';
+      
+      console.log(`🔄 Toggle Mode Entrée: isCommande=${isCommande}`);
+      
+      // Afficher/Masquer la section COMMANDE
+      if (sectionCommande) {
+        sectionCommande.style.display = isCommande ? 'block' : 'none';
+        console.log(`   sectionCommande: ${isCommande ? '✅ affichée' : '❌ masquée'}`);
+      } else {
+        console.warn('⚠️ sectionCommande non trouvée');
+      }
+      
+      // Afficher/Masquer le STOCK INITIAL et mettre à jour l'attribut required
+      if (stockContainer) {
+        stockContainer.style.display = isCommande ? 'none' : 'block';
+        const quantiteInput = document.getElementById('quantite');
+        if (quantiteInput) {
+          if (isCommande) {
+            quantiteInput.removeAttribute('required');
+            quantiteInput.value = '';
+          } else {
+            quantiteInput.setAttribute('required', 'required');
+          }
+        }
+        console.log(`   stockInitialContainer: ${isCommande ? '❌ masqué' : '✅ affichée'}`);
+      } else {
+        console.warn('⚠️ stockInitialContainer non trouvée');
+      }
       
       if (isCommande) {
         console.log('📦 Mode EN COMMANDE activé');
         // Charger les fournisseurs pour le mode commande
         loadFournisseursProduit();
+        // Adapter les champs de quantité au type de produit
+        adaptQuantitePrevisionsToType();
       } else {
         console.log('📦 Mode STOCK INITIAL activé');
       }
@@ -1246,6 +1390,9 @@
 
     if (modeStockRadio) modeStockRadio.addEventListener('change', toggleSectionCommande);
     if (modeCommandeRadio) modeCommandeRadio.addEventListener('change', toggleSectionCommande);
+    
+    // ✅ Appeler une fois au chargement pour initialiser l'état
+    toggleSectionCommande();
 
     // Charger les fournisseurs pour le mode commande dans produit
     async function loadFournisseursProduit() {
@@ -1579,14 +1726,38 @@
         let commandeData = null;
         if (isEnCommande) {
           console.log('📦 Mode EN COMMANDE - Sauvegarder les données avant réinitialisation');
-          commandeData = {
-            fournisseurId: document.getElementById('produitFournisseur').value,
-            quantiteCommande: parseFloat(document.getElementById('produitQuantiteCommande').value),
-            dateReceptionCommande: document.getElementById('produitDateReception').value,
-            etatCommande: document.getElementById('produitEtatCommande').value,
-            remarquesCommande: document.getElementById('produitRemarquesCommande').value
-          };
-          console.log('💾 Données commande sauvegardées:', commandeData);
+          
+          // Vérifier si c'est un LOT ou SIMPLE
+          const lotDiv = document.getElementById('quantitePrevisionsLot');
+          const isLot = lotDiv && lotDiv.style.display !== 'none';
+
+          if (isLot) {
+            // Capturer les données LOT
+            commandeData = {
+              fournisseurId: document.getElementById('produitFournisseur').value,
+              marque: document.getElementById('produitMarque').value,
+              nombrePieces: parseInt(document.getElementById('produitNombrePieces').value) || 1,
+              quantiteParPiece: parseFloat(document.getElementById('produitQuantiteParPiece').value) || 0,
+              uniteDetail: document.getElementById('produitUniteDetail').value,
+              // Calculer la quantité totale: nombrePieces × quantiteParPiece
+              quantiteCommande: (parseInt(document.getElementById('produitNombrePieces').value) || 1) * (parseFloat(document.getElementById('produitQuantiteParPiece').value) || 0),
+              dateReceptionCommande: document.getElementById('produitDateReception').value,
+              etatCommande: document.getElementById('produitEtatCommande').value,
+              remarquesCommande: document.getElementById('produitRemarquesCommande').value
+            };
+            console.log('💾 Données commande LOT sauvegardées:', commandeData);
+          } else {
+            // Capturer les données SIMPLE
+            commandeData = {
+              fournisseurId: document.getElementById('produitFournisseur').value,
+              marque: document.getElementById('produitMarque').value,
+              quantiteCommande: parseFloat(document.getElementById('produitQuantiteCommande').value),
+              dateReceptionCommande: document.getElementById('produitDateReception').value,
+              etatCommande: document.getElementById('produitEtatCommande').value,
+              remarquesCommande: document.getElementById('produitRemarquesCommande').value
+            };
+            console.log('💾 Données commande SIMPLE sauvegardées:', commandeData);
+          }
         }
 
         // Réinitialiser le formulaire
@@ -1640,6 +1811,8 @@
 
             console.log('📦 Création commande avec:', { produitId: produit._id, magasinId, fournisseurId, quantiteCommande, dateReceptionCommande });
 
+            const marque = commandeData.marque || '';
+            
             const commandeResponse = await fetch(`${API_BASE}/commandes`, {
               method: 'POST',
               headers: {
@@ -1650,6 +1823,7 @@
                 produitId: produit._id || produit.id,
                 magasinId: magasinId,
                 fournisseurId: fournisseurId,
+                marque: marque,
                 quantiteCommandee: quantiteCommande,
                 delaiLivraisonPrevu: delaiLivraisonPrevu,
                 dateEcheance: dateReceptionCommande,
