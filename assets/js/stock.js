@@ -1029,7 +1029,7 @@ function afficherTableProduits(produits) {
     let seuilAffiche = produit.seuilAlerte || 10;
     
     // 📦 SI LE PRODUIT EST EN COMMANDE
-    if (produit.etat === 'EN_COMMANDE' || produit.etat === 'EN_COMMANDE') {
+    if (produit.etat === 'EN_COMMANDE') {
       etatBadge = '<span class="badge bg-info">🛒 En commande</span>';
       
       // Afficher la quantité commandée si disponible
@@ -1040,13 +1040,27 @@ function afficherTableProduits(produits) {
           produit.commandesIds;
         
         // Si c'est un objet avec quantiteCommandee
-        if (commande && typeof commande === 'object' && commande.quantiteCommandee) {
-          quantiteAffichee = commande.quantiteCommandee;
-          seuilAffiche = commande.quantiteCommandee;
-          console.log(`🛒 Produit EN_COMMANDE: ${produit.designation} avec quantité: ${commande.quantiteCommandee}`);
+        if (commande && typeof commande === 'object') {
+          // 🎁 Pour LOT: Calculer depuis nombrePieces × quantiteParPiece
+          if (commande.nombrePieces && commande.quantiteParPiece) {
+            quantiteAffichee = (commande.nombrePieces * commande.quantiteParPiece);
+            seuilAffiche = quantiteAffichee;
+            console.log(`🛒 Produit EN_COMMANDE (LOT): ${produit.designation} avec quantité: ${quantiteAffichee} (${commande.nombrePieces} × ${commande.quantiteParPiece})`);
+          } 
+          // Pour SIMPLE: Utiliser quantiteCommandee directement
+          else if (commande.quantiteCommandee) {
+            quantiteAffichee = commande.quantiteCommandee;
+            seuilAffiche = commande.quantiteCommandee;
+            console.log(`🛒 Produit EN_COMMANDE (SIMPLE): ${produit.designation} avec quantité: ${commande.quantiteCommandee}`);
+          }
+          else {
+            console.warn(`⚠️ Commande sans quantiteCommandee pour ${produit.designation}:`, commande);
+          }
         } else {
           console.warn(`⚠️ Commande non peuplée ou sans quantiteCommandee pour ${produit.designation}:`, commande);
         }
+      } else {
+        console.warn(`⚠️ Aucune commande trouvée pour ${produit.designation}`);
       }
     } 
     // SINON: Déterminer l'état normal du stock
