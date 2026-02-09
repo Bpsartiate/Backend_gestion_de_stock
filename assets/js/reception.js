@@ -1408,51 +1408,9 @@ async function submitReception(e) {
       await createLotsForReception(result.reception, produitId);
     }
 
-    // 🔄 METTRE À JOUR LE PRODUIT: passer EN_COMMANDE → Disponible + quantité reçue
-    // ✅ Vale pour SIMPLE ET LOT
-    try {
-      // Calculer la quantité totale reçue selon le type
-      let totalRecu = 0;
-      
-      if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
-        // LOT: pièces × quantité/pièce
-        const nombrePieces = parseInt(document.getElementById('nombrePiecesReelles').value) || 0;
-        const quantiteParPiece = parseFloat(document.getElementById('quantiteParPieceReelle').value) || 0;
-        totalRecu = nombrePieces * quantiteParPiece;
-        console.log(`🎁 LOT total reçu: ${nombrePieces} pièces × ${quantiteParPiece} = ${totalRecu}`);
-      } else {
-        // SIMPLE: quantité directe
-        totalRecu = parseFloat(document.getElementById('quantiteRealReception').value) || 0;
-        console.log(`📦 SIMPLE total reçu: ${totalRecu}`);
-      }
-
-      const updateProduitData = {
-        etat: 'Disponible',  // Passer de EN_COMMANDE à Disponible
-        quantite: totalRecu  // Quantité reçue
-      };
-
-      console.log('🔄 Mise à jour produit:', { produitId, ...updateProduitData });
-
-      const updateResponse = await fetch(
-        `${API_CONFIG.BASE_URL}/api/protected/produits/${produitId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken')}`
-          },
-          body: JSON.stringify(updateProduitData)
-        }
-      );
-
-      if (updateResponse.ok) {
-        console.log('✅ Produit mis à jour: EN_COMMANDE → Disponible');
-      } else {
-        console.warn('⚠️ Erreur mise à jour produit:', await updateResponse.text());
-      }
-    } catch (err) {
-      console.warn('⚠️ Erreur lors de la mise à jour du produit:', err.message);
-    }
+    // 🔄 NOTE: Le produit est automatiquement mis à jour par POST /receptions
+    // Le backend passe EN_COMMANDE → STOCKÉ quand la réception est enregistrée
+    // Pas besoin de PATCH supplémentaire ici
 
     showToast(' Réception enregistrée avec succès!', 'success');
 

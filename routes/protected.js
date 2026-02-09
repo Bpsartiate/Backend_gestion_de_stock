@@ -26,6 +26,7 @@ const AlerteStock = require('../models/alerteStock');
 const RapportInventaire = require('../models/rapportInventaire');
 const Reception = require('../models/reception');
 const StockRayon = require('../models/stockRayon');
+const Commande = require('../models/commande');
 const consolidationService = require('../services/consolidationService');
 
 // Profil et membres protégés
@@ -4517,32 +4518,51 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
 
     // ✅ NOUVEAU: Si le produit était EN_COMMANDE, le passer à STOCKÉ
     if (produit.etat === 'EN_COMMANDE') {
-      produit.etat = 'STOCKÉ';
-      await produit.save();
-      console.log(`✅ État du produit mis à jour: EN_COMMANDE → STOCKÉ`);
+      try {
+        console.log(`🔍 Tentative de mise à jour de l'état du produit: EN_COMMANDE → STOCKÉ`);
+        
+        produit.etat = 'STOCKÉ';
+        await produit.save();
+        console.log(`✅ État du produit mis à jour: EN_COMMANDE → STOCKÉ`);
 
-      // Mettre à jour le statut de la commande associée
-      const Commande = require('../models/commande');
-      const commande = await Commande.findOne({ produitId: produitId });
-      if (commande) {
-        // ✅ CORRECTION: Utiliser les valeurs d'enum valides
-        // Vérifier si c'est une réception complète ou partielle
-        const quantiteCommandee = commande.quantiteCommandee || 0;
-        const quantiteTotal = (commande.quantiteRecue || 0) + parseFloat(quantite);
-        
-        if (quantiteTotal >= quantiteCommandee) {
-          commande.statut = 'REÇUE_COMPLÈTEMENT';  // ✅ Valeur enum correcte
-          console.log(`✅ Commande mise à jour: statut = REÇUE_COMPLÈTEMENT (${quantiteTotal}/${quantiteCommandee})`);
+        // Mettre à jour le statut de la commande associée
+        const commande = await Commande.findOne({ produitId: produitId });
+        if (commande) {
+          console.log(`📦 Commande trouvée: ${commande._id}`);
+          
+          // Vérifier si c'est une réception complète ou partielle
+          const quantiteCommandee = commande.quantiteCommandee || 0;
+          const quantiteTotal = (commande.quantiteRecue || 0) + parseFloat(quantite);
+          
+          if (quantiteTotal >= quantiteCommandee) {
+            commande.statut = 'REÇUE_COMPLÈTEMENT';
+            console.log(`✅ Commande mise à jour: statut = REÇUE_COMPLÈTEMENT (${quantiteTotal}/${quantiteCommandee})`);
+          } else {
+            commande.statut = 'REÇUE_PARTIELLEMENT';
+            console.log(`⚠️ Commande mise à jour: statut = REÇUE_PARTIELLEMENT (${quantiteTotal}/${quantiteCommandee})`);
+          }
+          
+          commande.quantiteRecue = quantiteTotal;
+          commande.dateReception = new Date();
+          await commande.save();
+          console.log(`✅ Commande sauvegardée avec succès`);
         } else {
-          commande.statut = 'REÇUE_PARTIELLEMENT';  // ✅ Valeur enum correcte
-          console.log(`⚠️ Commande mise à jour: statut = REÇUE_PARTIELLEMENT (${quantiteTotal}/${quantiteCommandee})`);
+          console.log(`⚠️ Aucune commande trouvée pour le produit ${produitId}`);
         }
-        
-        commande.quantiteRecue = quantiteTotal;
-        commande.dateReception = new Date();
-        await commande.save();
+      } catch (updateError) {
+        console.error(`❌ Erreur lors de la mise à jour de l'état du produit:`, updateError.message);
+        // Ne pas arrêter la réception si la mise à jour échoue
       }
+    } else {
+      console.log(`ℹ️ Produit n'est pas EN_COMMANDE (état actuel: ${produit.etat})`);
     }
+
+    // 🔄 RECHARGER LE PRODUIT POUR CONFIRMER LES CHANGEMENTS
+    const produitMisAJour = await Produit.findById(produitId);
+    console.log(`🔄 Produit rechargé pour confirmation:`);
+    console.log(`   - etat: ${produitMisAJour.etat}`);
+    console.log(`   - quantiteActuelle: ${produitMisAJour.quantiteActuelle}`);
+    console.log(`   - quantiteEntree: ${produitMisAJour.quantiteEntree}`);
 
     // 6. Lier le mouvement à la réception
     reception.mouvementStockId = stockMovement._id;
@@ -4571,9 +4591,10 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         receptionsFusionnées: consolidationResult.receptionsFusionnées || 1
       },
       produitUpdated: {
-        id: produit._id,
-        quantiteActuelle: produit.quantiteActuelle,
-        quantiteEntree: produit.quantiteEntree
+        id: produitMisAJour._id,
+        etat: produitMisAJour.etat,  // ✨ IMPORTANT: Utiliser le produit mis à jour
+        quantiteActuelle: produitMisAJour.quantiteActuelle,
+        quantiteEntree: produitMisAJour.quantiteEntree
       }
     });
   } catch (error) {
