@@ -664,18 +664,19 @@ router.get('/produits/:produitId/lots-disponibles', authMiddleware, async (req, 
             return res.status(404).json({ error: 'Produit non trouvé' });
         }
         
-        // Compter les LOTs disponibles
-        const lotsCount = await Lot.countDocuments({
+        // 🆕 FIX: Récupérer les détails des LOTs (pas juste count)
+        const lots = await Lot.find({
             produitId,
             status: { $in: ['complet', 'partiel_vendu'] }
-        });
+        }).select('_id quantiteInitiale quantiteRestante status').sort({ dateReception: 1 });
         
-        console.log(`📦 ${lotsCount} LOT(s) disponible(s) pour produit ${produitId}`);
+        console.log(`📦 ${lots.length} LOT(s) disponible(s) pour produit ${produitId}`);
         
         res.json({
             produitId,
-            lotsDisponibles: lotsCount,
-            quantiteActuelle: produit.quantiteActuelle || 0
+            lotsDisponibles: lots.length,
+            quantiteActuelle: produit.quantiteActuelle || 0,
+            lots: lots  // 🆕 Détails des LOTs
         });
         
     } catch (error) {

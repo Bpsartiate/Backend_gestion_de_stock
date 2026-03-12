@@ -2119,7 +2119,7 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
           magasinId: magasinId,
           status: { $ne: 'epuise' }
         });
-        const quantiteLots = lotsActuelsProduit.reduce((sum, lot) => sum + (lot.quantiteInitiale || 0), 0);
+        const quantiteLots = lotsActuelsProduit.reduce((sum, lot) => sum + (lot.quantiteRestante || 0), 0);
 
         // Total = StockRayons + LOTs
         const quantiteReeleProduit = quantiteStockRayons + quantiteLots;
@@ -2653,7 +2653,7 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
       {
         $group: {
           _id: '$produitId',
-          totalQuantite: { $sum: '$quantiteInitiale' }
+          totalQuantite: { $sum: '$quantiteRestante' }
         }
       }
     ]);
@@ -3534,7 +3534,7 @@ router.post('/lots', authMiddleware, checkMagasinAccess, async (req, res) => {
         {
           $group: {
             _id: '$produitId',
-            totalQuantite: { $sum: '$quantiteInitiale' }
+            totalQuantite: { $sum: '$quantiteRestante' }
           }
         }
       ]);

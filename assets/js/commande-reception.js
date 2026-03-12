@@ -34,9 +34,30 @@
     
     if (!produitId) {
       document.getElementById('sectionPrevisions').style.display = 'none';
+      document.getElementById('sectionRealiteComparaison').style.display = 'none';
       clearPrevisionsDisplay();
       return;
     }
+
+    // 🔍 Récupérer le produit pour vérifier son status
+    const produit = PRODUITS_RECEPTION?.find(p => p._id === produitId);
+    console.log('📦 Produit sélectionné - etat:', produit?.etat);
+    
+    // ✅ Vérifier si le produit est EN_COMMANDE
+    const isEnCommande = produit?.etat === 'EN_COMMANDE';
+    console.log(`🎯 Est EN_COMMANDE? ${isEnCommande}`);
+    
+    // Si le produit n'est pas EN_COMMANDE, cacher les sections EN_COMMANDE
+    if (!isEnCommande) {
+      console.log('ℹ️ Produit STOCKÉ - masquage sections EN_COMMANDE');
+      document.getElementById('sectionPrevisions').style.display = 'none';
+      document.getElementById('sectionRealiteComparaison').style.display = 'none';
+      clearPrevisionsDisplay();
+      return;
+    }
+
+    // 📦 Produit EN_COMMANDE - montrer les sections
+    document.getElementById('sectionRealiteComparaison').style.display = 'block';
 
     try {
       // Charger la commande liée au produit

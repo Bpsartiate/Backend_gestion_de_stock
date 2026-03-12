@@ -13,6 +13,38 @@
         <div class="modal-body">
           <input type="hidden" id="produitId" />
           
+          <!-- 🔍 RECHERCHE PRODUIT EXISTANT (visibleEn Commande uniquement) -->
+          <div id="searchProductSection" class="row g-3 mb-4" style="display: none;">
+            <div class="col-md-12">
+              <label class="form-label fw-bold d-flex align-items-center">
+                <i class="fas fa-search me-2 text-info"></i>
+                Rechercher un produit existant (optionnel)
+              </label>
+              <div class="position-relative">
+                <input 
+                  type="text" 
+                  id="searchExistingProduct" 
+                  class="form-control" 
+                  placeholder="🔍 Taper référence ou désignation... (ex: Po1214)"
+                  autocomplete="off"
+                />
+                <!-- Dropdown résultats -->
+                <div 
+                  id="searchResultsDropdown" 
+                  class="position-absolute w-100 bg-white border rounded-bottom shadow-lg mt-0" 
+                  style="display:none; top: 100%; left: 0; z-index: 1100; max-height: 300px; overflow-y: auto;"
+                >
+                  <div id="searchResultsList" class="list-group list-group-flush">
+                    <!-- Résultats dynamiques -->
+                  </div>
+                </div>
+              </div>
+              <small class="text-muted d-block mt-2">
+                ℹ️ Laissez vide pour créer un <strong>nouveau produit</strong>
+              </small>
+            </div>
+          </div>
+          
           <!-- 1.5. MODE: Stock Initial OU En Commande -->
           <div class="row g-3 mb-4">
             <div class="col-md-12">
@@ -1348,6 +1380,7 @@
     function toggleSectionCommande() {
       const sectionCommande = document.getElementById('sectionCommande');
       const stockContainer = document.getElementById('stockInitialContainer');
+      const searchSection = document.getElementById('searchProductSection');
       const isCommande = document.querySelector('input[name="modeEntree"]:checked')?.value === 'commande';
       
       console.log(`🔄 Toggle Mode Entrée: isCommande=${isCommande}`);
@@ -1358,6 +1391,12 @@
         console.log(`   sectionCommande: ${isCommande ? '✅ affichée' : '❌ masquée'}`);
       } else {
         console.warn('⚠️ sectionCommande non trouvée');
+      }
+
+      // Afficher/Masquer la section RECHERCHE PRODUIT EXISTANT
+      if (searchSection) {
+        searchSection.style.display = isCommande ? 'block' : 'none';
+        console.log(`   searchProductSection: ${isCommande ? '✅ affichée' : '❌ masquée'}`);
       }
       
       // Afficher/Masquer le STOCK INITIAL et mettre à jour l'attribut required
@@ -2150,6 +2189,131 @@
       }
     });
 
+    // ===== RECHERCHE DE PRODUITS EXISTANTS =====
+    const searchInput = document.getElementById('searchExistingProduct');
+    const searchDropdown = document.getElementById('searchResultsDropdown');
+    const searchList = document.getElementById('searchResultsList');
+    let searchTimeout;
+
+    async function searchExistingProducts(term) {
+      if (!term || term.trim().length < 2) {
+        searchDropdown.style.display = 'none';
+        return;
+      }
+
+      try {
+        const authToken = getAuthToken();
+        console.log(`🔍 Recherche produits: "${term}"`);
+
+        const response = await fetch(
+          `${API_BASE}/magasins/${currentMagasinId}/produits?search=${encodeURIComponent(term)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            }
+          }
+        );
+
+        if (!response.ok) {
+          console.error('❌ Erreur recherche:', response.status);
+          return;
+        }
+
+        const produits = await response.json();
+        searchList.innerHTML = '';
+
+        if (produits.length === 0) {
+          searchList.innerHTML = `
+            <div class="list-group-item text-muted text-center py-3">
+              <i class="fas fa-search me-2"></i>Aucun produit trouvé
+            </div>
+          `;
+        } else {
+          produits.slice(0, 10).forEach(produit => {
+            const badge = produit.quantiteActuelle > 0 
+              ? `<span class="badge bg-success ms-2">${produit.quantiteActuelle} stock</span>`
+              : `<span class="badge bg-warning text-dark ms-2">${produit.etat}</span>`;
+            
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action';
+            item.innerHTML = `
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>${produit.reference}</strong> - ${produit.designation}
+                  ${badge}
+                </div>
+                <small class="text-muted">${produit.typeProduitName || 'N/A'}</small>
+              </div>
+            `;
+
+            item.addEventListener('click', (e) => {
+              e.preventDefault();
+              selectExistingProduct(produit);
+            });
+
+            searchList.appendChild(item);
+          });
+        }
+
+        searchDropdown.style.display = 'block';
+      } catch (error) {
+        console.error('❌ Erreur recherche:', error);
+        searchList.innerHTML = `
+          <div class="list-group-item text-danger text-center py-3">
+            <i class="fas fa-exclamation-triangle me-2"></i>Erreur lors de la recherche
+          </div>
+        `;
+        searchDropdown.style.display = 'block';
+      }
+    }
+
+    function selectExistingProduct(produit) {
+      console.log('✅ Produit sélectionné:', produit);
+      
+      // Pré-remplir les champs
+      document.getElementById('reference').value = produit.reference || '';
+      document.getElementById('designation').value = produit.designation || '';
+      document.getElementById('produitId').value = produit._id || produit.id || '';
+      
+      // Si c'est un produit existant, on cache le champ d'ajout
+      // On passe en mode "modification" / "réception"
+      
+      // Cacher le dropdown
+      searchDropdown.style.display = 'none';
+      searchInput.value = `${produit.reference} - ${produit.designation}`;
+      
+      // Marquer comme produit existant (optionnel)
+      searchInput.dataset.selected = produit._id || produit.id;
+      
+      showNotification(`✅ Produit "${produit.reference}" sélectionné`, 'success');
+    }
+
+    // Event listener sur l'input de recherche
+    if (searchInput) {
+      searchInput.addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        const term = e.target.value.trim();
+        
+        searchTimeout = setTimeout(() => {
+          if (term.length < 2) {
+            searchDropdown.style.display = 'none';
+          } else {
+            searchExistingProducts(term);
+          }
+        }, 300); // Débounce 300ms
+      });
+
+      // Cacher le dropdown quand on clique ailleurs
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('#searchExistingProduct') && !e.target.closest('#searchResultsDropdown')) {
+          searchDropdown.style.display = 'none';
+        }
+      });
+    }
+
     // Recharger les catégories quand le modal s'ouvre
     const modalElement = document.getElementById('modalProduit');
     if (modalElement) {
@@ -2159,6 +2323,10 @@
         // Réinitialiser les champs
         uploadedPhotoUrl = null;
         document.getElementById('formAddProduit').reset();
+        // Réinitialiser la recherche
+        searchInput.value = '';
+        searchInput.dataset.selected = '';
+        searchDropdown.style.display = 'none';
       });
     }
   })(); // Fin du module

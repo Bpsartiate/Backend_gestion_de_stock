@@ -85,11 +85,7 @@
                     </li>
                     
                   </ul>
-                  <li class="nav-item"><a class="nav-link" href="affectation.php">
-                        <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-link"></span></span><span class="nav-link-text ps-1">Affectations</span>
-                        </div>
-                      </a>
-                    </li>
+               
                   <!-- parent pages--><a class="nav-link dropdown-indicator" href="#events" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="events">
                     <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-warehouse"></span></span><span class="nav-link-text ps-1">Logistique</span>
                     </div>
@@ -109,13 +105,7 @@
                       <!-- more inner pages-->
                     </li>
                     <li class="nav-item"><a class="nav-link" href="pages/stock/commandes.php">
-                        <div class="d-flex align-items-center"><i class="fas fa-boxes me-2"></i><span class="nav-link-text ps-1">Commandes & Réceptions</span>
-                        </div>
-                      </a>
-                      <!-- more inner pages-->
-                    </li>
-                    <li class="nav-item"><a class="nav-link" href="pages/stock/fournisseurs.php">
-                        <div class="d-flex align-items-center"><i class="fas fa-star me-2"></i><span class="nav-link-text ps-1">Évaluation des Fournisseurs</span>
+                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Commandes & Réceptions</span>
                         </div>
                       </a>
                       <!-- more inner pages-->
@@ -146,6 +136,12 @@
                         </li>
                  
                   </ul>
+                   <li class="nav-item"><a class="nav-link" href="pages/stock/fournisseurs.php">
+                        <div class="d-flex align-items-center"><i class="fas fa-star me-2"></i><span class="nav-link-text ps-1">Évaluation des Fournisseurs</span>
+                        </div>
+                      </a>
+                      <!-- more inner pages-->
+                    </li>
                   <!-- parent pages-->
                    <a class="nav-link dropdown-indicator" href="#e-learning" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="e-learning">
                     <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-graduation-cap"></span></span><span class="nav-link-text ps-1">Documentation</span><span class="badge rounded-pill ms-2 badge-soft-success">New</span>
@@ -233,6 +229,11 @@
                     </li>
                    
                   </ul>
+                     <li class="nav-item"><a class="nav-link" href="affectation.php">
+                        <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-link"></span></span><span class="nav-link-text ps-1">Affectations</span>
+                        </div>
+                      </a>
+                    </li>
                  <!-- parent pages--><a class="nav-link dropdown-indicator" href="#user" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="user">
                     <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-user"></span></span><span class="nav-link-text ps-1">User</span>
                     </div>

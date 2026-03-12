@@ -773,9 +773,10 @@ class VenteManager {
                     const lotsData = await lotsResponse.json();
                     const lotsCount = lotsData.lotsDisponibles || 0;
                     
-                    // 🆕 Stocker le lotsCount pour usage dans les handlers
+                    // 🆕 Stocker le lotsCount ET les détails des LOTs pour usage dans les handlers
                     window.currentStockInfo.lotsDisponibles = lotsCount;
-                    console.log(`📦 LOTs disponibles: ${lotsCount}`);
+                    window.currentStockInfo.lotsDetails = lotsData.lots || [];  // 🆕 FIX: Stocker les détails
+                    console.log(`📦 LOTs disponibles: ${lotsCount}`, lotsData.lots);
                     
                     // 🆕 Afficher le stock selon le mode sélectionné
                     this.updateStockDisplay();
@@ -930,7 +931,7 @@ class VenteManager {
         
         const produitId = this.currentProduit?._id;
         const magasinId = this.currentMagasin;
-        const quantite = parseInt(document.getElementById('venteQuantite').value || 0);
+        let quantite = parseInt(document.getElementById('venteQuantite').value || 0);
         const prix = parseFloat(document.getElementById('ventePrix').value || 0);
         const observations = document.getElementById('venteObservations').value;
 
@@ -976,18 +977,33 @@ class VenteManager {
             (document.querySelector('input[name="venteTypeVente"]:checked')?.value || 'partiel') : 
             undefined;  // undefined pour SIMPLE
         
+        // 🆕 FIX: Pour LOT entier, utiliser quantiteInitiale du premier LOT comme quantité vendue
+        let quantiteVendue = quantite;
+        let lotIdPrincipal = undefined;
+        
+        if (typeStockage === 'lot' && typeVente === 'entier') {
+            const lotsDetails = window.currentStockInfo?.lotsDetails || [];
+            if (lotsDetails.length > 0) {
+                const premierLot = lotsDetails[0];
+                quantiteVendue = premierLot.quantiteInitiale || quantite;
+                lotIdPrincipal = premierLot._id;
+                console.log(`🎯 LOT ENTIER: Utilisant quantiteInitiale=${quantiteVendue} (LOT ${lotIdPrincipal})`);
+            }
+        }
+        
         const panierItem = {
             produitId,
             nomProduit: produit.designation || produit.nomProduit || 'Produit',
             nomMagasin: nomMagasin,
             magasinId: magasinId,
             rayonId: rayonId,
-            quantite,
+            quantite: quantiteVendue,  // 🆕 FIX: Utiliser quantiteVendue au lieu de quantite brute
             prix,
-            total: quantite * prix,
+            total: quantiteVendue * prix,  // 🆕 FIX: Utiliser quantiteVendue pour le total
             observations,
             typeStockage,  // 🆕 PHASE 1 v2
-            typeVente  // 🆕 PHASE 1 v2: Mode de vente pour LOTs
+            typeVente,  // 🆕 PHASE 1 v2: Mode de vente pour LOTs
+            lotIdPrincipal  // 🆕 FIX: Stocker le LOT principal pour mode "entier"
         };
         
         this.panier.push(panierItem);
@@ -996,11 +1012,12 @@ class VenteManager {
             produit: produit.designation,
             type: typeStockage,
             typeVente: typeVente,
-            quantite: quantite,
+            quantiteAffichee: quantite,
+            quantiteVendue: quantiteVendue,
             magasin: nomMagasin,
             rayonId: rayonId,
             prixUnitaire: prix,
-            total: (quantite * prix).toFixed(2)
+            total: (quantiteVendue * prix).toFixed(2)
         });
 
         // Reset formulaire

@@ -2138,7 +2138,7 @@
                     </div>
                     <div class="d-flex justify-content-between mb-1">
                       <small>Quantité:</small>
-                      <small class="fw-bold">${lot.quantiteInitiale || 0} pièces</small>
+                      <small class="fw-bold">${lot.quantiteRestante || 0} pièces</small>
                     </div>
                     <div class="d-flex justify-content-between mb-1">
                       <small>Statut:</small>

@@ -1032,12 +1032,17 @@ function afficherTableProduits(produits) {
     if (produit.etat === 'EN_COMMANDE') {
       etatBadge = '<span class="badge bg-info">🛒 En commande</span>';
       
+      console.log(`🔍 DEBUG Rouleau Rose: etat=${produit.etat}, commandesIds présent? ${!!produit.commandesIds}, length=${produit.commandesIds?.length || 0}`);
+      console.log(`   commandesIds:`, produit.commandesIds);
+      
       // Afficher la quantité commandée si disponible
       if (produit.commandesIds && produit.commandesIds.length > 0) {
         // La première commande (la plus récente, déjà triée DESC)
         const commande = Array.isArray(produit.commandesIds) ? 
           produit.commandesIds[0] :  // ✅ Première = plus récente
           produit.commandesIds;
+        
+        console.log(`   Première commande:`, commande);
         
         // Si c'est un objet avec quantiteCommandee
         if (commande && typeof commande === 'object') {
@@ -1054,13 +1059,18 @@ function afficherTableProduits(produits) {
             console.log(`🛒 Produit EN_COMMANDE (SIMPLE): ${produit.designation} avec quantité: ${commande.quantiteCommandee}`);
           }
           else {
-            console.warn(`⚠️ Commande sans quantiteCommandee pour ${produit.designation}:`, commande);
+            console.warn(`⚠️ Commande sans données pour ${produit.designation}:`, commande);
+            // Fallback: utiliser quantiteActuelle si aucune donnée commandée
+            quantiteAffichee = produit.quantiteActuelle;
           }
         } else {
-          console.warn(`⚠️ Commande non peuplée ou sans quantiteCommandee pour ${produit.designation}:`, commande);
+          console.warn(`⚠️ Commande n'est pas un objet pour ${produit.designation}:`, commande);
+          quantiteAffichee = produit.quantiteActuelle;
         }
       } else {
-        console.warn(`⚠️ Aucune commande trouvée pour ${produit.designation}`);
+        console.warn(`⚠️ Aucune commande trouvée pour ${produit.designation} (commandesIds vide ou null)`);
+        // Fallback: utiliser quantiteActuelle si pas de commande
+        quantiteAffichee = produit.quantiteActuelle;
       }
     } 
     // SINON: Déterminer l'état normal du stock
@@ -1096,17 +1106,45 @@ function afficherTableProduits(produits) {
       <td class="etat">${etatBadge}</td>
       <td class="dateEntree">${new Date(produit.dateEntree).toLocaleDateString()}</td>
       <td class="actions">
-        <div class="btn-group btn-group-sm" role="group">
-          <button class="btn btn-info" onclick="editProduct('${produit._id}')" title="Modifier">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="btn btn-warning" onclick="registerMovement('${produit._id}', '${produit.designation}')" title="Mouvement">
-            <i class="fas fa-exchange-alt"></i>
-          </button>
-          <button class="btn btn-danger" onclick="deleteProduct('${produit._id}')" title="Supprimer">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
+        ${(produit.quantiteActuelle === 0 || produit.quantiteActuelle < (produit.seuilAlerte || 10)) ? `
+          <!-- Dropdown pour produits EN_RUPTURE ou STOCK FAIBLE -->
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn ${produit.quantiteActuelle === 0 ? 'btn-danger' : 'btn-warning'} dropdown-toggle btn-action-rgb" data-bs-toggle="dropdown" aria-expanded="false" title="Actions disponibles">
+              <i class="fas fa-bolt me-1"></i>ACTIONS <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item" href="#" onclick="openReceptionForProduct('${produit._id}'); return false;">
+                  <i class="fas fa-inbox text-success me-2"></i>📥 Réceptionner
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" onclick="openAddProductCommande('${produit._id}'); return false;">
+                  <i class="fas fa-shopping-cart text-warning me-2"></i>🛒 Commander
+                </a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item" href="#" onclick="editProduct('${produit._id}'); return false;">
+                  <i class="fas fa-edit text-info me-2"></i>✏️ Modifier
+                </a>
+              </li>
+            </ul>
+          </div>
+        ` : `
+          <!-- Boutons normaux -->
+          <div class="btn-group btn-group-sm" role="group">
+            <button class="btn btn-info" onclick="editProduct('${produit._id}')" title="Modifier">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-warning" onclick="registerMovement('${produit._id}', '${produit.designation}')" title="Mouvement">
+              <i class="fas fa-exchange-alt"></i>
+            </button>
+            <button class="btn btn-danger" onclick="deleteProduct('${produit._id}')" title="Supprimer">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `}
       </td>
     `;
     
@@ -1130,6 +1168,69 @@ function afficherTableProduits(produits) {
 
 function editProduct(produitId) {
   openProductDetailPremium(produitId);
+}
+
+// ================================
+// 📥 OUVRIR MODAL RÉCEPTION
+// ================================
+
+function openReceptionForProduct(produitId) {
+  console.log(`🔵 Ouverture réception pour produit: ${produitId}`);
+  
+  // Mettre le produitId dans le select
+  const select = document.getElementById('produitReception');
+  if (select) {
+    select.value = produitId;
+    
+    // Déclencher le changement pour charger les prévisions
+    const event = new Event('change', { bubbles: true });
+    select.dispatchEvent(event);
+  }
+  
+  // Ouvrir le modal
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalReception'));
+  modal.show();
+}
+
+// ================================
+// 🛒 OUVRIR MODAL AJOUT EN COMMANDE
+// ================================
+
+function openAddProductCommande(produitId) {
+  console.log(`🔵 Ouverture modal commande pour produit: ${produitId}`);
+  
+  // Chercher le produit
+  const produit = CACHE_PRODUITS?.find(p => p._id === produitId);
+  if (!produit) {
+    console.error('❌ Produit non trouvé:', produitId);
+    return;
+  }
+  
+  // Pré-remplir les champs
+  document.getElementById('reference').value = produit.reference || '';
+  document.getElementById('designation').value = produit.designation || '';
+  document.getElementById('produitId').value = produitId;
+  
+  // Marquer comme produit existant dans la recherche
+  const searchInput = document.getElementById('searchExistingProduct');
+  if (searchInput) {
+    searchInput.value = `${produit.reference} - ${produit.designation}`;
+    searchInput.dataset.selected = produitId;
+  }
+  
+  // Passer en mode "En Commande"
+  const modeCommande = document.getElementById('modeEnCommande');
+  if (modeCommande) {
+    modeCommande.checked = true;
+    const event = new Event('change', { bubbles: true });
+    modeCommande.dispatchEvent(event);
+  }
+  
+  // Ouvrir le modal
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalProduit'));
+  modal.show();
+  
+  showNotification(`✅ Mode Commande pour "${produit.reference}"`, 'success');
 }
 
 // ================================

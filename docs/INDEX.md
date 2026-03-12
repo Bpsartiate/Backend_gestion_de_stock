@@ -1,44 +1,8 @@
 # 📚 INDEX - Documentation & Améliorations Modal Guichet
 
-**Date**: 8 Janvier 2026  
-**Version**: 2.0 Pro  
-**Statut**: ✅ Complète avec Logique des Rôles  
-
----
-
-## 🎯 NOUVEAU - Logique des Rôles (Janvier 2026)
-
-### 🆕 Questions sur les Rôles et les Ventes?
-
-**Pour comprendre rapidement:**
-→ Lire: [VISUAL_SUMMARY_ROLES.md](./VISUAL_SUMMARY_ROLES.md)  
-⏱️ Durée: 5 minutes  
-📊 Format: Diagrammes visuels et schémas
-
-**Pour approfondir:**
-→ Lire: [VENTES_ROLES_LOGIC.md](./VENTES_ROLES_LOGIC.md)  
-⏱️ Durée: 15 minutes  
-📖 Format: Complet avec cas d'usage
-
-**Pour dev mobile:**
-→ Lire: [MOBILE_DEV_VENTES_GUIDE.md](./MOBILE_DEV_VENTES_GUIDE.md)  
-⏱️ Durée: 20 minutes  
-📱 Format: Code Dart/Flutter avec exemples
-
-**Pour dev backend/frontend:**
-→ Lire: [TECHNICAL_IMPLEMENTATION_VENTES.md](./TECHNICAL_IMPLEMENTATION_VENTES.md)  
-⏱️ Durée: 30 minutes  
-🔧 Format: Code JavaScript complet + endpoints
-
-**Réponses aux questions fréquentes:**
-→ Lire: [FAQ_ROLES_VENTES.md](./FAQ_ROLES_VENTES.md)  
-⏱️ Durée: 10 minutes  
-❓ Format: Q&A structuré
-
-**Navigation centralisée:**
-→ Lire: [VENTES_IMPLEMENTATION_INDEX.md](./VENTES_IMPLEMENTATION_INDEX.md)  
-⏱️ Durée: 5 minutes  
-🗺️ Format: Index thématique des ventes
+**Date**: 19 Décembre 2025  
+**Version**: 1.0 Pro  
+**Statut**: ✅ Complète  
 
 ---
 

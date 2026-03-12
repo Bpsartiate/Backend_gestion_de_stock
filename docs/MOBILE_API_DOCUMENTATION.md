@@ -235,7 +235,7 @@ Authorization: Bearer {{TOKEN}}
 
 ### GET /api/protected/magasins/:magasinId/produits
 
-**Lister tous les produits du magasin**
+**Lister tous les produits du magasin (y compris EN_COMMANDE)** 🛒
 
 #### Request
 ```bash
@@ -263,17 +263,32 @@ Authorization: Bearer {{TOKEN}}
       "quantiteActuelle": 60,
       "prixUnitaire": 2500,
       "seuilAlerte": 10,
-      "etat": "Neuf",
+      "etat": "STOCKÉ",
       "photoUrl": "https://...",
       "dateEntree": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "_id": "695d705f366b025d9f34d1d8",
+      "reference": "PROD002",
+      "designation": "Riz blanc",
+      "etat": "EN_COMMANDE",
+      "quantiteActuelle": 100,
+      "prixUnitaire": 1500,
+      "commandesIds": ["696a1234567890123456789a"]
     }
   ]
 }
 ```
 
+#### 📝 Note importante
+- ✅ Retourne TOUS les produits: stockés ET en commande
+- 🛒 **EN_COMMANDE** = Produit commandé, en attente de réception
+- 📦 **STOCKÉ** = Produit en stock normalement
+
 #### Utilisation
 - Afficher la liste des produits
-- Permettre la sélection pour ventes/mouvements
+- Pour **EN_COMMANDE**: Appeler POST /receptions pour réceptionner la commande
+- Permettre la sélection pour ventes/mouvements (stocks normaux)
 - Afficher le stock disponible
 
 ---
@@ -358,12 +373,13 @@ Authorization: Bearer {{TOKEN}}
 Content-Type: application/json
 
 {
-  "reference": "PROD001",
+  "reference": "Po1214",
   "designation": "Poulet frais",
-  "typeProduitId": "694fb31f6161930096064950",
-  "rayonId": "694fc2edff00de0189ebe6fb",
+  "typeProduitId": "696b44da0071eb6ffe8b24d8",
+  "rayonId": "696b45110071eb6ffe8b24ea",
   "prixUnitaire": 2500,
   "quantiteEntree": 50,
+  "photoUrl": "https://res.cloudinary.com/...",
   "seuilAlerte": 10,
   "etat": "Neuf",
   "notes": "Nouveau produit"
@@ -379,8 +395,9 @@ Content-Type: application/json
 | `rayonId` | ObjectId | ✅ | ID du rayon |
 | `prixUnitaire` | number | ✅ | Prix par unité |
 | `quantiteEntree` | number | ✅ | Quantité initiale |
+| `photoUrl` | string | ❌ | URL de la photo (Cloudinary) |
 | `seuilAlerte` | number | ❌ | Seuil d'alerte (défaut: 10) |
-| `etat` | string | ❌ | État (Neuf, Bon, Acceptable, Usé, Défectueux) |
+| `etat` | string | ❌ | État (Neuf, Bon état, Usagé, Endommagé, EN_COMMANDE, STOCKÉ) |
 | `notes` | string | ❌ | Remarques |
 
 #### Response (201 Created)
@@ -389,9 +406,12 @@ Content-Type: application/json
   "success": true,
   "produit": {
     "_id": "695d705f366b025d9f34d1d7",
-    "reference": "PROD001",
+    "reference": "Po1214",
     "designation": "Poulet frais",
-    "quantiteActuelle": 50
+    "quantiteActuelle": 50,
+    "prixUnitaire": 2500,
+    "etat": "Neuf",
+    "photoUrl": "https://res.cloudinary.com/..."
   }
 }
 ```
@@ -525,9 +545,9 @@ Authorization: Bearer {{TOKEN}}
 
 ### POST /api/protected/receptions
 
-**Enregistrer une réception de marchandises** ⭐
+**Enregistrer une réception (Fournisseur OU Réceptionner une commande)** ⭐
 
-#### Request
+#### Request - Type 1: Réception Fournisseur Normal
 ```bash
 POST /api/protected/receptions
 Authorization: Bearer {{TOKEN}}
@@ -537,13 +557,31 @@ Content-Type: application/json
   "magasinId": "693bf84f9955cef110cae98b",
   "produitId": "695d705f366b025d9f34d1d7",
   "rayonId": "694fc2edff00de0189ebe6fb",
+  "typeProduitId": "694fb31f6161930096064950",
   "quantite": 50,
   "fournisseur": "Fournisseur XYZ",
-  "dateReception": "2026-01-07",
   "prixAchat": 2000,
-  "prixTotal": 100000,
-  "numeroDocument": "FAC-001",
+  "photoUrl": "https://...",
   "observations": "Livraison conforme"
+}
+```
+
+#### Request - Type 2: Réceptionner une Commande 🛒
+```bash
+POST /api/protected/receptions
+Authorization: Bearer {{TOKEN}}
+Content-Type: application/json
+
+{
+  "magasinId": "693bf84f9955cef110cae98b",
+  "produitId": "695d705f366b025d9f34d1d7",
+  "rayonId": "694fc2edff00de0189ebe6fb",
+  "typeProduitId": "694fb31f6161930096064950",
+  "quantite": 50,
+  "prixAchat": 2000,
+  "photoUrl": "https://...",
+  "dateReceptionReelle": "2026-01-07",
+  "etatReel": "Neuf"
 }
 ```
 
@@ -553,11 +591,13 @@ Content-Type: application/json
 | `magasinId` | ObjectId | ✅ | ID du magasin |
 | `produitId` | ObjectId | ✅ | ID du produit |
 | `rayonId` | ObjectId | ✅ | ID du rayon |
+| `typeProduitId` | ObjectId | ✅ | ID du type produit |
 | `quantite` | number | ✅ | Quantité reçue |
-| `fournisseur` | string | ✅ | Nom du fournisseur |
-| `dateReception` | date | ✅ | Date de réception |
-| `prixAchat` | number | ✅ | Prix unitaire d'achat |
-| `prixTotal` | number | ✅ | Prix total |
+| `prixAchat` | number | ✅ | Prix unitaire |
+| `photoUrl` | string | ❌ | URL photo Cloudinary |
+| `fournisseur` | string | ❌ | Nom fournisseur (réception normal) |
+| `dateReceptionReelle` | date | ❌ | Date réelle (réception commande) |
+| `etatReel` | string | ❌ | État produit (réception commande) |
 | `numeroDocument` | string | ❌ | N° facture/bon |
 | `observations` | string | ❌ | Remarques |
 
@@ -570,12 +610,21 @@ Content-Type: application/json
     "quantite": 50,
     "fournisseur": "Fournisseur XYZ",
     "dateReception": "2026-01-07T00:00:00.000Z",
-    "prixTotal": 100000
+    "prixAchat": 2000
   },
   "stockMovement": {
     "_id": "...",
     "type": "RECEPTION",
     "quantite": 50
+  },
+  "produitUpdated": {
+    "id": "695d705f366b025d9f34d1d7",
+    "quantiteActuelle": 50,
+    "etat": "STOCKÉ"
+  },
+  "commandeUpdated": {
+    "statut": "REÇUE",
+    "dateReception": "2026-01-07T00:00:00.000Z"
   }
 }
 ```
@@ -583,12 +632,26 @@ Content-Type: application/json
 #### 📝 Automatismes
 - ✅ Crée un mouvement de stock type `RECEPTION`
 - ✅ Met à jour la `quantiteActuelle` du produit
+- ✅ Pour réception commande (ET/LOT): passe produit de EN_COMMANDE → STOCKÉ
+- ✅ Pour réception commande: marque la commande comme REÇUE
 - ✅ Log l'audit avec timestamp et utilisateur
 - ✅ Crée alerte si stock dépasse capacité rayon
 
+#### 🎯 Difference Réception Commande vs Fournisseur
+
+| Aspect | Réception Normale | Réception Commande |
+|--------|-------------------|-------------------|
+| `etat` avant | Peut être n'importe quoi | **EN_COMMANDE** |
+| `etat` après | Reste inchangé | **STOCKÉ** ✨ |
+| `fournisseur` | ✅ Utilisé | ❌ Ignoré |
+| `dateReceptionReelle` | ❌ Ignoré | ✅ Utilisé (optionnel) |
+| `etatReel` | ❌ Ignoré | ✅ Utilisé (optionnel) |
+| Commande | ❌ Aucune | ✅ Marquée REÇUE |
+
 #### Codes d'erreur
-- `400` - Données manquantes
-- `404` - Produit/Rayon non trouvé
+- `400` - Données manquantes ou invalides
+- `400` - Rayon ne supporte pas ce type produit
+- `404` - Produit/Rayon/Magasin non trouvé
 
 ---
 

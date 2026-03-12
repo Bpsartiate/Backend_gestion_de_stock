@@ -218,6 +218,70 @@
   }
 }
 
+/* ================================ */
+/* 🌈 ANIMATION RGB EFFETS BOUTON  */
+/* ================================ */
+
+@keyframes rgbGlow {
+  0% {
+    box-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000, inset 0 0 5px rgba(255, 0, 0, 0.3);
+    border-color: #ff0000;
+  }
+  12.5% {
+    box-shadow: 0 0 5px #ff7f00, 0 0 10px #ff7f00, inset 0 0 5px rgba(255, 127, 0, 0.3);
+    border-color: #ff7f00;
+  }
+  25% {
+    box-shadow: 0 0 5px #ffff00, 0 0 10px #ffff00, inset 0 0 5px rgba(255, 255, 0, 0.3);
+    border-color: #ffff00;
+  }
+  37.5% {
+    box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, inset 0 0 5px rgba(0, 255, 0, 0.3);
+    border-color: #00ff00;
+  }
+  50% {
+    box-shadow: 0 0 5px #0000ff, 0 0 10px #0000ff, inset 0 0 5px rgba(0, 0, 255, 0.3);
+    border-color: #0000ff;
+  }
+  62.5% {
+    box-shadow: 0 0 5px #4b0082, 0 0 10px #4b0082, inset 0 0 5px rgba(75, 0, 130, 0.3);
+    border-color: #4b0082;
+  }
+  75% {
+    box-shadow: 0 0 5px #9400d3, 0 0 10px #9400d3, inset 0 0 5px rgba(148, 0, 211, 0.3);
+    border-color: #9400d3;
+  }
+  100% {
+    box-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000, inset 0 0 5px rgba(255, 0, 0, 0.3);
+    border-color: #ff0000;
+  }
+}
+
+@keyframes rgbPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.9;
+  }
+}
+
+/* Classe pour le bouton ACTIONS */
+.btn-action-rgb {
+  animation: rgbGlow 3s linear infinite, rgbPulse 2s ease-in-out infinite;
+  font-weight: 600;
+  position: relative;
+  border: 2px solid currentColor;
+  transition: all 0.3s ease;
+}
+
+.btn-action-rgb:hover {
+  animation: rgbGlow 1.5s linear infinite, rgbPulse 1s ease-in-out infinite;
+  transform: scale(1.1);
+}
+
 </style>
   <!-- tittre -->
   <div class="row">
