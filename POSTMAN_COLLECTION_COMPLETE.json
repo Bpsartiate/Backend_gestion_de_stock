@@ -1,0 +1,876 @@
+{
+  "info": {
+    "_postman_id": "backend-gestion-stock-2026",
+    "name": "Backend Gestion de Stock - Complete API",
+    "description": "Collection complète des APIs avec Produits, Commandes, Réceptions, Ventes et Validations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "3.0.0",
+    "updated": "2026-03-16"
+  },
+  "item": [
+    {
+      "name": "🔐 AUTHENTIFICATION",
+      "item": [
+        {
+          "name": "Login - Obtenir Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@stock.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/login",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📦 PRODUITS",
+      "item": [
+        {
+          "name": "1️⃣ Upload Image Produit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/upload/produit-image",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "upload", "produit-image"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2️⃣ Créer Produit (Avec validation capacité rayon)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"PROD-{{$randomInt(1000, 9999)}}\",\n  \"designation\": \"Poulet frais 2kg\",\n  \"typeProduitId\": \"{{TYPE_PRODUIT_ID}}\",\n  \"rayonId\": \"{{RAYON_ID}}\",\n  \"prixUnitaire\": 2500,\n  \"quantiteEntree\": 50,\n  \"seuilAlerte\": 10,\n  \"etat\": \"Neuf\",\n  \"photoUrl\": \"https://res.cloudinary.com/example/image.jpg\",\n  \"notes\": \"Produit de qualité premium\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/produits",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "produits"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lister Produits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/produits",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "produits"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Détails Produit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/produits/{{PRODUIT_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "produits", "{{PRODUIT_ID}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Modifier Produit",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prixUnitaire\": 3000,\n  \"seuilAlerte\": 15,\n  \"notes\": \"Mise à jour du prix\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/produits/{{PRODUIT_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "produits", "{{PRODUIT_ID}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Supprimer Produit",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/produits/{{PRODUIT_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "produits", "{{PRODUIT_ID}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🛒 COMMANDES",
+      "item": [
+        {
+          "name": "Créer Commande",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"produitId\": \"{{PRODUIT_ID}}\",\n  \"magasinId\": \"{{MAGASIN_ID}}\",\n  \"fournisseurId\": \"{{FOURNISSEUR_ID}}\",\n  \"quantiteCommandee\": 100,\n  \"dateEcheance\": \"2026-03-30\",\n  \"prixUnitaire\": 2000,\n  \"etatPrevu\": \"Neuf\",\n  \"notes\": \"Commande urgente\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/commandes",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "commandes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lister Commandes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/commandes?magasinId={{MAGASIN_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "commandes"],
+              "query": [
+                {
+                  "key": "magasinId",
+                  "value": "{{MAGASIN_ID}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Commande par Produit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/commandes/produit/{{PRODUIT_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "commandes", "produit", "{{PRODUIT_ID}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Détails Commande",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/commandes/{{COMMANDE_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "commandes", "{{COMMANDE_ID}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Marquer Expédiée",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/commandes/{{COMMANDE_ID}}/marquer-expediee",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "commandes", "{{COMMANDE_ID}}", "marquer-expediee"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Annuler Commande",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/commandes/{{COMMANDE_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "commandes", "{{COMMANDE_ID}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📥 RÉCEPTIONS",
+      "item": [
+        {
+          "name": "1️⃣ Réception Simple (Validation capacité)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"magasinId\": \"{{MAGASIN_ID}}\",\n  \"produitId\": \"{{PRODUIT_ID}}\",\n  \"rayonId\": \"{{RAYON_ID}}\",\n  \"quantite\": 50,\n  \"typeProduitId\": \"{{TYPE_PRODUIT_ID}}\",\n  \"prixAchat\": 2000,\n  \"fournisseur\": \"Fournisseur XYZ\",\n  \"dateReception\": \"2026-03-16\",\n  \"photoUrl\": \"https://res.cloudinary.com/example/image.jpg\",\n  \"observations\": \"Livraison conforme\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/receptions",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "receptions"]
+            },
+            "description": "Crée une réception avec validation stricte de capacité rayon"
+          },
+          "response": []
+        },
+        {
+          "name": "2️⃣ Réception LOT (Avec nombrePieces)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"magasinId\": \"{{MAGASIN_ID}}\",\n  \"produitId\": \"{{PRODUIT_ID_LOT}}\",\n  \"rayonId\": \"{{RAYON_ID}}\",\n  \"quantite\": 100,\n  \"typeProduitId\": \"{{TYPE_PRODUIT_LOT_ID}}\",\n  \"prixAchat\": 1500,\n  \"nombrePieces\": 10,\n  \"quantiteParPiece\": 10,\n  \"uniteDetail\": \"kg\",\n  \"prixParUnite\": 150,\n  \"fournisseur\": \"Fournisseur Premium\",\n  \"dateReception\": \"2026-03-16\",\n  \"observations\": \"Livraison LOT complète\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/receptions",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "receptions"]
+            },
+            "description": "Crée une réception pour produit LOT avec nombrePieces"
+          },
+          "response": []
+        },
+        {
+          "name": "Lister Réceptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/receptions?magasinId={{MAGASIN_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "receptions"],
+              "query": [
+                {
+                  "key": "magasinId",
+                  "value": "{{MAGASIN_ID}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Détails Réception",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/receptions/{{RECEPTION_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "receptions", "{{RECEPTION_ID}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "💰 VENTES",
+      "item": [
+        {
+          "name": "Créer Vente Simple",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"magasinId\": \"{{MAGASIN_ID}}\",\n  \"produitId\": \"{{PRODUIT_ID}}\",\n  \"quantite\": 5,\n  \"prixUnitaire\": 3000,\n  \"typeVente\": \"direct\",\n  \"client\": \"Client A\",\n  \"dateVente\": \"2026-03-16\",\n  \"observations\": \"Vente comptoir\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/ventes",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "ventes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Créer Vente LOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"magasinId\": \"{{MAGASIN_ID}}\",\n  \"produitId\": \"{{PRODUIT_LOT_ID}}\",\n  \"quantite\": 25,\n  \"prixUnitaire\": 2500,\n  \"nombrePieces\": 2,\n  \"quantiteParPiece\": 12.5,\n  \"typeVente\": \"lot\",\n  \"client\": \"Grossiste XYZ\",\n  \"dateVente\": \"2026-03-16\",\n  \"observations\": \"Vente en gros\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/ventes",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "ventes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lister Ventes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/ventes?magasinId={{MAGASIN_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "ventes"],
+              "query": [
+                {
+                  "key": "magasinId",
+                  "value": "{{MAGASIN_ID}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Détails Vente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/ventes/{{VENTE_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "ventes", "{{VENTE_ID}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Annuler Vente",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/ventes/{{VENTE_ID}}",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "ventes", "{{VENTE_ID}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📍 RAYONS",
+      "item": [
+        {
+          "name": "Créer Rayon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeRayon\": \"RAY-{{$randomInt(100, 999)}}\",\n  \"nomRayon\": \"Rayon Frais A\",\n  \"typeRayon\": \"ETAGERE\",\n  \"capaciteMax\": 100,\n  \"description\": \"Rayon pour produits frais\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/rayons",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "rayons"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lister Rayons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/rayons",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "rayons"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏷️ TYPES PRODUITS",
+      "item": [
+        {
+          "name": "Créer Type Simple",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomType\": \"Poulet frais\",\n  \"code\": \"PF-001\",\n  \"typeStockage\": \"simple\",\n  \"unitePrincipale\": \"kg\",\n  \"capaciteMax\": 50,\n  \"icone\": \"🍗\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/types-produits",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "types-produits"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Créer Type LOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomType\": \"Rouleau Papier\",\n  \"code\": \"RP-001\",\n  \"typeStockage\": \"lot\",\n  \"unitePrincipale\": \"Piece\",\n  \"unitesVente\": [\"metre\", \"carton\"],\n  \"capaciteMax\": 100,\n  \"icone\": \"📜\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/types-produits",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "types-produits"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lister Types Produits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/types-produits",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "types-produits"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏢 MAGASINS",
+      "item": [
+        {
+          "name": "Créer Magasin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom_magasin\": \"Magasin Central {{$timestamp}}\",\n  \"adresse\": \"123 Rue Principale\",\n  \"ville\": \"Dakar\",\n  \"codePostal\": \"14000\",\n  \"telephone\": \"+221-12345678\",\n  \"email\": \"magasin@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lister Magasins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 RAPPORTS & ANALYTICS",
+      "item": [
+        {
+          "name": "Stock Global Magasin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/stock-global",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "stock-global"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Alertes Produits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/magasins/{{MAGASIN_ID}}/alertes",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "magasins", "{{MAGASIN_ID}}", "alertes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rapport Ventes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{AUTH_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/protected/rapports/ventes?magasinId={{MAGASIN_ID}}&dateDebut=2026-01-01&dateFin=2026-12-31",
+              "protocol": "http",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "protected", "rapports", "ventes"],
+              "query": [
+                {
+                  "key": "magasinId",
+                  "value": "{{MAGASIN_ID}}"
+                },
+                {
+                  "key": "dateDebut",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "dateFin",
+                  "value": "2026-12-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "https://backend-gestion-de-stock.onrender.com",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "AUTH_TOKEN",
+      "value": "",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "MAGASIN_ID",
+      "value": "696b40ed0071eb6ffe8b23b7",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "RAYON_ID",
+      "value": "696b45110071eb6ffe8b24ea",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "PRODUIT_ID",
+      "value": "698316b3a9ca5ffbb5a452bf",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "PRODUIT_LOT_ID",
+      "value": "698319f5bd38fae6d54b14a1",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "TYPE_PRODUIT_ID",
+      "value": "696b44da0071eb6ffe8b24d8",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "TYPE_PRODUIT_LOT_ID",
+      "value": "696df3ceda4872fc7ee13720",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "COMMANDE_ID",
+      "value": "",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "RECEPTION_ID",
+      "value": "",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "VENTE_ID",
+      "value": "",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "FOURNISSEUR_ID",
+      "value": "",
+      "type": "string",
+      "disabled": false
+    }
+  ]
+}

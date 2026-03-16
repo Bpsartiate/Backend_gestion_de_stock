@@ -2430,16 +2430,33 @@ router.post('/magasins/:magasinId/produits', authMiddleware, async (req, res) =>
     // Les LOTs enfants seront validés lors de la réception
     // 📦 Pour SIMPLE en mode EN_COMMANDE (quantiteEntree=0): skip aussi (pas d'occupation)
     if (!isParentLot && (quantiteEntree && quantiteEntree > 0)) {
-      const protuitsRayon = await Produit.countDocuments({ rayonId });
-      if (rayon.capaciteMax && protuitsRayon >= rayon.capaciteMax) {
+      // Vérification stricte: quantiteActuelle + nouvelleQuantité <= capaciteMax
+      const rayonActuel = rayon.quantiteActuelle || 0;
+      const nouvelleQuantiteTotal = rayonActuel + quantiteEntree;
+      
+      console.log(`🔍 VALIDATION CAPACITÉ RAYON:`);
+      console.log(`   Rayon: ${rayon.nomRayon}`);
+      console.log(`   Quantité actuelle: ${rayonActuel}`);
+      console.log(`   Nouvelle quantité: ${quantiteEntree}`);
+      console.log(`   Total après ajout: ${nouvelleQuantiteTotal}`);
+      console.log(`   Capacité max: ${rayon.capaciteMax}`);
+      
+      if (rayon.capaciteMax && nouvelleQuantiteTotal > rayon.capaciteMax) {
         return res.status(400).json({ 
-          message: `❌ Rayon plein! Capacité max: ${rayon.capaciteMax} produits, actuels: ${protuitsRayon}`,
-          rayonNom: rayon.nomRayon,
-          capaciteMax: rayon.capaciteMax,
-          articles: protuitsRayon,
-          occupation: ((protuitsRayon / rayon.capaciteMax) * 100).toFixed(0) + '%'
+          success: false,
+          message: `❌ Rayon plein! Capacité dépassée`,
+          error: {
+            rayon: rayon.nomRayon,
+            capaciteMax: rayon.capaciteMax,
+            quantiteActuelle: rayonActuel,
+            nouvelleQuantite: quantiteEntree,
+            totalDemande: nouvelleQuantiteTotal,
+            depassement: nouvelleQuantiteTotal - rayon.capaciteMax,
+            occupation: ((rayonActuel / rayon.capaciteMax) * 100).toFixed(1) + '%'
+          }
         });
       }
+      console.log(`✅ VALIDATION OK - Capacité suffisante`);
     } else {
       if (isParentLot) {
         console.log(`🎁 Parent LOT - Validation capacité rayon skippée`);

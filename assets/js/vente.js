@@ -977,17 +977,20 @@ class VenteManager {
             (document.querySelector('input[name="venteTypeVente"]:checked')?.value || 'partiel') : 
             undefined;  // undefined pour SIMPLE
         
-        // 🆕 FIX: Pour LOT entier, utiliser quantiteInitiale du premier LOT comme quantité vendue
-        let quantiteVendue = quantite;
+        // 🆕 FIX: Pour LOT entier, utiliser quantiteInitiale du premier LOT pour AFFICHAGE
+        // Mais envoyer quantite=1 (nombre de LOTs) au backend
+        let quantiteAffichee = quantite;  // Pour affichage panier
+        let quantiteAuBackend = quantite;  // Pour envoi API
         let lotIdPrincipal = undefined;
         
         if (typeStockage === 'lot' && typeVente === 'entier') {
             const lotsDetails = window.currentStockInfo?.lotsDetails || [];
             if (lotsDetails.length > 0) {
                 const premierLot = lotsDetails[0];
-                quantiteVendue = premierLot.quantiteInitiale || quantite;
+                quantiteAuBackend = 1;  // 🆕 FIX: Envoyer 1 LOT, pas 40 mètres!
+                quantiteAffichee = premierLot.quantiteInitiale || quantite;  // Afficher 40 au panier
                 lotIdPrincipal = premierLot._id;
-                console.log(`🎯 LOT ENTIER: Utilisant quantiteInitiale=${quantiteVendue} (LOT ${lotIdPrincipal})`);
+                console.log(`🎯 LOT ENTIER: Afficher=${quantiteAffichee}m, Envoyer au backend=${quantiteAuBackend} LOT`);
             }
         }
         
@@ -997,9 +1000,10 @@ class VenteManager {
             nomMagasin: nomMagasin,
             magasinId: magasinId,
             rayonId: rayonId,
-            quantite: quantiteVendue,  // 🆕 FIX: Utiliser quantiteVendue au lieu de quantite brute
+            quantite: quantiteAffichee,  // 🆕 FIX: Affichage au panier (40m)
+            quantiteAuBackend: quantiteAuBackend,  // 🆕 FIX: Quantité à envoyer (1 LOT)
             prix,
-            total: quantiteVendue * prix,  // 🆕 FIX: Utiliser quantiteVendue pour le total
+            total: quantiteAffichee * prix,  // Calcul pour affichage
             observations,
             typeStockage,  // 🆕 PHASE 1 v2
             typeVente,  // 🆕 PHASE 1 v2: Mode de vente pour LOTs
@@ -1012,12 +1016,12 @@ class VenteManager {
             produit: produit.designation,
             type: typeStockage,
             typeVente: typeVente,
-            quantiteAffichee: quantite,
-            quantiteVendue: quantiteVendue,
+            quantiteAffichee: quantiteAffichee,
+            quantiteAuBackend: quantiteAuBackend,
             magasin: nomMagasin,
             rayonId: rayonId,
             prixUnitaire: prix,
-            total: (quantiteVendue * prix).toFixed(2)
+            total: (quantiteAffichee * prix).toFixed(2)
         });
 
         // Reset formulaire
@@ -1172,7 +1176,7 @@ class VenteManager {
                 produitId: item.produitId,
                 designation: item.nomProduit,
                 rayonId: item.rayonId || undefined,
-                quantite: item.quantite,
+                quantite: item.quantiteAuBackend || item.quantite,  // 🆕 FIX: Utiliser quantiteAuBackend (1 LOT) au lieu de quantiteAffichee (40m)
                 prixUnitaire: item.prix,
                 montant: item.total,
                 observations: item.observations,
