@@ -2149,9 +2149,21 @@ router.get('/magasins/:magasinId/produits', authMiddleware, async (req, res) => 
         .select('type severite message quantiteActuelle seuilAlerte quantiteManquante dateCreation actionRecommandee')
         .lean();
 
+        // 🆕 Calculer les alertes standard pour la mobile
+        const alerteStock = produit.quantiteActuelle <= (produit.seuilAlerte || 10);
+        // ⚠️ Ne pas afficher rupture si produit EN_COMMANDE - c'est prévu, pas une rupture!
+        const alerteRupture = produit.quantiteActuelle <= 0 && produit.etat !== 'EN_COMMANDE';
+        const enCommande = produit.etat === 'EN_COMMANDE';
+
         return {
           ...produit.toObject(),
-          alertes: alertes || []
+          alertes: alertes || [],
+          alertesStandard: {
+            stockBas: alerteStock,
+            rupture: alerteRupture,
+            enCommande: enCommande,
+            niveau: alerteRupture ? 'critique' : alerteStock ? 'warning' : 'ok'
+          }
         };
       })
     );
@@ -2698,12 +2710,14 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
     if (includes.includes('alertes')) {
       const alerteStock = produit.quantiteActuelle <= (produit.seuilAlerte || 10);
       const alertePeremption = false; // À implémenter si vous avez datePeremption
-      const alerteRupture = produit.quantiteActuelle <= 0;
+      // ⚠️ Ne pas afficher rupture si produit EN_COMMANDE - c'est prévu, pas une rupture!
+      const alerteRupture = produit.quantiteActuelle <= 0 && produit.etat !== 'EN_COMMANDE';
 
       response.alertes = {
         stockBas: alerteStock,
         rupture: alerteRupture,
         peremption: alertePeremption,
+        enCommande: produit.etat === 'EN_COMMANDE', // 🆕 Ajouter flag si en commande
         niveau: alerteRupture ? 'critique' : alerteStock ? 'warning' : 'ok'
       };
     }
@@ -2860,11 +2874,14 @@ router.get('/produits/:produitId', authMiddleware, async (req, res) => {
     }
 
     // 4️⃣ ENRICHISSEMENT SUPPLÉMENTAIRE - Toujours inclus
+    // ⚠️ Ne pas afficher rupture si produit EN_COMMANDE
     response.statusLabel = 
+      produit.etat === 'EN_COMMANDE' ? 'En commande' :
       produit.quantiteActuelle <= 0 ? 'Rupture' :
       produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'Stock faible' : 'En stock';
 
     response.statusColor =
+      produit.etat === 'EN_COMMANDE' ? 'info' :
       produit.quantiteActuelle <= 0 ? 'danger' :
       produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'warning' : 'success';
 

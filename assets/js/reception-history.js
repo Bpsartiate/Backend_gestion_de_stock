@@ -333,9 +333,9 @@ function afficherModalDetailReception(reception) {
     }
   }
 
-  // Statut du stock
-  const stockStatus = produit.quantiteActuelle <= 0 ? 'Rupture' : produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'Stock faible' : 'En stock';
-  const stockColor = produit.quantiteActuelle <= 0 ? 'danger' : produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'warning' : 'success';
+  // Statut du stock - ⚠️ Ne pas afficher rupture si produit EN_COMMANDE
+  const stockStatus = produit.etat === 'EN_COMMANDE' ? 'En commande' : produit.quantiteActuelle <= 0 ? 'Rupture' : produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'Stock faible' : 'En stock';
+  const stockColor = produit.etat === 'EN_COMMANDE' ? 'info' : produit.quantiteActuelle <= 0 ? 'danger' : produit.quantiteActuelle <= (produit.seuilAlerte || 10) ? 'warning' : 'success';
 
   const html = `
     <div class="modal fade" id="modalDetailReception" tabindex="-1">
@@ -465,9 +465,9 @@ function afficherModalDetailReception(reception) {
               <div class="col-lg-3 col-md-6">
                 <div class="card border-0 shadow-sm bg-light h-100">
                   <div class="card-body text-center">
-                    <i class="fas fa-exclamation-circle" style="font-size: 28px; color: ${produit.quantiteActuelle <= 0 ? '#dc3545' : '#6c757d'};" class="mb-3"></i>
-                    <h5 class="card-title mb-1">${produit.quantiteActuelle <= 0 ? 'OUI' : 'NON'}</h5>
-                    <p class="text-muted small mb-0">Rupture de stock</p>
+                    <i class="fas fa-exclamation-circle" style="font-size: 28px; color: ${produit.etat === 'EN_COMMANDE' ? '#0dcaf0' : produit.quantiteActuelle <= 0 ? '#dc3545' : '#6c757d'};" class="mb-3"></i>
+                    <h5 class="card-title mb-1">${produit.etat === 'EN_COMMANDE' ? 'EN ATTENTE' : produit.quantiteActuelle <= 0 ? 'OUI' : 'NON'}</h5>
+                    <p class="text-muted small mb-0">${produit.etat === 'EN_COMMANDE' ? 'Produit en commande' : 'Rupture de stock'}</p>
                   </div>
                 </div>
               </div>
