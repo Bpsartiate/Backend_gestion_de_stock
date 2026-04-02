@@ -987,10 +987,10 @@ class VenteManager {
             const lotsDetails = window.currentStockInfo?.lotsDetails || [];
             if (lotsDetails.length > 0) {
                 const premierLot = lotsDetails[0];
-                quantiteAuBackend = 1;  // 🆕 FIX: Envoyer 1 LOT, pas 40 mètres!
-                quantiteAffichee = premierLot.quantiteInitiale || quantite;  // Afficher 40 au panier
+                quantiteAuBackend = quantite;  // ✅ FIX: Envoyer le nombre réel de LOTs (4, 10, etc.)
+                quantiteAffichee = (premierLot.quantiteInitiale || quantite) * quantite;  // Afficher quantité totale (40m × 4 = 160m)
                 lotIdPrincipal = premierLot._id;
-                console.log(`🎯 LOT ENTIER: Afficher=${quantiteAffichee}m, Envoyer au backend=${quantiteAuBackend} LOT`);
+                console.log(`🎯 LOT ENTIER: Afficher=${quantiteAffichee}m (${quantite} LOTs), Envoyer au backend=${quantiteAuBackend} LOTs`);
             }
         }
         

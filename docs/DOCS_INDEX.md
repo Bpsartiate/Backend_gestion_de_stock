@@ -45,7 +45,41 @@ Bienvenue ! Choisissez votre point d'entrée selon votre rôle :
 
 ---
 
-## 🚀 Démarrage Rapide (2 minutes)
+## � Bug Fixes & Hotfixes
+
+### Hotfixes Actifs (Avril 2026)
+
+| Date | Bug | Statut | Fichier | Impact |
+|------|-----|--------|---------|--------|
+| 3 Avril | Mobile LOT Reception: No LOT documents | ✅ FIXÉ | [BUG_MOBILE_LOT_RECEPTION_FIX.md](BUG_MOBILE_LOT_RECEPTION_FIX.md) | **CRITIQUE** |
+| 3 Avril | LOT sale: Quantité hardcoded à 1 | ✅ FIXÉ | [BUG_LOT_VENTE_QUANTITE_FIX.md](BUG_LOT_VENTE_QUANTITE_FIX.md) | **HAUTE** - Empêchait vente multi-LOTs |
+| 2 Avril | Rayon affiche 100% plein malgré produits épuisés | ✅ FIXÉ | [BUG_RAYON_OCCUPATION_FIX.md](BUG_RAYON_OCCUPATION_FIX.md) | **HAUTE** - Bloquait réceptions/ajouts |
+| 31 Mars | Double-counting bug rayon inventory | ✅ FIXÉ | [FIXES_MARCH_12_2026.md](FIXES_MARCH_12_2026.md) | **CRITIQUE** - Inventory corruption |
+| 31 Mars | Mobile: produits EN_COMMANDE affichent rupture | ✅ FIXÉ | [FIXES_MARCH_12_2026.md](FIXES_MARCH_12_2026.md) | **MOYENNE** - UX issue mobile |
+
+### Lecture Rapide des Fixes
+
+- **[BUG_MOBILE_LOT_RECEPTION_FIX.md](BUG_MOBILE_LOT_RECEPTION_FIX.md)** ⏱️ 5 min ⭐ **NOUVELLE** 
+  - Problème: Mobile - réception LOT créée mais 0 documents LOT
+  - Cause: Backend attendait frontend pour créer LOTs
+  - Fix: Backend crée automatiquement LOTs lors réception
+  - Test: Mobile reçoit 2 pièces → lotsCreatedCount: 2 ✅
+
+- **[BUG_LOT_VENTE_QUANTITE_FIX.md](BUG_LOT_VENTE_QUANTITE_FIX.md)** ⏱️ 5 min
+  - Problème: Vente LOT entier ne traite que 1 LOT même si quantité=4
+  - Cause: Frontend hardcoded `quantiteAuBackend = 1`
+  - Fix: Utiliser `quantite` réelle au lieu de hardcoder
+  - Test: Vend 4 LOTs → 4 lotsAffectes doivent être créés ✅
+
+- **[BUG_RAYON_OCCUPATION_FIX.md](BUG_RAYON_OCCUPATION_FIX.md)** ⏱️ 5 min
+  - Problème: Modal cache stale après sales
+  - Cause: Rayons ne se rechargent pas si même magasin
+  - Fix: Force reload `rayonsLoaded = false`
+  - Test: Vend → Ferme → Ré-ouvre → Voir occupation correct ✅
+
+---
+
+## �🚀 Démarrage Rapide (2 minutes)
 
 ### Step 1 : Contexte
 L'objectif était d'**améliorer la modale détail guichet** pour afficher :

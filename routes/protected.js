@@ -4470,16 +4470,66 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       console.log(`ℹ️ Produit n'est pas EN_COMMANDE (état actuel: ${produit.etat})`);
     }
 
-    // 🎁 PHASE 1 v2 - LOT: Ne pas créer StockRayon ici!
-    // Le frontend crée les LOTs individuels via POST /lots
-    // Chaque POST /lots crée son propre StockRayon et met à jour le rayon
-    
+    // 🎁 PHASE 1 v2 - LOT: Créer les LOT documents automatiquement (plus fiable que l'attente du frontend)
     if (req.body.type === 'lot') {
-      console.log(`🎁 Type = LOT - Réception créée, attente des LOTs individuels du frontend...`);
+      console.log(`🎁 Type = LOT - Création automatique des LOT documents...`);
       
-      // Juste enregistrer la réception et laisser le frontend créer les LOTs
+      // Juste enregistrer la réception 
       reception.mouvementStockId = stockMovement._id;
       await reception.save();
+      
+      // 🔥 NOUVEAU: Créer automatiquement les LOTs du backend (sans attendre le frontend)
+      const { nombrePieces, quantiteParPiece, uniteDetail, prixParUnite } = req.body;
+      
+      if (nombrePieces && quantiteParPiece && uniteDetail) {
+        console.log(`🎁 Création de ${nombrePieces} LOTs automatiquement...`);
+        
+        let lotsCreated = 0;
+        for (let i = 0; i < nombrePieces; i++) {
+          try {
+            const newLot = new Lot({
+              magasinId,
+              produitId,
+              typeProduitId: produit.typeProduitId,
+              receptionId: reception._id,
+              unitePrincipale: produit.typeProduitId?.unitePrincipaleStockage || 'Pièce',
+              quantiteInitiale: quantiteParPiece,
+              quantiteRestante: quantiteParPiece,
+              uniteDetail,
+              prixParUnite: prixParUnite || prixAchat || 0,
+              prixTotal: (prixParUnite || prixAchat || 0) * quantiteParPiece,
+              rayonId,
+              dateReception: dateReception || new Date(),
+              status: 'complet',
+              nombrePieces: 1,
+              quantiteParPiece
+            });
+            
+            await newLot.save();
+            lotsCreated++;
+            
+            // Mettre à jour rayon.quantiteActuelle +1 (chaque LOT = 1 emplacement)
+            const rayon = await Rayon.findById(rayonId);
+            if (rayon) {
+              const nouvelleCapacite = (rayon.quantiteActuelle || 0) + 1;
+              if (nouvelleCapacite <= rayon.capaciteMax) {
+                rayon.quantiteActuelle = nouvelleCapacite;
+                await rayon.save();
+              } else {
+                console.warn(`⚠️ Rayon ${rayon.nomRayon} plein (${rayon.capaciteMax})`);
+              }
+            }
+            
+            console.log(`   ✅ LOT ${i + 1}/${nombrePieces} créé: ${quantiteParPiece}${uniteDetail}`);
+          } catch (lotErr) {
+            console.error(`   ❌ Erreur création LOT ${i + 1}:`, lotErr.message);
+          }
+        }
+        
+        console.log(`✅ ${lotsCreated}/${nombrePieces} LOTs créés avec succès`);
+      } else {
+        console.warn('⚠️ Données LOT incomplètes - LOTs non créés');
+      }
       
       try {
         const magasinData = await Magasin.findById(magasinId);
@@ -4504,14 +4554,22 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         .populate('rayonId', 'nom')
         .populate('mouvementStockId');
 
+      // 🎁 RÉCUPÉRER LES LOTS CRÉÉS POUR LA RÉPONSE
+      const lotsCreated = await Lot.find({
+        receptionId: reception._id,
+        produitId: produitId
+      }).select('_id quantiteInitiale quantiteRestante status dateReception');
+      
       // 🔄 RECHARGER LE PRODUIT POUR CONFIRMER L'ÉTAT MIS À JOUR
       const produitMisAJourLot = await Produit.findById(produitId);
 
       return res.status(201).json({
         success: true,
-        message: '✅ Réception LOT enregistrée (LOTs à créer via frontend)',
+        message: `✅ Réception LOT enregistrée - ${lotsCreated.length} LOTs créés automatiquement`,
         reception: populatedReception,
         mouvement: stockMovement,
+        lotsCreatedCount: lotsCreated.length,
+        lotsCreated: lotsCreated,
         produitUpdated: {
           id: produitMisAJourLot._id,
           etat: produitMisAJourLot.etat,

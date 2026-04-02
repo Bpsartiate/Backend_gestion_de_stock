@@ -640,7 +640,7 @@ function showLotInterface() {
 // ================================// �🔄 QUAND UN PRODUIT EST SÉLECTIONNÉ
 // ================================
 
-function onProduitSelected() {
+async function onProduitSelected() {
   const select = document.getElementById('produitReception');
   const produitId = select.value;
   
@@ -657,18 +657,39 @@ function onProduitSelected() {
   // ✨ OPTIMISATION: Utiliser le type produit DÉJÀ POPULÉ (pas d'appel API!)
   // Le backend envoie typeProduitId avec tous les infos directement
   if (produit.typeProduitId) {
-    currentTypeProduit = typeof produit.typeProduitId === 'object' ? produit.typeProduitId : null;
+    // 🔍 Vérifier si typeProduitId est un objet ou juste un ID
+    if (typeof produit.typeProduitId === 'object') {
+      // Déjà populé ✅
+      currentTypeProduit = produit.typeProduitId;
+      console.log('✅ Type produit détecté (déjà populé):', currentTypeProduit.nomType);
+    } else {
+      // Juste un ID - fetch le type produit
+      console.warn('⚠️ typeProduitId est une string, fetch du type produit...');
+      try {
+        const typeResponse = await fetch(
+          `${API_CONFIG.BASE_URL}/api/protected/types-produits/${produit.typeProduitId}`,
+          { headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken')}` } }
+        );
+        if (typeResponse.ok) {
+          currentTypeProduit = await typeResponse.json();
+          console.log('✅ Type produit fetché:', currentTypeProduit.nomType);
+        } else {
+          console.warn('⚠️ Impossible de fetch le type produit');
+          currentTypeProduit = null;
+        }
+      } catch (err) {
+        console.error('❌ Erreur fetch type produit:', err);
+        currentTypeProduit = null;
+      }
+    }
     
     console.log('🔍 DEBUG currentTypeProduit:', currentTypeProduit);
     console.log('🔍 DEBUG typeStockage:', currentTypeProduit?.typeStockage);
     
     if (currentTypeProduit) {
-      console.log('✅ Type produit détecté (déjà populé):', currentTypeProduit.nomType);
-      console.log('   typeStockage:', currentTypeProduit.typeStockage);
-      
       // ⚡ DÉFAUT: Si typeStockage n'est pas défini, utiliser 'simple'
       const typeStockage = currentTypeProduit.typeStockage || 'simple';
-      console.log('   typeStockage final (avec défaut):', typeStockage);
+      console.log('✅ typeStockage détecté:', typeStockage);
       
       if (typeStockage === 'lot') {
         console.log('✅ Interface LOT activée');
@@ -678,7 +699,8 @@ function onProduitSelected() {
         showSimpleInterface();
       }
     } else {
-      console.warn('⚠️ currentTypeProduit est null après assignement');
+      console.warn('⚠️ Impossible de charger le type produit - utilisant interface SIMPLE par défaut');
+      showSimpleInterface();
     }
   } else {
     console.warn('⚠️ Pas de typeProduitId dans le produit!');
@@ -1029,12 +1051,23 @@ function verifierCapaciteTypeReception() {
 
 async function createLotsForReception(reception, produitId) {
   try {
+    // ✅ VÉRIFICATION CRITIQUE: currentTypeProduit doit exister
+    if (!currentTypeProduit) {
+      throw new Error('❌ Type produit non chargé - impossible de créer LOTs');
+    }
+    
     const nombrePieces = parseInt(document.getElementById('nombrePieces').value);
     const quantiteParPiece = parseFloat(document.getElementById('quantiteParPiece').value);
     const uniteDetail = document.getElementById('uniteDetail').value;
     const prixAchat = parseFloat(document.getElementById('prixAchat').value) || 0;
     const rayonId = document.getElementById('rayonReception').value;
     const dateReception = document.getElementById('dateReception').value;
+    
+    console.log(`🎁 Création LOTs: typeProduit=${currentTypeProduit.nomType}, pieces=${nombrePieces}, qty/piece=${quantiteParPiece}`);
+    
+    if (!nombrePieces || !quantiteParPiece || !uniteDetail || !rayonId) {
+      throw new Error(`❌ Données incomplètes: pieces=${nombrePieces}, qty=${quantiteParPiece}, unit=${uniteDetail}, rayon=${rayonId}`);
+    }
     
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     const lotsPromises = [];
@@ -1049,7 +1082,7 @@ async function createLotsForReception(reception, produitId) {
         produitId: produitId,
         typeProduitId: currentTypeProduit._id,
         receptionId: reception._id,
-        unitePrincipale: currentTypeProduit.unitePrincipaleStockage,
+        unitePrincipale: currentTypeProduit.unitePrincipaleStockage || currentTypeProduit.unitePrincipale,
         quantiteInitiale: parseFloat(quantiteParPiece),  // 1 pièce = quantiteParPiece unités (ex: 15m)
         quantiteRestante: parseFloat(quantiteParPiece),
         uniteDetail: uniteDetail,
@@ -1062,6 +1095,8 @@ async function createLotsForReception(reception, produitId) {
         nombrePieces: 1,  // Chaque Lot = 1 pièce
         quantiteParPiece: parseFloat(quantiteParPiece)
       };
+      
+      console.log(`   📦 LOT ${i}/${nombrePieces}: ${quantiteParPiece}${uniteDetail} @ ${prixAchat}FC/unit`);
       
       lotsPromises.push(
         fetch(
@@ -1404,8 +1439,20 @@ async function submitReception(e) {
     console.log(' Réception enregistrée:', result);
     
     // ✨ SI LOT: créer les LOTs individuels
-    if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
-      await createLotsForReception(result.reception, produitId);
+    isLot = currentTypeProduit && currentTypeProduit.typeStockage === 'lot';
+    console.log(`🔍 Reception type check: isLot=${isLot}, currentTypeProduit=${currentTypeProduit ? 'exists' : 'NULL'}, typeStockage=${currentTypeProduit?.typeStockage}`);
+    
+    if (isLot) {
+      try {
+        console.log('🎁 Démarrage création LOTs pour réception...');
+        await createLotsForReception(result.reception, produitId);
+        console.log('✅ LOTs créés avec succès');
+      } catch (lotErr) {
+        console.error('❌ Erreur lors création LOTs:', lotErr);
+        showToast('⚠️ Réception créée mais erreur création LOTs: ' + lotErr.message, 'warning');
+      }
+    } else {
+      console.log(`✅ Type SIMPLE - pas de LOTs à créer`);
     }
 
     // 🔄 NOTE: Le produit est automatiquement mis à jour par POST /receptions
