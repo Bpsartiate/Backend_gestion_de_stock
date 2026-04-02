@@ -27,6 +27,7 @@ const TypeProduit = require('../models/typeProduit'); // 🆕 PHASE 1 v2
 async function sellLot(produitId, rayonId, quantiteVendue, typeVente = 'partiel') {
   let quantiteRestante = quantiteVendue;
   let lotsAffectes = [];
+  let lots_qui_viennent_de_devenir_epuises = 0;  // 🆕 Tracker les LOTs épuisés de CETTE vente
   
   // Chercher les LOTs du produit dans ce rayon (complèt ou partiels)
   const lots = await Lot.find({
@@ -42,14 +43,20 @@ async function sellLot(produitId, rayonId, quantiteVendue, typeVente = 'partiel'
   for (const lot of lots) {
     if (quantiteRestante <= 0) break;
     
+    const ancienStatus = lot.status;
+    
     if (typeVente === 'entier') {
       // 🎯 Vendre le LOT entièrement - 1 LOT = 1 unité de vente
       lot.quantiteRestante = 0;
       lot.status = 'epuise';
+      // 🆕 Tracker: ce LOT vient de devenir épuisé
+      if (ancienStatus !== 'epuise') {
+        lots_qui_viennent_de_devenir_epuises++;
+      }
       lotsAffectes.push({
         lotId: lot._id,
         quantiteVendue: lot.quantiteInitiale,  // Nombre de pièces du LOT
-        ancienStatut: 'complet/partiel',
+        ancienStatut: ancienStatus,
         nouveauStatut: 'epuise'
       });
       quantiteRestante -= 1;  // 🆕 Diminuer par 1 LOT, pas par quantiteInitiale
@@ -61,6 +68,10 @@ async function sellLot(produitId, rayonId, quantiteVendue, typeVente = 'partiel'
       // Mettre à jour le statut
       if (lot.quantiteRestante === 0) {
         lot.status = 'epuise';
+        // 🆕 Tracker: ce LOT vient de devenir épuisé
+        if (ancienStatus !== 'epuise') {
+          lots_qui_viennent_de_devenir_epuises++;
+        }
       } else if (lot.quantiteRestante < lot.quantiteInitiale) {
         lot.status = 'partiel_vendu';
       }
@@ -68,7 +79,7 @@ async function sellLot(produitId, rayonId, quantiteVendue, typeVente = 'partiel'
       lotsAffectes.push({
         lotId: lot._id,
         quantiteVendue: vendu,
-        ancienStatut: 'complet/partiel',
+        ancienStatut: ancienStatus,
         nouveauStatut: lot.status
       });
       
@@ -80,6 +91,14 @@ async function sellLot(produitId, rayonId, quantiteVendue, typeVente = 'partiel'
   
   if (quantiteRestante > 0) {
     throw new Error(`❌ Stock insuffisant! Demandé: ${quantiteVendue}, Disponible: ${quantiteVendue - quantiteRestante}`);
+  }
+  
+  // 🔄 Mettre à jour rayon.quantiteActuelle UNIQUEMENT pour les LOTs qui VIENNENT DE DEVENIR ÉPUISÉS
+  if (lots_qui_viennent_de_devenir_epuises > 0) {
+    const rayon = await Rayon.findById(rayonId);
+    rayon.quantiteActuelle = Math.max(0, rayon.quantiteActuelle - lots_qui_viennent_de_devenir_epuises);
+    await rayon.save();
+    console.log(`✅ Rayon ${rayonId}: ${lots_qui_viennent_de_devenir_epuises} LOT(s) épuisé(s), quantiteActuelle = ${rayon.quantiteActuelle}`);
   }
   
   return { lotsAffectes };
@@ -95,6 +114,7 @@ async function sellLot(produitId, rayonId, quantiteVendue, typeVente = 'partiel'
 async function sellSimple(produitId, rayonId, quantiteVendue) {
   let quantiteRestante = quantiteVendue;
   let stocksAffectes = [];
+  let emplacements_qui_viennent_de_devenir_vides = 0;  // 🆕 Tracker les vides de CETTE vente
   
   // Chercher les StockRayon du produit dans ce rayon (EN_STOCK ou PARTIELLEMENT_VENDU)
   const stocks = await StockRayon.find({
@@ -113,11 +133,16 @@ async function sellSimple(produitId, rayonId, quantiteVendue) {
     if (quantiteRestante <= 0) break;
     
     const vendu = Math.min(quantiteRestante, stock.quantiteDisponible);
+    const ancienStatus = stock.statut;
     stock.quantiteDisponible -= vendu;
     
     // Mettre à jour le statut
     if (stock.quantiteDisponible === 0) {
       stock.statut = 'VIDE';
+      // 🆕 Tracker: cet emplacement vient de devenir vide pendant cette vente
+      if (ancienStatus !== 'VIDE') {
+        emplacements_qui_viennent_de_devenir_vides++;
+      }
     } else if (stock.quantiteDisponible < stock.quantiteInitiale) {
       stock.statut = 'PARTIELLEMENT_VENDU';
     }
@@ -125,7 +150,7 @@ async function sellSimple(produitId, rayonId, quantiteVendue) {
     stocksAffectes.push({
       stockRayonId: stock._id,
       quantiteVendue: vendu,
-      ancienStatut: 'EN_STOCK/PARTIELLEMENT_VENDU',
+      ancienStatut: ancienStatus,
       nouveauStatut: stock.statut
     });
     
@@ -137,17 +162,12 @@ async function sellSimple(produitId, rayonId, quantiteVendue) {
     throw new Error(`❌ Stock insuffisant! Demandé: ${quantiteVendue}, Disponible: ${quantiteVendue - quantiteRestante}`);
   }
   
-  // Si des emplacements deviennent VIDE, mettre à jour le rayon
-  const rayon = await Rayon.findById(rayonId);
-  const emplacementsVides = await StockRayon.countDocuments({
-    rayonId,
-    produitId,
-    statut: 'VIDE'
-  });
-  
-  if (emplacementsVides > 0) {
-    rayon.quantiteActuelle = Math.max(0, rayon.quantiteActuelle - emplacementsVides);
+  // 🔄 Mettre à jour rayon.quantiteActuelle UNIQUEMENT pour les emplacements qui VIENNENT DE DEVENIR VIDES
+  if (emplacements_qui_viennent_de_devenir_vides > 0) {
+    const rayon = await Rayon.findById(rayonId);
+    rayon.quantiteActuelle = Math.max(0, rayon.quantiteActuelle - emplacements_qui_viennent_de_devenir_vides);
     await rayon.save();
+    console.log(`✅ Rayon ${rayonId}: ${emplacements_qui_viennent_de_devenir_vides} emplacement(s) vidé(s), quantiteActuelle = ${rayon.quantiteActuelle}`);
   }
   
   return { stocksAffectes };

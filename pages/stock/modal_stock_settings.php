@@ -1970,9 +1970,11 @@
           } else if (!newMagasinId) {
             console.warn('⚠️ newMagasinId vide - magasin non trouvé');
           } else {
-            console.log('ℹ️ Même magasin, mais on recharge les catégories pour assurer à jour');
-            // ✅ TOUJOURS charger les catégories pour s'assurer que les checkboxes sont disponibles
+            console.log('ℹ️ Même magasin, mais on recharge les catégories et rayons pour assurer à jour');
+            // ✅ TOUJOURS charger les catégories et rayons pour s'assurer que les données sont à jour
             loadCategoriesModal();
+            rayonsLoaded = false;  // 🔧 Force rechargement des rayons
+            loadRayonsModal();      // 🔧 Recharger les rayons (synchronise avec ventes, satuts VIDE, etc)
           }
         });
       }
