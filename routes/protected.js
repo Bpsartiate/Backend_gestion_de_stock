@@ -4474,15 +4474,48 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     if (req.body.type === 'lot') {
       console.log(`🎁 Type = LOT - Création automatique des LOT documents...`);
       
-      // Juste enregistrer la réception 
+      // 🔥 STRICT VALIDATION: Tous les champs LOT sont REQUIS ou la réception est REJETÉE
+      const { nombrePieces, quantiteParPiece, uniteDetail, prixParUnite } = req.body;
+      
+      // Validations strictes
+      const lotErrors = [];
+      if (!nombrePieces || nombrePieces <= 0 || isNaN(parseFloat(nombrePieces))) lotErrors.push('nombrePieces (doit être > 0)');
+      if (!quantiteParPiece || quantiteParPiece <= 0 || isNaN(parseFloat(quantiteParPiece))) lotErrors.push('quantiteParPiece (doit être > 0)');
+      if (!uniteDetail || uniteDetail.trim() === '') lotErrors.push('uniteDetail (manquant)');
+      if (prixParUnite === null || prixParUnite === undefined || isNaN(parseFloat(prixParUnite))) lotErrors.push('prixParUnite (invalide)');
+      
+      if (lotErrors.length > 0) {
+        console.error('❌ RÉCEPTION LOT REJETÉE - Champs manquants/invalides:', lotErrors);
+        
+        // 🆕 Message d'erreur détaillé avec les champs reçus vs attendus
+        const detailedErrors = lotErrors.map(err => `  • ${err}`).join('\n');
+        const valuesReceived = `
+  Valeurs reçues:
+    - nombrePieces: ${nombrePieces || 'VIDE'}
+    - quantiteParPiece: ${quantiteParPiece || 'VIDE'}
+    - uniteDetail: ${uniteDetail || 'VIDE'}
+    - prixParUnite: ${prixParUnite || 'VIDE'}
+`;
+        
+        return res.status(400).json({
+          success: false,
+          error: `❌ ERREUR CRITIQUE - Réception LOT incomplète!\n\nChamps manquants ou invalides:\n${detailedErrors}\n${valuesReceived}\n⚠️ CECI EMPÊCHERAIT LA VENTE DU PRODUIT!\n\nVous DEVEZ remplir TOUS ces champs sur le formulaire de réception:
+  1. 🎁 Nombre de Pièces (doit être > 0)
+  2. 📦 Quantité par Pièce (doit être > 0)
+  3. 📏 Unité (sélectionner dans la liste)
+  4. 💵 Prix par Unité (doit être valide)`,
+          fields_required: ['nombrePieces', 'quantiteParPiece', 'uniteDetail', 'prixParUnite'],
+          received: { nombrePieces, quantiteParPiece, uniteDetail, prixParUnite },
+          missing_fields: lotErrors
+        });
+      }
+      
+      // Enregistrer la réception
       reception.mouvementStockId = stockMovement._id;
       await reception.save();
       
-      // 🔥 NOUVEAU: Créer automatiquement les LOTs du backend (sans attendre le frontend)
-      const { nombrePieces, quantiteParPiece, uniteDetail, prixParUnite } = req.body;
-      
-      if (nombrePieces && quantiteParPiece && uniteDetail) {
-        console.log(`🎁 Création de ${nombrePieces} LOTs automatiquement...`);
+      // 🎁 Créer les LOTs (tous les champs validés)
+      console.log(`🎁 Création de ${nombrePieces} LOTs automatiquement...`);
         
         let lotsCreated = 0;
         for (let i = 0; i < nombrePieces; i++) {
@@ -4527,9 +4560,6 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         }
         
         console.log(`✅ ${lotsCreated}/${nombrePieces} LOTs créés avec succès`);
-      } else {
-        console.warn('⚠️ Données LOT incomplètes - LOTs non créés');
-      }
       
       try {
         const magasinData = await Magasin.findById(magasinId);
@@ -4555,7 +4585,7 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         .populate('mouvementStockId');
 
       // 🎁 RÉCUPÉRER LES LOTS CRÉÉS POUR LA RÉPONSE
-      const lotsCreated = await Lot.find({
+      const lotsCreatedList = await Lot.find({
         receptionId: reception._id,
         produitId: produitId
       }).select('_id quantiteInitiale quantiteRestante status dateReception');
@@ -4565,11 +4595,11 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
 
       return res.status(201).json({
         success: true,
-        message: `✅ Réception LOT enregistrée - ${lotsCreated.length} LOTs créés automatiquement`,
+        message: `✅ Réception LOT enregistrée - ${lotsCreatedList.length} LOTs créés automatiquement`,
         reception: populatedReception,
         mouvement: stockMovement,
-        lotsCreatedCount: lotsCreated.length,
-        lotsCreated: lotsCreated,
+        lotsCreatedCount: lotsCreatedList.length,
+        lotsCreated: lotsCreatedList,
         produitUpdated: {
           id: produitMisAJourLot._id,
           etat: produitMisAJourLot.etat,

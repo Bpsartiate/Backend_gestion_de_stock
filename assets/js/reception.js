@@ -1046,91 +1046,11 @@ function verifierCapaciteTypeReception() {
 }
 
 // ================================
-// 🎁 CRÉER LES LOTS INDIVIDUELS
+// 📤 NOTE: LOT CREATION (v2.5)
 // ================================
-
-async function createLotsForReception(reception, produitId) {
-  try {
-    // ✅ VÉRIFICATION CRITIQUE: currentTypeProduit doit exister
-    if (!currentTypeProduit) {
-      throw new Error('❌ Type produit non chargé - impossible de créer LOTs');
-    }
-    
-    const nombrePieces = parseInt(document.getElementById('nombrePieces').value);
-    const quantiteParPiece = parseFloat(document.getElementById('quantiteParPiece').value);
-    const uniteDetail = document.getElementById('uniteDetail').value;
-    const prixAchat = parseFloat(document.getElementById('prixAchat').value) || 0;
-    const rayonId = document.getElementById('rayonReception').value;
-    const dateReception = document.getElementById('dateReception').value;
-    
-    console.log(`🎁 Création LOTs: typeProduit=${currentTypeProduit.nomType}, pieces=${nombrePieces}, qty/piece=${quantiteParPiece}`);
-    
-    if (!nombrePieces || !quantiteParPiece || !uniteDetail || !rayonId) {
-      throw new Error(`❌ Données incomplètes: pieces=${nombrePieces}, qty=${quantiteParPiece}, unit=${uniteDetail}, rayon=${rayonId}`);
-    }
-    
-    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-    const lotsPromises = [];
-    
-    // 🎁 PHASE 1 v2: 1 PIÈCE = 1 LOT (pas consolidation)
-    // 30 rouleaux = 30 Lots différents, chacun avec son numeroLot unique
-    console.log(`🎁 Phase 1 v2: Création de ${nombrePieces} LOTs (1 par pièce)...`);
-    
-    for (let i = 1; i <= nombrePieces; i++) {
-      const lotData = {
-        magasinId: MAGASIN_ID,
-        produitId: produitId,
-        typeProduitId: currentTypeProduit._id,
-        receptionId: reception._id,
-        unitePrincipale: currentTypeProduit.unitePrincipaleStockage || currentTypeProduit.unitePrincipale,
-        quantiteInitiale: parseFloat(quantiteParPiece),  // 1 pièce = quantiteParPiece unités (ex: 15m)
-        quantiteRestante: parseFloat(quantiteParPiece),
-        uniteDetail: uniteDetail,
-        prixParUnite: prixAchat,
-        prixTotal: parseFloat(quantiteParPiece) * prixAchat,
-        rayonId: rayonId,
-        dateReception: dateReception,
-        status: 'complet',
-        // 🎁 Métadonnées LOT
-        nombrePieces: 1,  // Chaque Lot = 1 pièce
-        quantiteParPiece: parseFloat(quantiteParPiece)
-      };
-      
-      console.log(`   📦 LOT ${i}/${nombrePieces}: ${quantiteParPiece}${uniteDetail} @ ${prixAchat}FC/unit`);
-      
-      lotsPromises.push(
-        fetch(
-          `${API_CONFIG.BASE_URL}/api/protected/lots`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(lotData)
-          }
-        )
-      );
-    }
-    
-    const lotResults = await Promise.all(lotsPromises);
-    let lotCreated = 0;
-    
-    for (const res of lotResults) {
-      if (res.ok) {
-        lotCreated++;
-      } else {
-        console.error('❌ Erreur création LOT:', await res.json());
-      }
-    }
-    
-    console.log(`✅ ${lotCreated}/${nombrePieces} LOTs créés (1 par pièce)`);
-    
-  } catch (err) {
-    console.error('❌ Erreur createLotsForReception:', err);
-    showToast('⚠️ Réception créée mais erreur lors de création des LOTs', 'warning');
-  }
-}
+// 🔄 V2.5 FIX: Backend now auto-creates LOTs in POST /receptions
+// Frontend no longer needs to create LOTs - this prevents duplicates
+// Backend sends lotsCreatedCount and lotsCreated[] in response
 
 // ================================
 // 📤 SOUMETTRE LA RÉCEPTION
@@ -1204,16 +1124,41 @@ async function submitReception(e) {
       const uniteDetail = document.getElementById('uniteDetail')?.value;
       const prixParUnite = parseFloat(document.getElementById('prixParUniteDetail')?.value);
 
-      if (!produitId || !nombrePieces || !quantiteParPiece || !uniteDetail || !rayonId || prixAchat === null) {
-        console.error('❌ Champs LOT requis manquants!', {
-          produitId: produitId || 'MISSING',
-          nombrePieces: nombrePieces || 'MISSING',
-          quantiteParPiece: quantiteParPiece || 'MISSING',
-          uniteDetail: uniteDetail || 'MISSING',
-          prixParUnite: prixParUnite || 'MISSING',
-          rayonId: rayonId || 'MISSING'
+      // 🆕 VALIDATION STRICTE: Vérifier CHAQUE champ avec messages clairs
+      const errors = [];
+      if (!produitId) errors.push('Produit manquant');
+      if (!nombrePieces || nombrePieces <= 0 || isNaN(nombrePieces)) errors.push('🎁 Nombre de Pièces invalide (doit être > 0)');
+      if (!quantiteParPiece || quantiteParPiece <= 0 || isNaN(quantiteParPiece)) errors.push('📦 Quantité par Pièce invalide (doit être > 0)');
+      if (!uniteDetail) errors.push('📏 Unité manquante');
+      if (!rayonId) errors.push('🏪 Rayon manquant');
+      if (prixAchat === null || prixAchat === undefined) errors.push('💰 Prix d\'achat manquant');
+      if (!prixParUnite || prixParUnite < 0 || isNaN(prixParUnite)) errors.push('💵 Prix par Unité invalide');
+
+      if (errors.length > 0) {
+        console.error('❌ Validation LOT échouée:', errors);
+        
+        // 🆕 Format du message d'erreur amélioré avec les champs manquants listés clairement
+        let errorMsg = `
+          <div style="text-align: left; font-size: 0.95em; line-height: 1.6;">
+            <div style="margin-bottom: 8px; font-weight: bold; color: #d32f2f;">
+              ⚠️ RÉCEPTION INCOMPLÈTE - EMPÊCHERA LA VENTE
+            </div>
+            <div style="background: #ffebee; padding: 8px; border-left: 4px solid #d32f2f; margin-bottom: 8px;">
+              <strong>Champs OBLIGATOIRES manquants ou invalides:</strong>
+              <br><br>
+        `;
+        
+        errors.forEach(error => {
+          errorMsg += `<div style="margin-left: 12px; margin-bottom: 4px;">• ${error}</div>`;
         });
-        showToast('❌ Veuillez remplir tous les champs LOT requis', 'danger');
+        
+        errorMsg += `
+              <br><strong style="color: #d32f2f;">➡️ Veuillez remplir TOUS ces champs avant de soumettre</strong>
+            </div>
+          </div>
+        `;
+        
+        showToast(errorMsg, 'danger');
         btnSubmit.disabled = false;
         iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
         textSubmit.textContent = 'Enregistrer Réception';
@@ -1438,21 +1383,13 @@ async function submitReception(e) {
     const result = await response.json();
     console.log(' Réception enregistrée:', result);
     
-    // ✨ SI LOT: créer les LOTs individuels
-    isLot = currentTypeProduit && currentTypeProduit.typeStockage === 'lot';
-    console.log(`🔍 Reception type check: isLot=${isLot}, currentTypeProduit=${currentTypeProduit ? 'exists' : 'NULL'}, typeStockage=${currentTypeProduit?.typeStockage}`);
-    
-    if (isLot) {
-      try {
-        console.log('🎁 Démarrage création LOTs pour réception...');
-        await createLotsForReception(result.reception, produitId);
-        console.log('✅ LOTs créés avec succès');
-      } catch (lotErr) {
-        console.error('❌ Erreur lors création LOTs:', lotErr);
-        showToast('⚠️ Réception créée mais erreur création LOTs: ' + lotErr.message, 'warning');
-      }
-    } else {
-      console.log(`✅ Type SIMPLE - pas de LOTs à créer`);
+    // 🔄 V2.5 FIX: Backend auto-crée les LOTs maintenant
+    // Plus besoin de les créer au frontend - évite les doublons
+    // Le backend envoie lotsCreatedCount et lotsCreated dans la réponse
+    console.log(`✅ LOTs gérés automatiquement par le backend`);
+    if (result.lotsCreatedCount) {
+      console.log(`   📦 ${result.lotsCreatedCount} LOTs créés automatiquement`);
+      showToast(`✅ ${result.lotsCreatedCount} LOTs créés automatiquement`, 'success');
     }
 
     // 🔄 NOTE: Le produit est automatiquement mis à jour par POST /receptions
