@@ -51,6 +51,7 @@ Bienvenue ! Choisissez votre point d'entrée selon votre rôle :
 
 | Date | Bug | Statut | Fichier | Impact |
 |------|-----|--------|---------|--------|
+| 5 Avril | LOT Validation: Champs obligatoires non validés strictement | ✅ FIXÉ | [BUG_LOT_VALIDATION_FIX_V26.md](BUG_LOT_VALIDATION_FIX_V26.md) | **CRITIQUE** - Empêchait sales (0 LOTs) |
 | 3 Avril | Mobile LOT Reception: No LOT documents | ✅ FIXÉ | [BUG_MOBILE_LOT_RECEPTION_FIX.md](BUG_MOBILE_LOT_RECEPTION_FIX.md) | **CRITIQUE** |
 | 3 Avril | LOT sale: Quantité hardcoded à 1 | ✅ FIXÉ | [BUG_LOT_VENTE_QUANTITE_FIX.md](BUG_LOT_VENTE_QUANTITE_FIX.md) | **HAUTE** - Empêchait vente multi-LOTs |
 | 2 Avril | Rayon affiche 100% plein malgré produits épuisés | ✅ FIXÉ | [BUG_RAYON_OCCUPATION_FIX.md](BUG_RAYON_OCCUPATION_FIX.md) | **HAUTE** - Bloquait réceptions/ajouts |
@@ -59,7 +60,14 @@ Bienvenue ! Choisissez votre point d'entrée selon votre rôle :
 
 ### Lecture Rapide des Fixes
 
-- **[BUG_MOBILE_LOT_RECEPTION_FIX.md](BUG_MOBILE_LOT_RECEPTION_FIX.md)** ⏱️ 5 min ⭐ **NOUVELLE** 
+- **[BUG_LOT_VALIDATION_FIX_V26.md](BUG_LOT_VALIDATION_FIX_V26.md)** ⏱️ 5 min ⭐ **NOUVELLE v2.6**
+  - Problème: Réceptions LOT incomplètes (manque "Nombre de Pièces") → 0 LOTs → sales fail
+  - Cause: Backend acceptait réceptions incomplétes, seulement warning
+  - Fix: Validation STRICTE frontend + backend avec messages détaillés
+  - User sees: Liste exacte des champs manquants (emojis + noms)
+  - Test: Soumet sans "Nombre de Pièces" → 400 error avec `missing_fields: ['nombrePieces (doit être > 0)']` ✅
+
+- **[BUG_MOBILE_LOT_RECEPTION_FIX.md](BUG_MOBILE_LOT_RECEPTION_FIX.md)** ⏱️ 5 min ⭐ **v2.5**
   - Problème: Mobile - réception LOT créée mais 0 documents LOT
   - Cause: Backend attendait frontend pour créer LOTs
   - Fix: Backend crée automatiquement LOTs lors réception

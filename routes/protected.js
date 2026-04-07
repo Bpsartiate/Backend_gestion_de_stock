@@ -4471,15 +4471,18 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
     }
 
     // 🎁 PHASE 1 v2 - LOT: Créer les LOT documents automatiquement (plus fiable que l'attente du frontend)
-    if (req.body.type === 'lot') {
-      console.log(`🎁 Type = LOT - Création automatique des LOT documents...`);
+    // 🔧 FIX v2.7: Vérifier si nombrePieces existe PLUTÔT QUE type === 'lot'
+    // Cela capture TOUTES les réceptions LOT même si type n'est pas envoyé
+    if (req.body.nombrePieces || nombrePieces) {
+      console.log(`🎁 📦 NOMBREPIECES DÉTECTÉ - Création automatique des LOT documents...`);
+      console.log(`   nombrePieces reçu: ${req.body.nombrePieces || nombrePieces}`);
       
       // 🔥 STRICT VALIDATION: Tous les champs LOT sont REQUIS ou la réception est REJETÉE
-      const { nombrePieces, quantiteParPiece, uniteDetail, prixParUnite } = req.body;
+      const { nombrePieces: nbPieces, quantiteParPiece, uniteDetail, prixParUnite } = req.body;
       
       // Validations strictes
       const lotErrors = [];
-      if (!nombrePieces || nombrePieces <= 0 || isNaN(parseFloat(nombrePieces))) lotErrors.push('nombrePieces (doit être > 0)');
+      if (!nbPieces || nbPieces <= 0 || isNaN(parseFloat(nbPieces))) lotErrors.push('nombrePieces (doit être > 0)');
       if (!quantiteParPiece || quantiteParPiece <= 0 || isNaN(parseFloat(quantiteParPiece))) lotErrors.push('quantiteParPiece (doit être > 0)');
       if (!uniteDetail || uniteDetail.trim() === '') lotErrors.push('uniteDetail (manquant)');
       if (prixParUnite === null || prixParUnite === undefined || isNaN(parseFloat(prixParUnite))) lotErrors.push('prixParUnite (invalide)');
@@ -4491,7 +4494,7 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
         const detailedErrors = lotErrors.map(err => `  • ${err}`).join('\n');
         const valuesReceived = `
   Valeurs reçues:
-    - nombrePieces: ${nombrePieces || 'VIDE'}
+    - nombrePieces: ${nbPieces || 'VIDE'}
     - quantiteParPiece: ${quantiteParPiece || 'VIDE'}
     - uniteDetail: ${uniteDetail || 'VIDE'}
     - prixParUnite: ${prixParUnite || 'VIDE'}
@@ -4505,7 +4508,7 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
   3. 📏 Unité (sélectionner dans la liste)
   4. 💵 Prix par Unité (doit être valide)`,
           fields_required: ['nombrePieces', 'quantiteParPiece', 'uniteDetail', 'prixParUnite'],
-          received: { nombrePieces, quantiteParPiece, uniteDetail, prixParUnite },
+          received: { nombrePieces: nbPieces, quantiteParPiece, uniteDetail, prixParUnite },
           missing_fields: lotErrors
         });
       }
@@ -4515,10 +4518,10 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
       await reception.save();
       
       // 🎁 Créer les LOTs (tous les champs validés)
-      console.log(`🎁 Création de ${nombrePieces} LOTs automatiquement...`);
+      console.log(`🎁 Création de ${nbPieces} LOTs automatiquement...`);
         
         let lotsCreated = 0;
-        for (let i = 0; i < nombrePieces; i++) {
+        for (let i = 0; i < nbPieces; i++) {
           try {
             const newLot = new Lot({
               magasinId,
@@ -4553,13 +4556,13 @@ router.post('/receptions', authMiddleware, checkMagasinAccess, async (req, res) 
               }
             }
             
-            console.log(`   ✅ LOT ${i + 1}/${nombrePieces} créé: ${quantiteParPiece}${uniteDetail}`);
+            console.log(`   ✅ LOT ${i + 1}/${nbPieces} créé: ${quantiteParPiece}${uniteDetail}`);
           } catch (lotErr) {
             console.error(`   ❌ Erreur création LOT ${i + 1}:`, lotErr.message);
           }
         }
         
-        console.log(`✅ ${lotsCreated}/${nombrePieces} LOTs créés avec succès`);
+        console.log(`✅ ${lotsCreated}/${nbPieces} LOTs créés avec succès`);
       
       try {
         const magasinData = await Magasin.findById(magasinId);
@@ -4822,7 +4825,7 @@ router.get('/receptions', authMiddleware, checkMagasinAccess, async (req, res) =
         select: 'designation reference image quantiteActuelle prixUnitaire typeProduitId seuilAlerte etat',
         populate: {
           path: 'typeProduitId',
-          select: 'nomType unitePrincipale code icone'
+          select: 'nomType unitePrincipale code icone typeStockage'
         }
       })
       .populate('magasinId', 'nom')
@@ -4835,6 +4838,29 @@ router.get('/receptions', authMiddleware, checkMagasinAccess, async (req, res) =
       .sort({ dateReception: -1 })
       .skip(skip)
       .limit(parseInt(limit));
+
+    // 🎁 Pour chaque réception LOT: récupérer les LOTs créés
+    const receptionsWithLots = await Promise.all(
+      receptions.map(async (reception) => {
+        const receptionObj = reception.toObject();
+        
+        // Si c'est une réception LOT, fetcher les LOTs
+        if (receptionObj.type === 'lot' || receptionObj.nombrePieces) {
+          const lots = await Lot.find({
+            receptionId: reception._id,
+            produitId: reception.produitId._id
+          }).select('_id quantiteInitiale quantiteRestante status dateReception uniteDetail prixParUnite prixTotal nombrePieces');
+          
+          receptionObj.lots = lots || [];
+          receptionObj.lotsCount = lots.length;
+        } else {
+          receptionObj.lots = [];
+          receptionObj.lotsCount = 0;
+        }
+        
+        return receptionObj;
+      })
+    );
 
     // Compter total
     const total = await Reception.countDocuments(filter);
@@ -4858,7 +4884,7 @@ router.get('/receptions', authMiddleware, checkMagasinAccess, async (req, res) =
       page: parseInt(page),
       limit: parseInt(limit),
       pages: Math.ceil(total / limit),
-      receptions,
+      receptions: receptionsWithLots,
       stats: stats.reduce((acc, s) => {
         acc[s._id] = { count: s.count, totalQuantite: s.totalQuantite, totalPrix: s.totalPrix };
         return acc;
@@ -4885,7 +4911,7 @@ router.get('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
         path: 'produitId',
         populate: {
           path: 'typeProduitId',
-          select: 'nomType unitePrincipale code icone'
+          select: 'nomType unitePrincipale code icone typeStockage'
         }
       })
       .populate('magasinId', 'nom')
@@ -4900,7 +4926,30 @@ router.get('/receptions/:receptionId', authMiddleware, checkMagasinAccess, async
       return res.status(404).json({ error: 'Réception non trouvée' });
     }
 
-    res.json({ success: true, reception });
+    // 🎁 Si réception LOT: récupérer les LOTs créés
+    const receptionObj = reception.toObject();
+    if (receptionObj.type === 'lot' || receptionObj.nombrePieces) {
+      const lots = await Lot.find({
+        receptionId: req.params.receptionId,
+        produitId: receptionObj.produitId._id
+      }).select('_id quantiteInitiale quantiteRestante status dateReception uniteDetail prixParUnite prixTotal nombrePieces quantiteParPiece');
+      
+      receptionObj.lots = lots || [];
+      receptionObj.lotsCount = lots.length;
+      receptionObj.lotsCreatedSuccessfully = lots.length === (receptionObj.nombrePieces || 0);
+      
+      console.log(`📦 GET /receptions/:id ${req.params.receptionId}`);
+      console.log(`   Type: ${receptionObj.type}`);
+      console.log(`   Nombre de Pièces attendues: ${receptionObj.nombrePieces}`);
+      console.log(`   LOTs trouvés: ${lots.length}`);
+      console.log(`   ✅ Succès: ${receptionObj.lotsCreatedSuccessfully}`);
+    } else {
+      receptionObj.lots = [];
+      receptionObj.lotsCount = 0;
+      receptionObj.lotsCreatedSuccessfully = true;
+    }
+
+    res.json({ success: true, reception: receptionObj });
   } catch (error) {
     console.error('❌ GET /receptions/:id error:', error);
     res.status(500).json({ error: error.message });
@@ -5022,6 +5071,123 @@ router.put('/receptions/:receptionId', authMiddleware, upload.single('photo'), c
   } catch (error) {
     console.error('❌ PUT /receptions/:id error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// 🔧 FIX v2.7: ENDPOINT DE NETTOYAGE - Créer les LOTs manquants
+// Cet endpoint récupère toutes les réceptions avec nombrePieces MAIS sans LOTs associés
+// et crée les LOTs automatiquement
+
+// ENDPOINT: POST /api/protected/receptions/fix/missing-lots
+router.post('/receptions/fix/missing-lots', authMiddleware, checkMagasinAccess, async (req, res) => {
+  try {
+    console.log('\n🔧 === FIX ENDPOINT: Création des LOTs manquants ===');
+    const { magasinId: queryMagasinId } = req.query;
+    const targetMagasinId = queryMagasinId || req.user.magasinId;
+
+    // 1. Trouver TOUS les réceptions avec nombrePieces > 0
+    console.log(`🔍 Recherche des réceptions orphelines (nombrePieces > 0)...`);
+    const orphanedReceptions = await Reception.find({
+      magasinId: targetMagasinId,
+      nombrePieces: { $gt: 0 },
+      quantiteParPiece: { $gt: 0 },
+      uniteDetail: { $exists: true, $ne: null }
+    }).populate('produitId', 'designation reference typeProduitId prixUnitaire')
+      .populate('magasinId', 'nom');
+
+    console.log(`   Trouvé: ${orphanedReceptions.length} réceptions avec nombrePieces`);
+
+    let lotsCreatedGlobal = 0;
+    let receptionsFixed = 0;
+    const results = [];
+
+    for (const reception of orphanedReceptions) {
+      try {
+        // 2. Vérifier si les LOTs existent déjà
+        const existingLots = await Lot.find({
+          receptionId: reception._id,
+          produitId: reception.produitId._id
+        });
+
+        const lotsNeeded = reception.nombrePieces || 0;
+        const lotsExists = existingLots.length;
+
+        if (lotsExists >= lotsNeeded) {
+          console.log(`   ✅ ${reception._id} - ${lotsExists}/${lotsNeeded} LOTs OK (pas de création nécessaire)`);
+          continue;  // Skip si déjà complet
+        }
+
+        // 3. Créer les LOTs manquants
+        console.log(`   🎁 ${reception._id} - Création de ${lotsNeeded} LOTs pour ${reception.produitId.designation}`);
+        const produit = await Produit.findById(reception.produitId._id);
+
+        let lotsCreatedForThisReception = 0;
+        for (let i = 0; i < lotsNeeded; i++) {
+          const newLot = new Lot({
+            magasinId: reception.magasinId._id,
+            produitId: reception.produitId._id,
+            typeProduitId: produit.typeProduitId,
+            receptionId: reception._id,
+            unitePrincipale: produit.typeProduitId?.unitePrincipaleStockage || 'Pièce',
+            quantiteInitiale: reception.quantiteParPiece,
+            quantiteRestante: reception.quantiteParPiece,
+            uniteDetail: reception.uniteDetail,
+            prixParUnite: reception.prixParUnite || reception.prixAchat || 0,
+            prixTotal: (reception.prixParUnite || reception.prixAchat || 0) * reception.quantiteParPiece,
+            rayonId: reception.rayonId,
+            dateReception: reception.dateReception || new Date(),
+            status: 'complet',
+            nombrePieces: 1,
+            quantiteParPiece: reception.quantiteParPiece
+          });
+
+          await newLot.save();
+          lotsCreatedForThisReception++;
+          lotsCreatedGlobal++;
+        }
+
+        receptionsFixed++;
+        results.push({
+          receptionId: reception._id,
+          produit: reception.produitId.designation,
+          lotsCreated: lotsCreatedForThisReception,
+          utilisateur: reception.utilisateurId,
+          dateReception: reception.dateReception,
+          status: 'FIXED ✅'
+        });
+
+        console.log(`      ✅ ${lotsCreatedForThisReception} LOTs créés pour cette réception`);
+
+      } catch (receptionError) {
+        console.error(`   ❌ Erreur pour ${reception._id}:`, receptionError.message);
+        results.push({
+          receptionId: reception._id,
+          status: 'ERROR ❌',
+          error: receptionError.message
+        });
+      }
+    }
+
+    console.log(`\n✅ FIX COMPLETED`);
+    console.log(`   Réceptions corrigées: ${receptionsFixed}`);
+    console.log(`   LOTs créés au total: ${lotsCreatedGlobal}`);
+
+    res.status(200).json({
+      success: true,
+      message: `✅ ${receptionsFixed} réceptions corrigées - ${lotsCreatedGlobal} LOTs créés`,
+      receptionsProjectedToFix: orphanedReceptions.length,
+      receptionsActuallyFixed: receptionsFixed,
+      lotsCreatedGlobal: lotsCreatedGlobal,
+      results: results
+    });
+
+  } catch (error) {
+    console.error('❌ POST /receptions/fix/missing-lots error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: 'Erreur lors de la correction des LOTs manquants'
+    });
   }
 });
 

@@ -6,6 +6,72 @@ Tous les changements majeurs du projet sont documentés ici, organisés par vers
 
 ## 🔄 Avril 2026
 
+### v2.6 - LOT Validation & Error Messages (5 Avril 2026)
+
+#### ✅ Strict LOT Field Validation + Detailed Error Messages
+
+**Problem:** Incomplete LOT receptions on mobile (missing Nombre de Pièces) would create 0 LOTs but still save reception → later "Aucun LOT trouvé" sales error ❌
+
+**Root Cause:** Backend only warned about missing LOT fields but accepted reception anyway
+
+**Changes:**
+
+1. **Frontend Validation Enhancement** (`assets/js/reception.js`)
+   - ✅ Field-by-field validation with emoji indicators
+   - ✅ Detailed toast showing EXACTLY which fields are missing:
+     ```
+     🎁 Nombre de Pièces invalide (doit être > 0)
+     📦 Quantité par Pièce invalide (doit être > 0)
+     📏 Unité manquante
+     💵 Prix par Unité invalide
+     ```
+   - ✅ Message clearly states: "(EMPÊCHERA LA VENTE)" to warn user
+
+2. **Backend Validation** (`routes/protected.js` lines 4476-4499)
+   - ✅ STRICT: Rejects reception if ANY LOT field is missing/invalid
+   - ✅ Returns 400 error with detailed breakdown:
+     ```json
+     {
+       "error": "❌ ERREUR CRITIQUE - Réception LOT incomplète!
+       
+     Champs manquants ou invalides:
+       • nombrePieces (doit être > 0)
+       • prixParUnite (invalide)
+       
+     Valeurs reçues:
+       - nombrePieces: VIDE
+       - quantiteParPiece: 50
+       - uniteDetail: metre
+       - prixParUnite: VIDE",
+       "missing_fields": ["nombrePieces (doit être > 0)", "prixParUnite (invalide)"],
+       "received": { ... }
+     }
+     ```
+
+**Impact:** ✅ Prevents incomplete LOT receptions that would break sales  
+**Files Modified:**
+- `assets/js/reception.js` (lines 1128-1147 - frontend validation with detailed messages)
+- `routes/protected.js` (lines 4476-4499 - backend strict validation with detailed error response)
+
+**Test:**
+```javascript
+// BEFORE: Reception created with 0 LOTs (silent fail)
+POST /receptions {type: 'lot', nombrePieces: null, quantiteParPiece: 50, ...}
+// Response: 201 (accepted) ❌
+
+// AFTER: Reception rejected with clear error
+POST /receptions {type: 'lot', nombrePieces: null, quantiteParPiece: 50, ...}
+// Response: 400 with detailed missing_fields: ['nombrePieces (doit être > 0)'] ✅
+```
+
+**User Experience:**
+- ✅ Frontend shows WHICH fields to fill before submit
+- ✅ Backend catches any bypass attempts with crystal-clear error listing
+- ✅ Both errors mention "EMPÊCHERA LA VENTE" to emphasize consequences
+- ✅ Mobile users can't accidentally create incomplete LOTs
+
+---
+
 ### v2.5 - Mobile LOT Reception Fix (3 Avril 2026)
 
 #### 🐛 Mobile LOT Reception: No LOT Documents Created
