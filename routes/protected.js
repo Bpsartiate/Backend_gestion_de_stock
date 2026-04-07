@@ -5077,29 +5077,34 @@ router.put('/receptions/:receptionId', authMiddleware, upload.single('photo'), c
 // 🔧 FIX v2.7: ENDPOINT DE NETTOYAGE - Créer les LOTs manquants
 // Cet endpoint récupère toutes les réceptions avec nombrePieces MAIS sans LOTs associés
 // et crée les LOTs automatiquement
+// NEW: Traite AUSSI les réceptions SIMPLES (sans nombrePieces) qui devraient être LOT
 
-// ENDPOINT: POST /api/protected/receptions/fix/missing-lots
+// ENDPOINT: POST /api/protected/receptions/fix/missing-lots?convertSimpleToLot=true
 router.post('/receptions/fix/missing-lots', authMiddleware, checkMagasinAccess, async (req, res) => {
   try {
     console.log('\n🔧 === FIX ENDPOINT: Création des LOTs manquants ===');
-    const { magasinId: queryMagasinId } = req.query;
+    const { magasinId: queryMagasinId, convertSimpleToLot = true } = req.query;
     const targetMagasinId = queryMagasinId || req.user.magasinId;
 
-    // 1. Trouver TOUS les réceptions avec nombrePieces > 0
-    console.log(`🔍 Recherche des réceptions orphelines (nombrePieces > 0)...`);
+    let lotsCreatedGlobal = 0;
+    let receptionsFixed = 0;
+    const results = [];
+
+    // ============================================
+    // PARTIE 1: Réceptions AVEC nombrePieces > 0
+    // ============================================
+    console.log(`\n📦 PARTIE 1: Réceptions avec nombrePieces > 0`);
+    console.log(`🔍 Recherche des réceptions orphelines...`);
     const orphanedReceptions = await Reception.find({
       magasinId: targetMagasinId,
       nombrePieces: { $gt: 0 },
       quantiteParPiece: { $gt: 0 },
       uniteDetail: { $exists: true, $ne: null }
     }).populate('produitId', 'designation reference typeProduitId prixUnitaire')
-      .populate('magasinId', 'nom');
+      .populate('magasinId', 'nom')
+      .populate('utilisateurId', 'nom email prenom');
 
     console.log(`   Trouvé: ${orphanedReceptions.length} réceptions avec nombrePieces`);
-
-    let lotsCreatedGlobal = 0;
-    let receptionsFixed = 0;
-    const results = [];
 
     for (const reception of orphanedReceptions) {
       try {
@@ -5113,7 +5118,7 @@ router.post('/receptions/fix/missing-lots', authMiddleware, checkMagasinAccess, 
         const lotsExists = existingLots.length;
 
         if (lotsExists >= lotsNeeded) {
-          console.log(`   ✅ ${reception._id} - ${lotsExists}/${lotsNeeded} LOTs OK (pas de création nécessaire)`);
+          console.log(`   ✅ ${reception._id} - ${lotsExists}/${lotsNeeded} LOTs OK`);
           continue;  // Skip si déjà complet
         }
 
@@ -5151,20 +5156,112 @@ router.post('/receptions/fix/missing-lots', authMiddleware, checkMagasinAccess, 
           receptionId: reception._id,
           produit: reception.produitId.designation,
           lotsCreated: lotsCreatedForThisReception,
-          utilisateur: reception.utilisateurId,
+          utilisateur: reception.utilisateurId?.nom || 'N/A',
           dateReception: reception.dateReception,
-          status: 'FIXED ✅'
+          status: 'FIXED ✅',
+          type: 'nombrePieces_orphaned'
         });
 
-        console.log(`      ✅ ${lotsCreatedForThisReception} LOTs créés pour cette réception`);
+        console.log(`      ✅ ${lotsCreatedForThisReception} LOTs créés`);
 
       } catch (receptionError) {
         console.error(`   ❌ Erreur pour ${reception._id}:`, receptionError.message);
         results.push({
           receptionId: reception._id,
           status: 'ERROR ❌',
-          error: receptionError.message
+          error: receptionError.message,
+          type: 'nombrePieces_orphaned'
         });
+      }
+    }
+
+    // ============================================
+    // PARTIE 2: Réceptions SIMPLES (nombrePieces = null) d'un produit LOT
+    // ============================================
+    if (convertSimpleToLot === 'true' || convertSimpleToLot === true) {
+      console.log(`\n📦 PARTIE 2: Réceptions SIMPLES → LOT (nécessitant conversion)`);
+      console.log(`🔍 Recherche des réceptions SIMPLES d'un produit LOT...`);
+
+      // Trouver tous les produits de type LOT
+      const lotTypeProducts = await Produit.find({
+        magasinId: targetMagasinId,
+        'typeProduitId.typeStockage': 'lot'
+      }).select('_id');
+
+      const lotProductIds = lotTypeProducts.map(p => p._id.toString());
+
+      // Trouver réceptions SIMPLES sans LOTs
+      const simpleReceptions = await Reception.find({
+        magasinId: targetMagasinId,
+        produitId: { $in: lotProductIds },
+        nombrePieces: { $in: [null, 0] }  // Pas de nombrePieces = SIMPLE
+      }).populate('produitId', 'designation reference typeProduitId prixUnitaire')
+        .populate('magasinId', 'nom')
+        .populate('utilisateurId', 'nom email prenom');
+
+      console.log(`   Trouvé: ${simpleReceptions.length} réceptions SIMPLES à convertir en LOT`);
+
+      for (const reception of simpleReceptions) {
+        try {
+          // Vérifier si LOTs existent déjà
+          const existingLots = await Lot.find({
+            receptionId: reception._id,
+            produitId: reception.produitId._id
+          });
+
+          if (existingLots.length > 0) {
+            console.log(`   ✅ ${reception._id} - ${existingLots.length} LOTs existants (skip)`);
+            continue;
+          }
+
+          // Créer 1 LOT avec la quantité totale comme quantiteInitiale
+          console.log(`   🎁 ${reception._id} - Conversion SIMPLE → LOT (${reception.quantite} une seule unité)`);
+          const produit = await Produit.findById(reception.produitId._id);
+
+          const newLot = new Lot({
+            magasinId: reception.magasinId._id,
+            produitId: reception.produitId._id,
+            typeProduitId: produit.typeProduitId,
+            receptionId: reception._id,
+            unitePrincipale: produit.typeProduitId?.unitePrincipaleStockage || 'Pièce',
+            quantiteInitiale: reception.quantite,  // Quantité totale reçue
+            quantiteRestante: reception.quantite,
+            uniteDetail: produit.typeProduitId?.unitePrincipale || 'Pièce',
+            prixParUnite: reception.prixAchat || 0,
+            prixTotal: reception.prixTotal || (reception.quantite * reception.prixAchat),
+            rayonId: reception.rayonId,
+            dateReception: reception.dateReception || new Date(),
+            status: 'complet',
+            nombrePieces: 1,
+            quantiteParPiece: reception.quantite
+          });
+
+          await newLot.save();
+          lotsCreatedGlobal++;
+          receptionsFixed++;
+
+          results.push({
+            receptionId: reception._id,
+            produit: reception.produitId.designation,
+            lotsCreated: 1,
+            quantiteConverted: reception.quantite,
+            utilisateur: reception.utilisateurId?.nom || 'N/A',
+            dateReception: reception.dateReception,
+            status: 'FIXED (CONVERTED) ✅',
+            type: 'simple_to_lot'
+          });
+
+          console.log(`      ✅ 1 LOT créé (conversion simple → lot de ${reception.quantite})`);
+
+        } catch (receptionError) {
+          console.error(`   ❌ Erreur pour ${reception._id}:`, receptionError.message);
+          results.push({
+            receptionId: reception._id,
+            status: 'ERROR ❌',
+            error: receptionError.message,
+            type: 'simple_to_lot'
+          });
+        }
       }
     }
 
@@ -5175,9 +5272,9 @@ router.post('/receptions/fix/missing-lots', authMiddleware, checkMagasinAccess, 
     res.status(200).json({
       success: true,
       message: `✅ ${receptionsFixed} réceptions corrigées - ${lotsCreatedGlobal} LOTs créés`,
-      receptionsProjectedToFix: orphanedReceptions.length,
-      receptionsActuallyFixed: receptionsFixed,
+      receptionsFixed: receptionsFixed,
       lotsCreatedGlobal: lotsCreatedGlobal,
+      convertSimpleToLotEnabled: convertSimpleToLot === 'true' || convertSimpleToLot === true,
       results: results
     });
 

@@ -1067,24 +1067,99 @@ async function submitReception(e) {
       return;
     }
     
-    // ⚡ VALIDATION SUPPLÉMENTAIRE: Vérifier les champs selon le type
+    // 🔧 v2.8 FIX: VALIDATION PRE-SUBMIT STRICTE - Empêcher les erreurs mobiles
+    // Cette validation vérifie TOUS les champs requis AVANT d'envoyer vers l'API
+    
     if (currentTypeProduit && currentTypeProduit.typeStockage === 'lot') {
-      // Validation LOT
+      // 🎁 VALIDATION LOT - STRICTE
+      console.log('🔍 Validation LOT stricte (v2.8)...');
+      
       const nombrePieces = document.getElementById('nombrePieces')?.value;
       const quantiteParPiece = document.getElementById('quantiteParPiece')?.value;
       const uniteDetail = document.getElementById('uniteDetail')?.value;
+      const prixParUnite = document.getElementById('prixParUniteDetail')?.value;
+      const prixAchatFinal = parseFloat(document.getElementById('prixAchat').value) || 0;
       
-      if (!nombrePieces || nombrePieces <= 0 || !quantiteParPiece || quantiteParPiece <= 0 || !uniteDetail) {
-        showToast('❌ Veuillez remplir tous les champs LOT (nombre, quantité par pièce, unité)', 'danger');
-        return;
+      // ⚠️ VALIDATION STRICTE: Tous les champs sont OBLIGATOIRES
+      const lotFields = {
+        'nombrePieces': { value: nombrePieces, label: '🎁 Nombre de Pièces' },
+        'quantiteParPiece': { value: quantiteParPiece, label: '📦 Quantité par Pièce' },
+        'uniteDetail': { value: uniteDetail, label: '📏 Unité' },
+        'prixParUnite': { value: prixParUnite, label: '💵 Prix par Unité' }
+      };
+      
+      const LOT_ERRORS = [];
+      
+      // Vérifier CHAQUE champ individuellement
+      if (!nombrePieces) {
+        LOT_ERRORS.push('🎁 Nombre de Pièces: manquant');
+      } else if (isNaN(parseFloat(nombrePieces)) || parseFloat(nombrePieces) <= 0) {
+        LOT_ERRORS.push('🎁 Nombre de Pièces: doit être > 0');
       }
+      
+      if (!quantiteParPiece) {
+        LOT_ERRORS.push('📦 Quantité par Pièce: manquant');
+      } else if (isNaN(parseFloat(quantiteParPiece)) || parseFloat(quantiteParPiece) <= 0) {
+        LOT_ERRORS.push('📦 Quantité par Pièce: doit être > 0');
+      }
+      
+      if (!uniteDetail || uniteDetail.trim() === '') {
+        LOT_ERRORS.push('📏 Unité: manquant (ex: "mètre", "kg", "pièce")');
+      }
+      
+      if (!prixParUnite) {
+        LOT_ERRORS.push('💵 Prix par Unité: manquant');
+      } else if (isNaN(parseFloat(prixParUnite)) || parseFloat(prixParUnite) < 0) {
+        LOT_ERRORS.push('💵 Prix par Unité: doit être numérique');
+      }
+      
+      if (prixAchatFinal <= 0) {
+        LOT_ERRORS.push('💰 Prix d\'Achat: doit être > 0');
+      }
+      
+      // 🛑 SI DES ERREURS: BLOQUER et afficher message détaillé
+      if (LOT_ERRORS.length > 0) {
+        console.error('❌ RÉCEPTION LOT REJETÉE:', LOT_ERRORS);
+        
+        let errorHTML = `
+          <div style="text-align: left; font-size: 0.95em; line-height: 1.8;">
+            <div style="margin-bottom: 10px; font-weight: bold; color: #d32f2f; font-size: 1.05em;">
+              ⛔ RÉCEPTION LOT BLOQUÉE - Champs manquants
+            </div>
+            <div style="background: #ffebee; padding: 12px; border-left: 5px solid #d32f2f; margin-bottom: 10px;">
+              <strong style="display: block; margin-bottom: 8px;">❌ Erreurs trouvées:</strong>
+        `;
+        
+        LOT_ERRORS.forEach(error => {
+          errorHTML += `<div style="margin-left: 8px; margin-bottom: 6px;">• ${error}</div>`;
+        });
+        
+        errorHTML += `
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f44336;">
+                <strong style="color: #d32f2f;">➡️ VOUS DEVEZ remplir TOUS ces champs</strong>
+                <div style="font-size: 0.9em; color: #666; margin-top: 8px;">
+                  ⚠️ Les LOTs manquants empêcheront la vente!
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        showToast(errorHTML, 'danger');
+        return;  // 🛑 ARRÊTER LE SUBMIT
+      }
+      
+      console.log('✅ Validation LOT OK - tous les champs remplis');
+      
     } else {
-      // Validation SIMPLE
-      const quantiteReception = document.getElementById('quantiteReception')?.value;
-      if (!quantiteReception || quantiteReception <= 0) {
-        showToast('❌ Veuillez entrer une quantité valide', 'danger');
-        return;
+      // 📦 VALIDATION SIMPLE
+      const quantiteReception = document.getElementById('quantiteRealReception')?.value;
+      if (!quantiteReception || parseFloat(quantiteReception) <= 0) {
+        showToast('❌ Veuillez entrer une quantité valide (> 0)', 'danger');
+        return;  // 🛑 ARRÊTER LE SUBMIT
       }
+      
+      console.log('✅ Validation SIMPLE OK');
     }
 
     // 📱 AFFICHER LE LOADING
@@ -1355,6 +1430,44 @@ async function submitReception(e) {
       receptionData.prixTotalEstime = nombrePieces * quantiteParPiece * prixParUnite;
       
       console.log('🎁 Préparation LOT:', { nombrePieces, quantiteParPiece, uniteDetail, prixParUnite });
+      
+      // 🔧 v2.8 FIX: DOUBLE-CHECK avant envoi API
+      console.log('🔍 DOUBLE-CHECK LOT avant envoi...');
+      const checkErrors = [];
+      
+      if (!nombrePieces || nombrePieces <= 0 || isNaN(nombrePieces)) 
+        checkErrors.push('nombrePieces invalide');
+      if (!quantiteParPiece || quantiteParPiece <= 0 || isNaN(quantiteParPiece)) 
+        checkErrors.push('quantiteParPiece invalide');
+      if (!uniteDetail || uniteDetail.trim() === '') 
+        checkErrors.push('uniteDetail vide');
+      if (prixParUnite === null || prixParUnite === undefined || isNaN(prixParUnite)) 
+        checkErrors.push('prixParUnite invalide');
+      
+      if (checkErrors.length > 0) {
+        console.error('❌ DOUBLE-CHECK ÉCHOUÉE - ENVOI BLOQUÉ:', checkErrors);
+        const btnSubmit = document.getElementById('btnSubmitReception');
+        const iconSubmit = document.getElementById('iconSubmit');
+        const textSubmit = document.getElementById('textSubmit');
+        
+        showToast(
+          `<div style="text-align: center;">
+            ⛔ <strong>ERREUR SYSTÈME</strong><br>
+            Les données LOT sont incomplètes (${checkErrors.join(', ')})
+            <br><br>
+            <small>Veuillez rafraîchir et réessayer</small>
+          </div>`,
+          'danger'
+        );
+        
+        btnSubmit.disabled = false;
+        iconSubmit.innerHTML = '<i class="fas fa-check me-2"></i>';
+        textSubmit.textContent = 'Enregistrer Réception';
+        return;
+      }
+      
+      console.log('✅ DOUBLE-CHECK OK - Données LOT valides, envoi API');
+
     } else {
       receptionData.type = 'simple';
     }
