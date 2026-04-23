@@ -22,7 +22,8 @@ cp .env.example .env
 # Edit .env - Add MongoDB URI:
 # MONGODB_URI=mongodb://localhost:27017/stock_management
 # ou
-# MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/stock_management
+# MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/stock_management
+# ⚠️ Ne jamais commiter vos identifiants MongoDB dans un dépôt public !
 ```
 
 ### 3. Start Backend (1 min)

@@ -76,7 +76,9 @@ PORT=3000
 MONGODB_URI=mongodb://localhost:27017/stock_management
 
 # Option 2: MongoDB Atlas Cloud (recommandé)
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/stock_management?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/stock_management?retryWrites=true&w=majority
+# ⚠️ Ne jamais commiter vos identifiants MongoDB dans un dépôt public !
+# Remplacez <username>, <password> et <cluster> par vos informations personnelles dans un fichier .env localement.
 
 # === JWT (Authentification) ===
 JWT_SECRET=votre-secret-jwt-très-sécurisé-changez-moi
